@@ -643,7 +643,7 @@ static int ribbon_error(const char *what, const char *detail) {
 // Rejects malformed ribbons, and names the menu commands the ribbon leaves unreachable:
 // with no menu bar, a command that is on no tab and in no menu the ribbon opens is lost.
 static int validate_ribbon(xmlNodePtr ribbon, xmlNodePtr menus, const action_meta_list_t *meta) {
-  int errors = 0, app_menus = 0, quick = 0;
+  int errors = 0, app_menus = 0, quick = 0, contexts = 0;
   bool *reached = calloc((size_t)(meta->n ? meta->n : 1), sizeof(bool));
   char *layout = attr(ribbon, "layout");
   if (layout && !eq(layout, "classic") && !eq(layout, "simplified")) errors += ribbon_error("layout must be classic or simplified, not", layout);
@@ -658,8 +658,10 @@ static int validate_ribbon(xmlNodePtr ribbon, xmlNodePtr menus, const action_met
       if (++quick > 1) errors += ribbon_error("declares more than one <QuickAccessToolbar>", NULL);
       EACH_ELEMENT(it, n) { char *command = attr(it, "command"); for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].name, command)) reached[i] = true; free(command); }
     } else if (elem(n, "tab")) {
-      char *label = attr(n, "label"); int groups = 0;
+      char *label = attr(n, "label"), *context = attr(n, "context"); int groups = 0;
       if (!label || !*label) errors += ribbon_error("a <Tab> needs a label", NULL);
+      if (context && (!ident_expr(context) || ++contexts > 32)) errors += ribbon_error("a <Tab> context is an identifier, and a ribbon has at most 32; got", context);
+      free(context);
       EACH_ELEMENT(group, n) {
         if (!elem(group, "group")) { errors += ribbon_error("a <Tab> holds <Group> elements, not", (const char *)group->name); continue; }
         groups++;
@@ -687,8 +689,15 @@ static int validate_ribbon(xmlNodePtr ribbon, xmlNodePtr menus, const action_met
 }
 
 static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char *pre, const action_meta_list_t *meta) {
-  int tab_index = 0;
+  int tab_index = 0, contexts = 0;
+  char upper[128]; ident(upper, sizeof(upper), pre, true);
   LINE("#include <orion/user/toolbar.h>\n");
+  // Each contextual tab's context is a bit the application passes to rbSetContexts.
+  EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) {
+    char *context = attr(tab, "context"), name[128];
+    if (context) { ident(name, sizeof(name), context, true); OUT("#define %s_RIBBON_CONTEXT_%s (1u << %d)\n", upper, name, contexts++); }
+    free(context);
+  }
   xmlNodePtr quick = child(ribbon, "quickaccesstoolbar"), app_menu = child(ribbon, "applicationmenu");
   if (quick) {
     char symbol[256]; snprintf(symbol, sizeof(symbol), "%s_ribbon_quick_access_items", pre);
@@ -734,9 +743,10 @@ static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char
   OUT("static const ribbon_tab_t %s_ribbon_tabs[] = {\n", pre);
   tab_index = 0;
   EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) {
-    char *raw = attr(tab, "label"), label[ORIONC_STRING_SIZE]; cstr(label, sizeof(label), raw);
-    OUT("  { %s, %s_ribbon_tab%d_groups, ARRAY_LEN(%s_ribbon_tab%d_groups) },\n", label, pre, tab_index, pre, tab_index);
-    tab_index++; free(raw);
+    char *raw = attr(tab, "label"), *context = attr(tab, "context"), label[ORIONC_STRING_SIZE], bit[300] = "0"; cstr(label, sizeof(label), raw);
+    if (context) { char name[128]; ident(name, sizeof(name), context, true); snprintf(bit, sizeof(bit), "%s_RIBBON_CONTEXT_%s", upper, name); }
+    OUT("  { %s, %s_ribbon_tab%d_groups, ARRAY_LEN(%s_ribbon_tab%d_groups), %s },\n", label, pre, tab_index, pre, tab_index, bit);
+    tab_index++; free(raw); free(context);
   }
   LINE("};\n");
   OUT("static const ribbon_def_t %s_ribbon = { .tabs = %s_ribbon_tabs, .tab_count = ARRAY_LEN(%s_ribbon_tabs)", pre, pre, pre);

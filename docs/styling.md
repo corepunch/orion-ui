@@ -101,7 +101,7 @@ apply to every part.
 | `CARD` | `Card` (`:hover`, `:checked`) | `BADGE`, `BADGE_ICON` | `Badge`, `Badge::icon` (`fill`) |
 | `TOOLBAR_BUTTON` (`_LABELED`, `_SPLIT`) | `Toolbar::button` (`.labeled`, `.split`) | `TITLEBAR`, `TITLE_TOOLBAR` | `Window::titlebar`, `Window::title-toolbar` |
 | `TOOLBAR_SPLIT_ARROW`, `_SEPARATOR`, `_GRIP` | `Toolbar::split-arrow`, `::separator`, `::grip` | `WINDOW_CLOSE`, `RESIZE_GRIP` | `Window::close`, `Window::resize-grip` |
-| `RIBBON`, `RIBBON_TABS`, `_TAB`, `_MENU` | `Ribbon`, `Ribbon::tabs`, `::tab`, `::tab.menu` | `RIBBON_BUTTON`, `_GROUP`, `_SEPARATOR`, `_ARROW`, `_TOGGLE` | `Ribbon::button`, `::group`, `::separator`, `::arrow`, `::toggle` |
+| `RIBBON`, `RIBBON_TABS`, `_TAB`, `_CONTEXT_TAB`, `_MENU` | `Ribbon`, `Ribbon::tabs`, `::tab`, `::tab.contextual`, `::tab.menu` | `RIBBON_BUTTON`, `_GROUP`, `_SEPARATOR`, `_ARROW`, `_TOGGLE` | `Ribbon::button`, `::group`, `::separator`, `::arrow`, `::toggle` |
 | `SLIDER_TRACK`, `_THUMB`, `_TROUGH`, `_KNOB` | `Slider::track`, `::thumb`, `::trough`, `::knob` | `SCROLLBAR_*` | `Scrollbar::track`, `::thumb`, `::arrow-up` … `::corner` |
 
 Layout containers are boxes too, like a `div`: `StackView`, `GridView` and

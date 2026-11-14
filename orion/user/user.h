@@ -630,6 +630,7 @@ typedef struct window_pages_s {
   const toolbar_item_t *pane_toolbar_items;
   int pane_toolbar_count;
   bool pane_toolbar_replace;
+  bool page_toolbars_hidden;              // HOST: its pages' toolbars show elsewhere (a ribbon's contextual tabs)
   struct page_host_s *page_host;
   struct page_docking_s *docking;          // PAGE: framework-owned, separate from app userdata
 } window_pages_t;
@@ -752,6 +753,10 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc,
                                   hinstance_t hinstance, void *lparam);
 bool set_host_page(window_t *host, window_t *page);
+// Whether the host's toolbar shows the active page's <Toolbar> after its own items (the default).
+// An application that shows a page's commands elsewhere, as a ribbon's contextual tab, turns it off
+// before selecting pages.
+bool set_host_page_toolbars(window_t *host, bool shown);
 void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
 void set_window_title(window_t *win, const char *title);  // ≈ SetWindowText: caption, or the merged toolbar title

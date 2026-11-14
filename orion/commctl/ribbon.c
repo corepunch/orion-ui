@@ -29,7 +29,8 @@ typedef struct { irect16_t rect; rb_form_t form; int group; } rb_cell_t;
 typedef struct {
   const ribbon_def_t  *def;
   const accel_table_t *accel;       // not owned
-  int                  active;
+  int                  active, home; // home: the last tab chosen that always shows, to return to
+  uint32_t             contexts;    // whose contextual tabs show
   ribbon_layout_t      layout;
   bool                 minimized;
   uint8_t             *states;      // TBSTATE_* per item, tab after tab
@@ -93,6 +94,10 @@ static int rb_command_state(const ribbon_state_t *st, uint16_t ident, int set) {
   return found;
 }
 
+static bool rb_tab_shown(const ribbon_state_t *st, int tab) {
+  return !st->def->tabs[tab].context || (st->def->tabs[tab].context & st->contexts);
+}
+
 // ── metrics ──────────────────────────────────────────────────────────────────
 
 // Where the window's title bar hides behind the content, the tab row at the screen's corner
@@ -141,8 +146,10 @@ static irect16_t rb_tab_rect(const window_t *win, const ribbon_state_t *st, int 
     if (index < 0) return R(x, 0, w, h);
     x += w + ui_px(rb_sel(win, "Ribbon::tabs"), "gap");
   } else if (index < 0) return R(x, 0, 0, h);
-  for (int i = 0; i < index && i < st->def->tab_count; i++) x += text_strwidth(tab, ui_tr(st->def->tabs[i].label)) + 2 * pad;
-  return R(x, 0, index < st->def->tab_count ? text_strwidth(tab, ui_tr(st->def->tabs[index].label)) + 2 * pad : 0, h);
+  for (int i = 0; i < index && i < st->def->tab_count; i++)
+    if (rb_tab_shown(st, i)) x += text_strwidth(tab, ui_tr(st->def->tabs[i].label)) + 2 * pad;
+  bool shown = index < st->def->tab_count && rb_tab_shown(st, index);
+  return R(x, 0, shown ? text_strwidth(tab, ui_tr(st->def->tabs[index].label)) + 2 * pad : 0, h);
 }
 
 static irect16_t rb_restore_rect(const window_t *win) {
@@ -269,7 +276,7 @@ static rb_hit_t rb_hit(window_t *win, ribbon_state_t *st, ipoint16_t p) {
     if (menu_row_maximized_window(win) && rect_contains_point(rb_restore_rect(win), p)) return (rb_hit_t){RB_RESTORE, 0};
     if (rb_has_menu(st) && rect_contains_point(rb_tab_rect(win, st, -1), p)) return (rb_hit_t){RB_MENU, 0};
     for (int i = 0; i < st->def->tab_count; i++)
-      if (rect_contains_point(rb_tab_rect(win, st, i), p)) return (rb_hit_t){RB_TAB, i};
+      if (rb_tab_shown(st, i) && rect_contains_point(rb_tab_rect(win, st, i), p)) return (rb_hit_t){RB_TAB, i};
     return (rb_hit_t){RB_NONE, 0};
   }
   if (st->minimized) return (rb_hit_t){RB_NONE, 0};
@@ -319,10 +326,29 @@ static bool rb_select_tab(window_t *win, ribbon_state_t *st, int index) {
     fflush(stderr);
     return false;
   }
+  if (!rb_tab_shown(st, index)) {
+    fprintf(stderr, "[ribbon] tab rejected win=%u index=%d: its context 0x%x is not among 0x%x\n", win->id, index,
+            (unsigned)st->def->tabs[index].context, (unsigned)st->contexts);
+    fflush(stderr);
+    return false;
+  }
+  if (!st->def->tabs[index].context) st->home = index;
   if (index == st->active) return true;
   st->active = index;
   rb_relayout(win, st);
   return true;
+}
+
+// The tabs of the contexts in `mask` show. A tab whose context left gives way to the tab the
+// user came from; with `open`, the first tab this reveals becomes the active one.
+static void rb_set_contexts(window_t *win, ribbon_state_t *st, uint32_t mask, bool open) {
+  uint32_t revealed = mask & ~st->contexts;
+  st->contexts = mask;
+  if (!st->def) return;
+  if (st->active < st->def->tab_count && !rb_tab_shown(st, st->active)) st->active = st->home;
+  for (int i = 0; open && i < st->def->tab_count; i++)
+    if (st->def->tabs[i].context & revealed) { st->active = i; break; }
+  rb_relayout(win, st);
 }
 
 static bool rb_set_ribbon(window_t *win, ribbon_state_t *st, const ribbon_def_t *def) {
@@ -346,7 +372,9 @@ static bool rb_set_ribbon(window_t *win, ribbon_state_t *st, const ribbon_def_t 
   }
   free(st->states); free(st->cells);
   st->def = def; st->states = states; st->cells = cells; st->item_total = total;
-  st->active = 0; st->layout = def->layout; st->cell_count = 0;
+  st->active = st->home = 0; st->layout = def->layout; st->cell_count = 0;
+  for (int t = 0; t < def->tab_count; t++)
+    if (!def->tabs[t].context) { st->active = st->home = t; break; }
   rb_resized(win, st);
   return true;
 }
@@ -427,10 +455,12 @@ static void rb_paint(window_t *win, ribbon_state_t *st) {
   }
   for (int i = 0; i < st->def->tab_count; i++) {
     irect16_t r = rb_tab_rect(win, st, i);
+    if (!rb_tab_shown(st, i)) continue;
     if (maximized && r.x + r.w > rb_restore_rect(win).x) break;
     ctrl_state_t state = rb_state(st, (rb_hit_t){RB_TAB, i}, false, i == st->active && !st->minimized);
-    theme_draw_in(win, THEME_PART_RIBBON_TAB, r, state);
-    draw_text_clipped(tab_sel, ui_tr(st->def->tabs[i].label), &r, theme_foreground_in(win, THEME_PART_RIBBON_TAB, state), TEXT_ALIGN_CENTER);
+    theme_part_t part = st->def->tabs[i].context ? THEME_PART_RIBBON_CONTEXT_TAB : THEME_PART_RIBBON_TAB;
+    theme_draw_in(win, part, r, state);
+    draw_text_clipped(tab_sel, ui_tr(st->def->tabs[i].label), &r, theme_foreground_in(win, part, state), TEXT_ALIGN_CENTER);
   }
   if (st->minimized) return;
   const ribbon_tab_t *tab = rb_tab(st);
@@ -561,13 +591,14 @@ result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       return true;
     case evGetTooltipRect: {
       rb_hit_t hit = rb_hit(win, st, point);
-      if (hit.kind != RB_ITEM || !lparam) return false;
+      if (hit.kind != RB_ITEM || st->cells[hit.index].form != RB_FORM_ICON || !lparam) return false;
       *(irect16_t *)lparam = st->cells[hit.index].rect;
       return true;
     }
     case evGetTooltipText: {
       rb_hit_t hit = rb_hit(win, st, point);
-      const ribbon_item_t *it = hit.kind == RB_ITEM ? rb_item(st, hit.index) : NULL;
+      // A tooltip names a bare icon; a button that shows its caption has none.
+      const ribbon_item_t *it = hit.kind == RB_ITEM && st->cells[hit.index].form == RB_FORM_ICON ? rb_item(st, hit.index) : NULL;
       const char *tip = it ? ui_tr(it->tooltip ? it->tooltip : it->text) : NULL;
       if (!tip || !lparam) return false;
       const accel_t *key = it->ident && !strchr(tip, '(') ? accel_find_cmd(st->accel, it->ident) : NULL;
@@ -634,6 +665,10 @@ result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         return false;
       }
       *(irect16_t *)lparam = rb_tab_rect(win, st, (int)wparam);
+      return (int)wparam < 0 ? rb_has_menu(st) : rb_tab_shown(st, (int)wparam);
+    case rbGetContexts:  return (result_t)st->contexts;
+    case rbSetContexts:
+      rb_set_contexts(win, st, wparam, lparam != NULL);
       return true;
     default:
       return false;

@@ -25,6 +25,10 @@ static const ribbon_item_t kView[] = { { RIBBON_ITEM_BUTTON, ID_ZOOM, "zoom-in",
 static const ribbon_group_t kHomeGroups[] = { { "Clipboard", kClipboard, ARRAY_LEN(kClipboard) }, { "Editing", kEditing, ARRAY_LEN(kEditing) } };
 static const ribbon_group_t kViewGroups[] = { { "Zoom", kView, ARRAY_LEN(kView) }, { "Again", kClipboard, ARRAY_LEN(kClipboard) } };
 static const ribbon_tab_t kTabs[] = { { "Home", kHomeGroups, ARRAY_LEN(kHomeGroups) }, { "View", kViewGroups, ARRAY_LEN(kViewGroups) } };
+#define CONTEXT_TABLE (1u << 0)
+static const ribbon_tab_t kContextTabs[] = { { "Home", kHomeGroups, ARRAY_LEN(kHomeGroups) }, { "View", kViewGroups, ARRAY_LEN(kViewGroups) },
+                                             { "Table", kViewGroups, ARRAY_LEN(kViewGroups), CONTEXT_TABLE } };
+static const ribbon_def_t kContextRibbon = { .tabs = kContextTabs, .tab_count = ARRAY_LEN(kContextTabs) };
 static const ribbon_def_t kRibbon = { .tabs = kTabs, .tab_count = ARRAY_LEN(kTabs), .menu_label = "File",
                                       .menu_items = kFileMenu, .menu_count = ARRAY_LEN(kFileMenu) };
 
@@ -115,10 +119,15 @@ static void test_commands(void) {
   dispatch_message(&ev);
   ASSERT(g_clicks == 3, "releasing on another command cancels the press");
   char tip[256] = "";
+  ASSERT(!send_message(ribbon, evGetTooltipText, MAKEDWORD(open.x + 2, open.y + 2), tip), "a button that shows its caption has no tooltip");
+  send_message(ribbon, rbSetLayout, RIBBON_LAYOUT_SIMPLIFIED, NULL);
+  open = item_rect(ribbon, ID_OPEN); save = item_rect(ribbon, ID_SAVE);
+  irect16_t large = item_rect(ribbon, ID_NEW);
   ASSERT_TRUE(send_message(ribbon, evGetTooltipText, MAKEDWORD(open.x + 2, open.y + 2), tip));
-  ASSERT(strcmp(tip, "Open a document") == 0, "the tooltip is the item's");
+  ASSERT(strcmp(tip, "Open a document") == 0, "a bare icon's tooltip is the item's");
   ASSERT_TRUE(send_message(ribbon, evGetTooltipText, MAKEDWORD(save.x + 2, save.y + 2), tip));
   ASSERT(strcmp(tip, "Save") == 0, "or its caption");
+  ASSERT(!send_message(ribbon, evGetTooltipText, MAKEDWORD(large.x + 2, large.y + 2), tip), "the single row's captioned buttons have none either");
   destroy_window(ribbon);
   test_env_shutdown();
   PASS();
@@ -169,6 +178,30 @@ static void test_scaling(void) {
   PASS();
 }
 
+static void test_contextual_tabs(void) {
+  TEST("a contextual tab shows while its context is active and gives way to the tab the user came from");
+  test_env_init();
+  window_t *ribbon = create_window("ribbon", WINDOW_NOTITLE | WINDOW_NORESIZE, MAKERECT(0, 0, 900, 200), NULL, ribbon_proc, 0, (void *)&kContextRibbon);
+  show_window(ribbon, true);
+  irect16_t view, table;
+  ASSERT_TRUE(send_message(ribbon, rbGetTabRect, 1, &view));
+  ASSERT(!send_message(ribbon, rbGetTabRect, 2, &table) && table.w == 0, "the contextual tab is hidden");
+  ASSERT_FALSE(send_message(ribbon, rbSetActiveTab, 2, NULL));
+  click_rect(ribbon, view);
+  send_message(ribbon, rbSetContexts, CONTEXT_TABLE, NULL);
+  ASSERT(send_message(ribbon, rbGetTabRect, 2, &table) && table.x >= view.x + view.w, "it shows after the other tabs");
+  ASSERT(send_message(ribbon, rbGetActiveTab, 0, NULL) == 1, "showing it does not open it");
+  send_message(ribbon, rbSetContexts, 0, NULL);
+  send_message(ribbon, rbSetContexts, CONTEXT_TABLE, (void *)(uintptr_t)1);
+  ASSERT(send_message(ribbon, rbGetActiveTab, 0, NULL) == 2, "unless asked to");
+  ASSERT_EQUAL(send_message(ribbon, rbGetContexts, 0, NULL), CONTEXT_TABLE);
+  send_message(ribbon, rbSetContexts, 0, NULL);
+  ASSERT(send_message(ribbon, rbGetActiveTab, 0, NULL) == 1, "when the context leaves, the tab the user came from returns");
+  destroy_window(ribbon);
+  test_env_shutdown();
+  PASS();
+}
+
 static result_t quick_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)msg; (void)wparam; (void)lparam;
   return false;
@@ -210,6 +243,7 @@ int main(void) {
   test_commands();
   test_layouts();
   test_scaling();
+  test_contextual_tabs();
   test_chrome();
   TEST_END();
 }

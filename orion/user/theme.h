@@ -203,6 +203,7 @@ typedef enum {
   THEME_PART_RIBBON,           // a Ribbon's command panel, under its tab row
   THEME_PART_RIBBON_TABS,      // the tab row
   THEME_PART_RIBBON_TAB,       // one tab; CTRL_SELECTED is the active one
+  THEME_PART_RIBBON_CONTEXT_TAB, // a contextual tab, shown while its context is active
   THEME_PART_RIBBON_MENU,      // the application-menu button at the start of the tab row
   THEME_PART_RIBBON_BUTTON,    // a command; CTRL_SELECTED is a checked toggle or an open drop-down
   THEME_PART_RIBBON_GROUP,     // a group: its foreground is the caption under the commands
