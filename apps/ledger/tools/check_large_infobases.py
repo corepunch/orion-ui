@@ -37,6 +37,24 @@ def check_invoices(path, country):
     assert gross > 0, 'payroll deductions missing'
 
 
+HISTORY = ('posting_revisions', 'revision_entries')
+
+
+def check_repost(before, after):
+    strip = lambda snap: {t: rows for t, rows in snap.items() if t not in HISTORY}
+    assert strip(before) == strip(after), 'reposting changed persisted records'
+    for table in HISTORY:
+        assert set(before.get(table, [])) <= set(after.get(table, [])), f'reposting rewrote {table}'
+    added = [dict(r) for r in set(after.get('posting_revisions', [])) - set(before.get('posting_revisions', []))]
+    posted = [dict(r) for r in after.get('entries', [])]
+    assert all(r['action'] == 'post' for r in added), 'reposting recorded a non-post revision'
+    assert len({r['document_id'] for r in added}) == len(added), 'reposting recorded a document twice'
+    new_ids = {r['id'] for r in added}
+    snapshot_rows = [dict(r) for r in set(after.get('revision_entries', [])) - set(before.get('revision_entries', []))]
+    assert all(r['revision_id'] in new_ids for r in snapshot_rows), 'reposting added entries to an old revision'
+    assert len(snapshot_rows) == len(posted), 'posting history does not snapshot every entry'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--checker', type=Path, default=Path('build/bin/ledger-fixture-check'))
@@ -57,10 +75,11 @@ def main():
             assert 'balances' not in first, 'transient reports must not be persisted'
             subprocess.run(command, check=True, timeout=args.timeout)
             assert first == snapshot(path), 'save/reopen changed persisted records'
-            # Reposting must not duplicate movements or change totals/net payroll.
+            # Reposting must not duplicate movements or change totals/net payroll; it only
+            # appends one posting-history revision per document.
             before_repost = snapshot(path, movement_ids=False)
             subprocess.run(command + ['--materialize'], check=True, timeout=args.timeout)
-            assert before_repost == snapshot(path, movement_ids=False), 'reposting changed persisted records'
+            check_repost(before_repost, snapshot(path, movement_ids=False))
             print(f'{country} saved_bytes={path.stat().st_size} wall_seconds={time.perf_counter() - start:.3f}', flush=True)
 
 
