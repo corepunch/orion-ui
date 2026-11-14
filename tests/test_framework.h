@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include "test_portable.h"
 
 // Test statistics
 static int tests_run = 0;

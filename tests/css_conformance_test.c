@@ -13,7 +13,7 @@
 #include <orion/commctl/form_loader.h>
 #include <orion/user/image.h>
 #include <orion/user/theme.h>
-#include <glob.h>
+#include <dirent.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -208,7 +208,7 @@ static fixture_verdict_t compare_fixture(const char *orion, const char *fixture)
   snprintf(diff_png, sizeof(diff_png), "build/conformance/%s.diff.png", flat);
   if (verdict == FIXTURE_MATCHES) { remove(orion_png); remove(diff_png); }
   else {
-    mkdir("build", 0755); mkdir("build/conformance", 0755);
+    test_mkdir("build", 0755); test_mkdir("build/conformance", 0755);
     save_image_png(orion_png, actual, w, h);
     save_image_png(diff_png, diff, w, h);
     if (text) fprintf(stderr, "[conformance] %s: %s%s%s; see %s\n", fixture, why, known ? ": known, " : "", known ? known : "", diff_png);
@@ -221,24 +221,35 @@ static fixture_verdict_t compare_fixture(const char *orion, const char *fixture)
   return verdict;
 }
 
+static int compare_paths(const void *a, const void *b) { return strcmp(*(char *const *)a, *(char *const *)b); }
+
 static void test_fixtures(const char *suite) {
-  char pattern[256], title[128];
-  snprintf(pattern, sizeof(pattern), "tests/conformance/%s/*.orion", suite);
-  glob_t g = {0};
-  glob(pattern, 0, NULL, &g);
-  for (size_t i = 0; i < g.gl_pathc; i++) {
-    const char *name = strrchr(g.gl_pathv[i], '/') + 1;
+  char dir[256], title[128];
+  snprintf(dir, sizeof(dir), "tests/conformance/%s", suite);
+  char *paths[512]; size_t npaths = 0;
+  DIR *d = opendir(dir);
+  for (struct dirent *e = d ? readdir(d) : NULL; e && npaths < 512; e = readdir(d)) {
+    size_t n = strlen(e->d_name);
+    if (n <= 6 || strcmp(e->d_name + n - 6, ".orion")) continue;
+    size_t len = strlen(dir) + n + 2;
+    paths[npaths] = malloc(len);
+    snprintf(paths[npaths++], len, "%s/%s", dir, e->d_name);
+  }
+  if (d) closedir(d);
+  qsort(paths, npaths, sizeof(*paths), compare_paths);
+  for (size_t i = 0; i < npaths; i++) {
+    const char *name = strrchr(paths[i], '/') + 1;
     char fixture[160];
     snprintf(fixture, sizeof(fixture), "%s/%.*s", suite, (int)(strlen(name) - strlen(".orion")), name);
     snprintf(title, sizeof(title), "%s matches Chrome", fixture);
     TEST(title);
-    fixture_verdict_t verdict = compare_fixture(g.gl_pathv[i], fixture);
+    fixture_verdict_t verdict = compare_fixture(paths[i], fixture);
     if (verdict == FIXTURE_DIFFERS) { FAIL("Orion and Chrome disagree"); }
     else if (verdict == FIXTURE_MATCHES && known_reason(fixture)) { FAIL("now matches Chrome: remove it from k_known"); }
     else { PASS(); }
+    free(paths[i]);
   }
-  if (g.gl_pathc == 0) { TEST(suite); FAIL("no fixtures"); }
-  globfree(&g);
+  if (npaths == 0) { TEST(suite); FAIL("no fixtures"); }
 }
 
 int main(void) {

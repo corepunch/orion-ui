@@ -98,9 +98,12 @@ jobs:
       - name: Build release packages
         if: inputs.version != ''
         run: sh scripts/package-release.sh "${{ inputs.version }}" "${{ matrix.platform }}" dist
-      # The test suite is POSIX-only so far (usleep, fork, PTYs); Windows releases are built and bundled untested.
       - name: Build and run tests
         if: inputs.version != '' && runner.os != 'Windows'
+        run: make test
+      # Manual runs only: Windows releases are still built untested until this has run green.
+      - name: Build and run tests (Windows)
+        if: inputs.version == '' && runner.os == 'Windows'
         run: make test
       - name: Check macOS keyboard input and MDI regressions
         if: runner.os == 'macOS' && inputs.version == ''
