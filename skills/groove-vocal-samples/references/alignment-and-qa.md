@@ -57,7 +57,7 @@ Processing defaults reproduce the accepted batch:
 
 ## Numerical evidence
 
-The helper compiles `tools/groove_audio/decode_sample.c` against the current repo and uses Groove minimp3_ex `MP3D_SEEK_TO_SAMPLE`. Check actual encoder-delay/padding removal: two bars must decode to 151,200 mono frames, four to 302,400. FFprobe duration alone is insufficient.
+The helper compiles `tools/groove_audio/decode_sample.c` against the current repo and uses Jamsheet minimp3_ex `MP3D_SEEK_TO_SAMPLE`. Check actual encoder-delay/padding removal: two bars must decode to 151,200 mono frames, four to 302,400. FFprobe duration alone is insufficient.
 
 For sufficiently long preserved heads, match a 25 ms source template starting 4 ms after the landmark, searching both sides within ±60 ms. Pass: offset ≤2 ms and normalized correlation ≥0.75. Short heads are explicitly unverified. This proves placement of the supplied source landmark through encoding, not annotation correctness or perceived rhythmic feel. Never label an intended time as an observed one.
 

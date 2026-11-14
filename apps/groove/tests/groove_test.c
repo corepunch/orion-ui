@@ -1,4 +1,4 @@
-// Groove tests: block synthesis, the offline mixer, snapping rules, and the
+// Jamsheet tests: block synthesis, the offline mixer, snapping rules, and the
 // sheet's drop handling through real windows.
 
 #include "test_framework.h"
@@ -136,10 +136,10 @@ static void test_eurodance_demos(void) {
 }
 
 static void test_project_io(void) {
-  TEST("Groove projects round-trip arrangement and mixer state, and invalid files leave the song intact");
+  TEST("Jamsheet projects round-trip arrangement and mixer state, and invalid files leave the song intact");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   g_app->song.bpm = 128;
   g_app->song.loop = false;
@@ -269,7 +269,7 @@ static void test_demo_install(void) {
 }
 
 static void test_song_library(void) {
-  TEST("iPad songs save into Groove's own storage; My Songs lists them newest first with previews read from the files");
+  TEST("iPad songs save into Jamsheet's own storage; My Songs lists them newest first with previews read from the files");
   test_env_init();
   g_app = app_init();
   ASSERT_NOT_NULL(g_app);
@@ -280,7 +280,7 @@ static void test_song_library(void) {
 #else
   ASSERT(!g_app->songs_dir[0], "desktop keeps ordinary file dialogs and creates no song library");
 #endif
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   char dir[128], path[512], other[512], broken[512], notes[512], name[128];
   snprintf(dir, sizeof(dir), "/tmp/orion-groove-songs-%ld", (long)getpid());
@@ -666,7 +666,7 @@ static void test_sheet_drop(void) {
   g_app = app_init();
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
   ASSERT(g_app != NULL, "app_init");
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT(win && g_app->sheet, "main window and sheet");
   show_window(win, true);
@@ -774,7 +774,7 @@ static void test_overlap_sheet(void) {
   test_env_init();
   g_app = app_init();
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -850,7 +850,7 @@ static void test_resized_clip_drag(void) {
   test_env_init();
   g_app = app_init();
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   sheet_set_library_width(g_app->sheet, 880);
@@ -913,7 +913,7 @@ static void test_fractional_selection(void) {
   TEST("fractional clips select and delete at their visible edges after scrolling; empty canvas and the ruler seek by quarter bars");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -990,7 +990,7 @@ static void test_two_finger_sheet_pan(void) {
   TEST("two-finger canvas pan cancels a clip drag and scrolls through the framework without editing the song");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -1109,7 +1109,7 @@ static void test_library_transport(void) {
   TEST("main toolbar centers transport between flexible spacers and routes playback and library actions");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                 MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win); show_window(win, true);
@@ -1160,7 +1160,7 @@ static void test_shared_block_cards(void) {
   TEST("canvas and library share the same card widget, measure, spacing and library drag behavior");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   int clip = song_add_clip(&g_app->song, 0, 0, 0);
   send_message(g_app->sheet, evResize, 0, NULL);
@@ -1239,7 +1239,7 @@ static void test_drag_anchor(void) {
   test_env_init();
   g_app = app_init();
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(4)->family;
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -1314,7 +1314,7 @@ static void test_drag_center_boundaries(void) {
   TEST("real drags use the sample center across half-step boundaries, independent of grab offset and scrolling");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -1414,7 +1414,7 @@ static void test_sheet_gestures(void) {
   g_app = app_init();
   ASSERT_NOT_NULL(g_app);
   int natural = block_get(0)->bars * GR_TICKS_BAR;
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -1538,7 +1538,7 @@ static void test_drag_off_sheet_removes(void) {
   TEST("dropping a moved clip outside the grid removes it; dropping inside keeps it");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   song_add_clip(&g_app->song, 0, 0, 0);
@@ -1576,7 +1576,7 @@ static void test_lazy_audio(void) {
   g_app = app_init();
   g_app->song.track_family[0] = block_get(6)->family;
   ASSERT_NOT_NULL(g_app);
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   for (int i = 0; i < blocks_count(); i++) ASSERT(!block_get(i)->audio.pcm, "nothing is rendered at start-up");
   int credit = g_app->peak_credit;
@@ -1610,7 +1610,7 @@ static void test_genre_filter(void) {
   TEST("the genre filter narrows the family to tagged blocks, and every genre restores it");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   ASSERT_EQUAL(g_app->genre, 0);
@@ -1636,7 +1636,7 @@ static void test_family_filter(void) {
   TEST("family selector filters the bin and combines with genre");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   window_t *bar = g_app->library;
@@ -1667,7 +1667,7 @@ static void test_track_selection(void) {
   TEST("track selection and sample filtering are independent");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   int drums[GR_MAX_BLOCKS], bass[GR_MAX_BLOCKS];
@@ -1715,7 +1715,7 @@ static void test_duplicate_track(void) {
   TEST("duplicating a track inserts an empty matching track, preserves other rows, and saves the choice");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win); show_window(win, true);
   int bass[GR_MAX_BLOCKS], guitar[GR_MAX_BLOCKS];
   ASSERT(blocks_in_family(FAMILY_BASS, bass, GR_MAX_BLOCKS) > 0 && blocks_in_family(FAMILY_GUITAR, guitar, GR_MAX_BLOCKS) > 0, "sample families exist");
@@ -1767,7 +1767,7 @@ static void test_portable_recordings(void) {
   // route restored recordings into its temporary directory, not that library.
   samples_truncate(0);
   snprintf(g_app->samples_dir, sizeof(g_app->samples_dir), "%s", dir);
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   sample_t sample = { .name = "Recorded voice", .bpm = 140, .bars = 1, .frames = bar_frames_for_bpm(140) };
   sample.pcm = calloc((size_t)sample.frames, sizeof(int16_t));
@@ -2013,7 +2013,7 @@ static void test_library_below_arrangement(void) {
   TEST("library always docks below the arrangement, with colour-marked family tabs that never take focus");
   test_env_init();
   g_app = app_init();
-  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
+  window_t *win = create_window("Jamsheet", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                 MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win); show_window(win, true);
   window_t *library = g_app->library;
@@ -2036,7 +2036,7 @@ static void test_library_below_arrangement(void) {
 }
 
 int main(void) {
-  TEST_START("Groove");
+  TEST_START("Jamsheet");
   test_sample_packs();
   test_library_below_arrangement();
   test_library_levels();

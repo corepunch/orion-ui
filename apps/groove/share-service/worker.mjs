@@ -66,9 +66,9 @@ async function upload(request, env, url) {
   const title = form.get('title'), audio = form.get('audio'), project = form.get('project');
   if (typeof title !== 'string' || !title.trim() || title.trim().length > 200) return error(400, 'Title must contain 1 to 200 characters');
   if (!(audio instanceof File) || audio.size === 0 || audio.size > MAX_AUDIO) return error(audio instanceof File && audio.size > MAX_AUDIO ? 413 : 400, 'Invalid MP3 file');
-  if (project !== null && (!(project instanceof File) || project.size === 0 || project.size > MAX_PROJECT || !/\.groove$/i.test(project.name))) return error(project instanceof File && project.size > MAX_PROJECT ? 413 : 400, 'Invalid Groove project');
+  if (project !== null && (!(project instanceof File) || project.size === 0 || project.size > MAX_PROJECT || !/\.groove$/i.test(project.name))) return error(project instanceof File && project.size > MAX_PROJECT ? 413 : 400, 'Invalid Jamsheet project');
   if (!validMp3(new Uint8Array(await audio.slice(0, 3).arrayBuffer()))) return error(400, 'Invalid MP3 file');
-  if (project && !/^ORION_GROOVE \d+\r?\n/.test(await project.slice(0, 32).text())) return error(400, 'Invalid Groove project');
+  if (project && !/^ORION_GROOVE \d+\r?\n/.test(await project.slice(0, 32).text())) return error(400, 'Invalid Jamsheet project');
   const id = randomToken(), token = randomToken(32), prefix = `songs/${id}/`;
   try {
     await env.SONGS.put(prefix + 'audio', audio, { httpMetadata: { contentType: 'audio/mpeg' } });

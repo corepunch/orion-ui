@@ -74,7 +74,7 @@ static void songs_rebuild(window_t *win, songs_dlg_t *st, int select) {
   }
   free_result_list(rows);
   if (!loaded)
-    set_window_item_text(win, ID_SONG_BROWSER_EMPTY, "%s", ui_tr("Groove's song storage is unavailable on this device."));
+    set_window_item_text(win, ID_SONG_BROWSER_EMPTY, "%s", ui_tr("Jamsheet's song storage is unavailable on this device."));
   show_window(get_window_item(win, ID_SONG_BROWSER_EMPTY), st->count == 0);
   window_layout_sync(win);
   int i = st->count ? CLAMP(select, 0, st->count - 1) : -1;
@@ -102,7 +102,7 @@ static void songs_dlg_activate(window_t *win, songs_dlg_t *st, int index) {
 static void songs_dlg_open(window_t *win, songs_dlg_t *st, int i) {
   if (i < 0 || !st->rows[i].bpm || !app_confirm_replace_song(win)) return;
   if (!app_open_song(st->rows[i].path)) {
-    message_box(win, ui_tr("Could not open this Groove song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
+    message_box(win, ui_tr("Could not open this Jamsheet song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
     return;
   }
   end_dialog(win, 1);

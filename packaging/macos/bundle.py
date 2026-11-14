@@ -18,7 +18,7 @@ ICON_SIZES = (
 )
 DISPLAY_NAMES = {
     'browser': 'Browser', 'filemanager': 'File Manager', 'formeditor': 'Form Editor',
-    'gitclient': 'Git Client', 'groove': 'Groove', 'helloworld': 'Hello World',
+    'gitclient': 'Git Client', 'groove': 'Jamsheet', 'helloworld': 'Hello World',
     'imageeditor': 'Image Editor', 'ledger': 'Ledger', 'penciltest': 'Pencil Test',
     'socialfeed': 'Social Feed', 'taskmanager': 'Task Manager', 'terminal': 'Terminal',
     'vibeoffice': 'Vibe Office',
@@ -235,7 +235,7 @@ def main():
         for localization in (share_root / 'groove/locale').glob('*.lproj'):
             shutil.copytree(localization, resources / localization.name)
         info['CFBundleLocalizations'] = ['en'] + sorted(p.stem for p in (share_root / 'groove/locale').glob('*.xml') if p.stem != 'en')
-        info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Groove songs.'
+        info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Jamsheet songs.'
     (contents / 'Info.plist').write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_XML))
     (contents / 'PkgInfo').write_bytes(b'APPL????')
     run(['codesign', '--force', '--deep', '--sign', '-', str(bundle)], capture=True)

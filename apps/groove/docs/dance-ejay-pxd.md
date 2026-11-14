@@ -1,6 +1,6 @@
 # Dance eJay sample library
 
-Reference for the Groove block bin. The disc is a late-1990s Dance eJay CD at `/Users/igor/Downloads/Dance eJay` (about 4456 files). It holds the full Dance eJay library and demos of Dance eJay 2, HipHop eJay, Rave eJay and Techno eJay. Groove synthesizes its own loops in the same roles. It does not import the original audio.
+Reference for the Jamsheet block bin. The disc is a late-1990s Dance eJay CD at `/Users/igor/Downloads/Dance eJay` (about 4456 files). It holds the full Dance eJay library and demos of Dance eJay 2, HipHop eJay, Rave eJay and Techno eJay. Jamsheet synthesizes its own loops in the same roles. It does not import the original audio.
 
 The player is the 16-bit `DANCE/DMACHINE/DANCE.EXE` plus `DANCE02.DLL` ("DanceMachine Audio-DLL", Bernhard Throll / THROLL GmbH, 1997). Both are NE binaries, not PE.
 
@@ -117,7 +117,7 @@ The large "other" bucket is mostly vocal hooks and atmospheres (`Come on!`, `Spi
 
 ## The other products on the disc
 
-`DEMO/` holds playable demos of four more eJay titles. Together with the full Dance library they define the four genres Groove tags its blocks with: Dance, Hip Hop, Rave and Techno.
+`DEMO/` holds playable demos of four more eJay titles. Together with the full Dance library they define the four genres Jamsheet tags its blocks with: Dance, Hip Hop, Rave and Techno.
 
 | folder | product | clips | bar length | tempo |
 |---|---|---:|---:|---:|
@@ -176,9 +176,9 @@ The two letters in the code are the group:
 
 The groove-generator one-shots are the only clips shorter than half a bar: 4725, 9450 and 18900 samples (a sixteenth, an eighth and a quarter note at 140 BPM).
 
-## What Groove takes from this
+## What Jamsheet takes from this
 
-Groove takes the roles, not the audio and not the names. Each block has one family, which is its tab, and one or more genre tags, which the toolbar's genre control filters on. How the sounds are made is in [sound-synthesis.md](sound-synthesis.md).
+Jamsheet takes the roles, not the audio and not the names. Each block has one family, which is its tab, and one or more genre tags, which the toolbar's genre control filters on. How the sounds are made is in [sound-synthesis.md](sound-synthesis.md).
 
 | tab | reference group it stands for |
 |---|---|

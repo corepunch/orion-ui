@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <script>if (location.pathname.startsWith("/s/")) document.write('<base href="/">');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Groove</title>
-<meta name="description" content="Listen to a song made with Groove, then make your own.">
+<title>Jamsheet</title>
+<meta name="description" content="Listen to a song made with Jamsheet, then make your own.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#1e1f1c">
 <meta property="og:type" content="music.song">
-<meta property="og:site_name" content="Groove">
-<meta property="og:title" content="A song made with Groove">
-<meta property="og:description" content="Listen, then open it in Groove to remix it.">
+<meta property="og:site_name" content="Jamsheet">
+<meta property="og:title" content="A song made with Jamsheet">
+<meta property="og:description" content="Listen, then open it in Jamsheet to remix it.">
 <meta property="og:image" content="https://corepunch.github.io/orion-ui/groove/play/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -119,7 +119,7 @@ footer a { color: var(--muted); }
 <body>
 <div class="wrap">
   <header>
-    <a href="#" id="home"><img src="assets/groove-wordmark.png" alt="Groove" width="144" height="48"></a>
+    <a href="#" id="home"><img src="assets/groove-wordmark.png" alt="Jamsheet" width="144" height="48"></a>
     <span class="tag">Make music by dragging blocks</span>
   </header>
 
@@ -158,12 +158,12 @@ footer a { color: var(--muted); }
     <div class="actions" id="actions" hidden>
       <a class="btn primary" id="open-app" href="#">
         <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"/></svg>
-        Open in Groove
+        Open in Jamsheet
       </a>
       <a class="btn secondary" id="download-project" hidden download>Download project</a>
       <button class="btn secondary" id="share" type="button" hidden>Share link</button>
       <button class="btn secondary" id="remove" type="button" hidden>Remove song</button>
-      <a class="btn secondary" href="#downloads" id="get-app">Download Groove</a>
+      <a class="btn secondary" href="#downloads" id="get-app">Download Jamsheet</a>
     </div>
     <p class="note" id="note" role="status"></p>
 
@@ -173,20 +173,20 @@ footer a { color: var(--muted); }
       <form id="upload-form">
         <label>Song title <input name="title" maxlength="120" required autocomplete="off"></label>
         <label>MP3 file <input name="audio" type="file" accept="audio/mpeg,.mp3" required></label>
-        <label>Groove project <span class="hint">Optional. Listeners can download it, including embedded recordings.</span><input name="project" type="file" accept=".groove"></label>
+        <label>Jamsheet project <span class="hint">Optional. Listeners can download it, including embedded recordings.</span><input name="project" type="file" accept=".groove"></label>
         <button class="btn primary" type="submit">Create link</button>
       </form>
     </section>
 
     <section class="downloads" id="downloads" aria-labelledby="downloads-title">
-      <h2 id="downloads-title">Get Groove</h2>
+      <h2 id="downloads-title">Get Jamsheet</h2>
       <p>Drag blocks onto eight tracks, record your own sounds and share your song.</p>
       <ul id="download-list"></ul>
     </section>
   </main>
 
   <footer>
-    <span id="disclaimer" hidden>This song was shared by a Groove user.
+    <span id="disclaimer" hidden>This song was shared by a Jamsheet user.
       <button id="report" type="button" style="font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer">Report this song</button> ·</span>
     <a href="https://corepunch.github.io/orion-ui/groove/privacy/">Privacy</a> · <a href="https://corepunch.github.io/orion-ui/groove/support/">Support</a>
   </footer>
@@ -304,7 +304,7 @@ footer a { color: var(--muted); }
   function showEmpty(title, text) {
     $('song').hidden = true; $('actions').hidden = true; $('disclaimer').hidden = true;
     $('empty').hidden = false; $('empty-title').textContent = title; $('empty-text').textContent = text;
-    document.title = 'Groove';
+    document.title = 'Jamsheet';
   }
 
   function validMeta(m) {
@@ -319,7 +319,7 @@ footer a { color: var(--muted); }
     $('upload').hidden = true; $('share').hidden = true; $('remove').hidden = true;
     $('download-project').hidden = true; $('open-app').hidden = true;
     if (!id) {
-      showEmpty('Songs made with Groove play here', 'Share a song or get Groove below to make your own.');
+      showEmpty('Songs made with Jamsheet play here', 'Share a song or get Jamsheet below to make your own.');
       $('upload').hidden = !uploadsAvailable;
       return;
     }
@@ -344,7 +344,7 @@ footer a { color: var(--muted); }
     const files = Object.assign({ song: 'song.groove', audio: 'audio.m4a', cover: 'cover.png' }, m.files);
     const title = m.title.trim() || 'Untitled song';
     $('empty').hidden = true; $('song').hidden = false; $('actions').hidden = false; $('disclaimer').hidden = false;
-    $('song-title').textContent = title; document.title = `${title} · Groove`;
+    $('song-title').textContent = title; document.title = `${title} · Jamsheet`;
     cover.hidden = !isFixture;
     if (isFixture) {
       $('cover-img').src = base + files.cover;
@@ -359,7 +359,7 @@ footer a { color: var(--muted); }
       $('share').hidden = false; $('remove').hidden = !getToken(id);
     }
     $('duration').textContent = clock(duration()); $('play').disabled = false;
-    if ('mediaSession' in navigator && 'MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'Made with Groove' });
+    if ('mediaSession' in navigator && 'MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'Made with Jamsheet' });
     setPlaying(false); updatePosition();
   }
 
@@ -403,7 +403,7 @@ footer a { color: var(--muted); }
     } catch (_) { showNote('Could not remove this song. Please try again.'); }
   });
   $('report').addEventListener('click', async () => {
-    if (isFixture) { location.href = `mailto:${REPORT_EMAIL}?subject=` + encodeURIComponent(`Report shared Groove song ${currentSong}`); return; }
+    if (isFixture) { location.href = `mailto:${REPORT_EMAIL}?subject=` + encodeURIComponent(`Report shared Jamsheet song ${currentSong}`); return; }
     const reason = prompt('Why are you reporting this song?');
     if (!reason || !reason.trim()) return;
     try {
@@ -445,7 +445,7 @@ footer a { color: var(--muted); }
     document.addEventListener('visibilitychange', away, { once: true });
     setTimeout(() => {
       if (!left && !document.hidden) {
-        showNote('Groove didn’t open. If it isn’t installed yet, download it below, then open this link again.');
+        showNote('Jamsheet didn’t open. If it isn’t installed yet, download it below, then open this link again.');
         $('downloads').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 1500);

@@ -5,7 +5,7 @@ import shlex
 import subprocess
 from common import prepare_work, work_arguments, write_json
 
-parser = work_arguments('Build the offline renderer from the current Groove C synth.')
+parser = work_arguments('Build the offline renderer from the current Jamsheet C synth.')
 parser.add_argument('--cc', default=os.environ.get('CC', 'cc'))
 args = parser.parse_args()
 root = prepare_work(args)

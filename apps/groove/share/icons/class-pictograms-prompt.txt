@@ -3,7 +3,7 @@ Tool: built-in ImageGen. Generate all 18 icons together in one transparent atlas
 Do not generate icons or visual states separately.
 
 Use case: generate
-Asset: compact category pictograms overlaid on Groove sample cards.
+Asset: compact category pictograms overlaid on Jamsheet sample cards.
 Generate without a reference image so the old detailed rendering does not
 influence the new style. Follow the subject list, order, and palette below.
 

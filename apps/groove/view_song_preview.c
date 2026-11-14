@@ -11,7 +11,7 @@ static void paint_preview(const song_t *song, irect16_t r) {
   for (int t = 0; t < GR_TRACKS; t++)
     fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), R(r.x, r.y + t * r.h / GR_TRACKS, r.w, (t + 1) * r.h / GR_TRACKS - t * r.h / GR_TRACKS));
   if (!song) {
-    const char *text = ui_tr("Groove cannot read this song");
+    const char *text = ui_tr("Jamsheet cannot read this song");
     draw_text_ellipsized("Text", text, r.x + MAX(0, (r.w - text_strwidth("Text", text)) / 2),
               r.y + (r.h - text_char_height("Text")) / 2, r.w, get_sys_color(brTextSecondary));
     return;

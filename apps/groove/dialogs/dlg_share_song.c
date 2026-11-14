@@ -59,7 +59,7 @@ static void share_song_start(window_t *win, share_song_t *st, bool attachment) {
     goto fail;
   }
   snprintf(st->wav, sizeof(st->wav), "%s/song.wav", st->dir);
-  snprintf(st->mp3, sizeof(st->mp3), "%s/%s.mp3", st->dir, strlen(st->title) <= 240 ? st->title : "Groove Song");
+  snprintf(st->mp3, sizeof(st->mp3), "%s/%s.mp3", st->dir, strlen(st->title) <= 240 ? st->title : "Jamsheet Song");
   if (!attachment && send_message(get_window_item(win, ID_SHARE_SONG_PROJECT), btnGetCheck, 0, NULL)) {
     snprintf(st->project, sizeof(st->project), "%s/song.groove", st->dir);
     if (!song_write_copy(st->project)) goto fail;

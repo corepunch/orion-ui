@@ -18,7 +18,7 @@ the new sample to the desired position and track.
 ## Storage
 
 New originals are saved in `Documents/Samples` on iPad and
-`Documents/Groove/Samples` on macOS. Groove also loads earlier recordings
+`Documents/Jamsheet/Samples` on macOS. Jamsheet also loads earlier recordings
 from `axSettingsDirectory()/Samples`. The originals are standard mono 44.1 kHz PCM16 WAV files with a private `gruv`
 metadata chunk for the name, tempo and bar count. Titles are never used as paths.
 The library loads at startup so recordings can be reused in other songs.
@@ -31,7 +31,7 @@ Songs are saved as `ORION_GROOVE 6`, which preserves instrument choices for
 empty tracks. Older versions remain readable. Each distinct custom
 source is embedded once, regardless of the number of placements. Built-in
 sources remain references by ID and name. Versions 2–5 remain readable; older
-Groove builds cannot open version 6 songs.
+Jamsheet builds cannot open version 6 songs.
 
 Version 6 adds eight family IDs after the song header; the asset and clip rows
 otherwise follow version 5. An asset is either the
@@ -57,7 +57,7 @@ app's Documents area, where Files can share it. Send the `.groove` file; no
 separate WAV folder is needed. File > Import Song opens a received project
 through the native picker. On iPad, Save Song As adds it to My Songs.
 
-Project export is distinct from audio mixdown. It needs Groove at the receiving
+Project export is distinct from audio mixdown. It needs Jamsheet at the receiving
 end. WAV/MP3 mixdown, native Share and social video remain separate proposals.
 
 ## Capture and packaging
@@ -77,7 +77,7 @@ loading, sample playback and WAV persistence remain portable.
 
 ## Validation
 
-The Groove test suite includes a round trip that saves two placements of one
+The Jamsheet test suite includes a round trip that saves two placements of one
 recording, deletes the standalone WAV, opens the song from embedded PCM, checks
 the exact restored samples and renders audible output. Reopening deduplicates
 the source. Truncated samples and trailing project garbage are rejected without

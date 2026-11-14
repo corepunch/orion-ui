@@ -186,9 +186,9 @@ page does (`ledger.settle`).
 ## Tokens
 
 The Metro theme is a dark, square-edged creative workspace with a blue accent
-and flat coloured cards. Groove uses it by default in standalone builds;
+and flat coloured cards. Jamsheet uses it by default in standalone builds;
 other applications may select it with `THEME_<app>=metro`. Category colours in
-Groove identify sound families, and sample cards show their names and waveforms.
+Jamsheet identify sound families, and sample cards show their names and waveforms.
 
 | Token | Porcelain | Porcelain Dark (One Dark) |
 |---|---|---|

@@ -49,7 +49,7 @@ static void record_start(window_t *win, record_sample_t *st) {
   if (st->input) return;
   ui_microphone_permission_t permission = ui_microphone_permission(true);
   if (permission != UI_MIC_ALLOWED) {
-    const char *text = permission == UI_MIC_DENIED ? "Enable Microphone for Groove in system settings." :
+    const char *text = permission == UI_MIC_DENIED ? "Enable Microphone for Jamsheet in system settings." :
       permission == UI_MIC_UNAVAILABLE ? "Microphone recording is unavailable on this platform." : "Allow microphone access, then press Record again.";
     set_window_item_text(win, ID_RECORD_SAMPLE_STATUS, "%s", ui_tr(text));
     return;

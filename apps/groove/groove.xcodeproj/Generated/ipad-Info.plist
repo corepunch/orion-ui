@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Groove</string>
+	<string>Jamsheet</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,7 +23,7 @@
 		<string>ru</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>Groove</string>
+	<string>Jamsheet</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -39,9 +39,9 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Record your own sounds and vocals as samples in Groove songs.</string>
+	<string>Record your own sounds and vocals as samples in Jamsheet songs.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Save exported Groove timeline videos to your photo library.</string>
+	<string>Save exported Jamsheet timeline videos to your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

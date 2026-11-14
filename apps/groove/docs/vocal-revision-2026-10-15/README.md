@@ -51,14 +51,14 @@ retry. Both selected takes were delivered at half-time by the generator; complet
 lines were fitted at pitch-preserving rates below 2.0, without individual-word
 stretching. Rock This Place required only small timing changes.
 
-All **61 delivered vocals** pass the current Groove MP3 decoder: exact original
+All **61 delivered vocals** pass the current Jamsheet MP3 decoder: exact original
 bar lengths, mono 44.1 kHz, finite audible PCM, no clipping, first signal within
 5 ms at −55 dBFS, and quiet endpoints. All 105 checked attack templates in repaired
 files retain their placement (minimum correlation 0.999864). All 18 new line/call
 attack templates match within 2 ms (minimum correlation 0.999906). Template matches
 verify the retained source landmarks, not every perceived syllable attack.
 
-The app and test executable build. All **22 Groove tests pass**, and all 61 build
+The app and test executable build. All **22 Jamsheet tests pass**, and all 61 build
 resource hashes match the installed samples. The six added clips brought the
 library to 518 entries, so capacity increased from 512 to 1024; a compile-time
 capacity check now prevents another silent array overrun. New entries are appended
@@ -68,7 +68,7 @@ after existing definitions to preserve IDs.
 unprompted ASR were reviewed; they cannot certify exact voice identity or total
 absence of quiet separation artifacts. ASR hears the final word of Rock This Place
 as “pounds” in the source and “bounce” in the export; that lexical distinction is
-not independently confirmed. A running Groove session caches PCM and must be
+not independently confirmed. A running Jamsheet session caches PCM and must be
 relaunched to load the revised resources.
 
 ## Evidence and reproduction

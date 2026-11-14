@@ -27,7 +27,7 @@ its original metadata, including `TBPM=140`. Library names and IDs are unchanged
 
 [verification.json](verification.json) records the original and cleaned hashes,
 source hashes, every repaired join, processing settings, and per-file checks.
-All 55 exports pass Groove's actual minimp3 decoder: exact original bar frames,
+All 55 exports pass Jamsheet's actual minimp3 decoder: exact original bar frames,
 finite audible signal, no clipping, signal within 5 ms at -55 dBFS, and quiet
 endpoints. All 216 checked attack templates retain zero-frame displacement;
 minimum correlation is 0.99989. This establishes preservation of the supplied
@@ -36,7 +36,7 @@ attack placement, not independent correctness of the earlier musical annotations
 All ten before/after contact sheets and the [seam detail plot](seam-details.png)
 were visually reviewed. These are plots of real PCM with shared axes. Listening
 was unavailable; remaining generation or separation defects are not ruled out.
-Groove builds successfully, all 20 Groove tests pass, and the 55 installed build
+Jamsheet builds successfully, all 20 Jamsheet tests pass, and the 55 installed build
 resource hashes match the verified exports.
 
 ## Reproduction
@@ -61,5 +61,5 @@ python tools/groove_audio/clean_vocals.py \
 The command requires a new output directory, checks input hashes, stages its
 outputs, and never overwrites app assets. The historical generation manifests
 describe the earlier exports; this cleanup's verification supersedes their
-delivery hashes. A running Groove session caches sample PCM and needs relaunching
+delivery hashes. A running Jamsheet session caches sample PCM and needs relaunching
 to load the updated resources.

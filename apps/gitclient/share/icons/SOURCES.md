@@ -4,7 +4,7 @@ through `checked-icon`. Path geometry is unmodified; width and height are set
 to 24 px, preserving the upstream viewBox.
 
 Source: [Phosphor core](https://github.com/phosphor-icons/core), revision
-`2b75f3ad12b420c9504ef05df8d2564a28f8500e` (the same revision as Groove).
+`2b75f3ad12b420c9504ef05df8d2564a28f8500e` (the same revision as Jamsheet).
 
 | Asset pair | Upstream icon |
 |---|---|

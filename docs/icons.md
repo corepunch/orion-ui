@@ -39,9 +39,9 @@ color to `draw_icon16` / `draw_toolbar_icon_in_rect`.
 
 ## Icon strips
 
-### Groove transport icons
+### Jamsheet transport icons
 
-Groove uses upstream [Phosphor](https://github.com/phosphor-icons/core) SVGs in
+Jamsheet uses upstream [Phosphor](https://github.com/phosphor-icons/core) SVGs in
 `apps/groove/share/icons/`. The transport uses Fill icons. Rewind and Fast Forward
 have more padding inside their SVGs. Play switches to Pause during playback. The toolbar paints
 the icons using the active theme's foreground color. `PHOSPHOR-SOURCE.txt`

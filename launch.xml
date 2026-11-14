@@ -2,8 +2,8 @@
 <!-- How to start this checkout. Git Client lists these targets for every
      worktree; keep them in step with the Makefile (see AGENTS.md). -->
 <launch project="ui">
-    <target name="Groove" default="true" run="make groove" />
-    <target name="Groove demo song" run="make groove-demo" />
+    <target name="Jamsheet" default="true" run="make groove" />
+    <target name="Jamsheet demo song" run="make groove-demo" />
     <target name="Git Client" build="make build/bin/gitclient" run="build/bin/gitclient ${workspace}">
         <param name="workspace" default="." />
     </target>

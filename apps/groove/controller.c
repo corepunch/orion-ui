@@ -319,10 +319,10 @@ static void open_song_dialog(void) {
   ofn.hwndOwner = g_app->win;
   ofn.lpstrFile = path;
   ofn.nMaxFile = sizeof(path);
-  ofn.lpstrFilter = "Groove Songs\0*.groove\0All Files\0*.*\0";
+  ofn.lpstrFilter = "Jamsheet Songs\0*.groove\0All Files\0*.*\0";
   ofn.Flags = OFN_FILEMUSTEXIST;
   if (get_open_filename(&ofn) && app_confirm_replace_song(ofn.hwndOwner) && !app_open_song(path))
-    message_box(g_app->win, ui_tr("Could not open this Groove song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
+    message_box(g_app->win, ui_tr("Could not open this Jamsheet song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
 }
 
 static bool save_song_as_dialog(window_t *owner) {
@@ -333,11 +333,11 @@ static bool save_song_as_dialog(window_t *owner) {
   ofn.hwndOwner = owner;
   ofn.lpstrFile = path;
   ofn.nMaxFile = sizeof(path);
-  ofn.lpstrFilter = "Groove Song\0*.groove\0";
+  ofn.lpstrFilter = "Jamsheet Song\0*.groove\0";
   ofn.Flags = OFN_OVERWRITEPROMPT;
   if (!get_save_filename(&ofn)) return false;
   if (app_save_song(path)) return true;
-  message_box(owner, ui_tr("Could not save the Groove song. Check the filename and available space."), ui_tr("Save failed"), MB_OK);
+  message_box(owner, ui_tr("Could not save the Jamsheet song. Check the filename and available space."), ui_tr("Save failed"), MB_OK);
   return false;
 }
 #endif
@@ -350,7 +350,7 @@ static bool save_current_song(window_t *owner) {
     return save_song_as_dialog(owner);
 #endif
   if (app_save_song(g_app->filename)) return true;
-  message_box(owner, ui_tr("Could not save the Groove song. Check the available space."), ui_tr("Save failed"), MB_OK);
+  message_box(owner, ui_tr("Could not save the Jamsheet song. Check the available space."), ui_tr("Save failed"), MB_OK);
   return false;
 }
 
@@ -434,7 +434,7 @@ static void project_file_dialog(bool exporting) {
   openfilename_t ofn = {0};
   ofn.lStructSize = sizeof(ofn); ofn.hwndOwner = g_app->win;
   ofn.lpstrFile = path; ofn.nMaxFile = sizeof(path);
-  ofn.lpstrFilter = "Groove Songs\0*.groove\0";
+  ofn.lpstrFilter = "Jamsheet Songs\0*.groove\0";
   ofn.Flags = exporting ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
   bool accepted = exporting ? get_save_filename(&ofn) : get_open_filename(&ofn);
   if (!accepted || (!exporting && !app_confirm_replace_song(ofn.hwndOwner))) return;
@@ -442,7 +442,7 @@ static void project_file_dialog(bool exporting) {
 #ifdef AX_PLATFORM_IOS
   if (ok && !exporting) g_app->song_dirty = true;
 #endif
-  if (!ok) message_box(g_app->win, ui_tr("Could not read or write the Groove song."), ui_tr("Song unavailable"), MB_OK);
+  if (!ok) message_box(g_app->win, ui_tr("Could not read or write the Jamsheet song."), ui_tr("Song unavailable"), MB_OK);
 }
 
 void app_command(uint16_t id) {
@@ -486,7 +486,7 @@ void app_command(uint16_t id) {
     case ID_FILE_DEMO_VICTORY: {
       int demo = id == ID_FILE_DEMO ? GR_DEMO_SKYLINE : id == ID_FILE_DEMO_AFTERGLOW ? GR_DEMO_AFTERGLOW : GR_DEMO_VICTORY;
       if (app_confirm_replace_song(g_app->win) && !app_load_demo_song(demo))
-        message_box(g_app->win, ui_tr("Could not load this demo song. Check that Groove's demo files are installed."), ui_tr("Demo unavailable"), MB_OK);
+        message_box(g_app->win, ui_tr("Could not load this demo song. Check that Jamsheet's demo files are installed."), ui_tr("Demo unavailable"), MB_OK);
       break;
     }
 #ifndef AX_PLATFORM_IOS

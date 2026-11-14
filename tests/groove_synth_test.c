@@ -171,7 +171,7 @@ static void test_synth_repeatability_and_tails(void) {
 }
 
 int main(void) {
-  TEST_START("Groove synth");
+  TEST_START("Jamsheet synth");
   test_guitar_pitch_and_gate();
   test_sampled_instruments();
   test_hat_choke();

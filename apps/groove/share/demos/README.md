@@ -1,9 +1,9 @@
-# Groove EuroDance demos
+# Jamsheet EuroDance demos
 
 Choose a song from **File → Demo**, then press **Play**. Each is a normal,
 editable `.groove` project. **Save Song** asks for a new filename so the bundled
 project is preserved. On iPad it asks for a name instead and keeps the copy in
-Groove's own song library; **File → Open Song** there shows every saved song with
+Jamsheet's own song library; **File → Open Song** there shows every saved song with
 a preview drawn from the file. The songs play once by default; enable **Loop** to
 repeat.
 
@@ -129,4 +129,4 @@ Launch from the build's `bin` directory with `groove --demo` (Neon Skyline),
 `groove --demo=skyline`, `groove --demo=afterglow`, or `groove --demo=victory`.
 The normal share/install process packages all three projects and the existing
 instrument bank. Preview WAV files are build artifacts and are not required for
-playback in Groove.
+playback in Jamsheet.

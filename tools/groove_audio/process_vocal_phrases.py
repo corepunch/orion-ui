@@ -57,8 +57,8 @@ def main():
         report=dict(file=name,title=row['title'],bars=row['bars'],source_sha256=sha(source),raw_take=row['source_take'],source_regions=regions,delivery_sha256=sha(mp3),master_sha256=sha(wav),gain=gain,frames=fmt[0],peak=float(abs(decoded).max()),leading_signal_ms=leading,activity_ratio=float(active.mean()),checks=checks,passed=all(checks.values()))
         reports.append(report)
         sf.write(out/(stem+'-before.wav'),np.concatenate(before)*gain,SR,subtype='FLOAT')
-        draw_comparison([('Complete source phrases',np.concatenate(before)*gain,SR),('Final / actual Groove decoder',decoded,SR)],140,BEAT,row['target_line_beats'],[],out/(stem+'-comparison.png'))
-        draw_comparison([('Final / actual Groove decoder',decoded,SR)],140,BEAT,row['target_line_beats'],[],out/(stem+'-final.png'))
+        draw_comparison([('Complete source phrases',np.concatenate(before)*gain,SR),('Final / actual Jamsheet decoder',decoded,SR)],140,BEAT,row['target_line_beats'],[],out/(stem+'-comparison.png'))
+        draw_comparison([('Final / actual Jamsheet decoder',decoded,SR)],140,BEAT,row['target_line_beats'],[],out/(stem+'-final.png'))
         (out/'verification.json').write_text(json.dumps(reports,indent=2)+'\n');print(name,checks,'activity',report['activity_ratio'],flush=True)
         if not report['passed']:raise ValueError(f'Export failed checks: {name}')
 

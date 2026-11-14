@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate isolated native Xcode projects for Orion apps (currently Groove)."""
+"""Generate isolated native Xcode projects for Orion apps (currently Jamsheet)."""
 import argparse
 import hashlib
 import importlib.util
@@ -212,16 +212,16 @@ def generate(args):
                 export['teamID'] = release['DEVELOPMENT_TEAM']
             write(bundle / 'Generated/DeveloperIDExportOptions.plist', plistlib.dumps(export).decode())
         info = dict(CFBundleExecutable='$(EXECUTABLE_NAME)', CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',
-                    CFBundleName='Groove', CFBundleDisplayName='Groove', CFBundlePackageType='APPL',
+                    CFBundleName='Jamsheet', CFBundleDisplayName='Jamsheet', CFBundlePackageType='APPL',
                     CFBundleInfoDictionaryVersion='6.0', CFBundleShortVersionString='$(MARKETING_VERSION)',
                     CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en',
                     CFBundleLocalizations=languages,
                     GrooveShareBaseURL='$(GROOVE_SHARE_BASE_URL)',
-                    NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Groove songs.',
+                    NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Jamsheet songs.',
                     ITSAppUsesNonExemptEncryption=False)
         if ipad:
             info.update(LSRequiresIPhoneOS=True, UIFileSharingEnabled=True, LSSupportsOpeningDocumentsInPlace=True,
-                        NSPhotoLibraryAddUsageDescription='Save exported Groove timeline videos to your photo library.',
+                        NSPhotoLibraryAddUsageDescription='Save exported Jamsheet timeline videos to your photo library.',
                         UIRequiredDeviceCapabilities=['opengles-3'],
                         UILaunchScreen={}, UIRequiresFullScreen=False,
                         UISupportedInterfaceOrientations=['UIInterfaceOrientation' + s for s in

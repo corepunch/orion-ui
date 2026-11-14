@@ -56,7 +56,7 @@ static inline uint32_t color_mix(uint32_t a, uint32_t b, uint8_t amount) {
   }
   return out;
 }
-// A Card is a CSS box (theme_draw_in(win, THEME_PART_CARD, ...), base.css); Card::plastic (Groove's
+// A Card is a CSS box (theme_draw_in(win, THEME_PART_CARD, ...), base.css); Card::plastic (Jamsheet's
 // block cards, theme_draw_ex with CTRL_PLASTIC) is the same kind of box with `background: plastic(...)`,
 // which the box renderer (theme_box.c) hands to the shader: one pass, its shadow reserved inside r.
 // Kernel entry point: plain floats only, so the renderer knows nothing about control state.
@@ -67,7 +67,7 @@ typedef struct {
 } plastic_look_t;
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
                             const plastic_look_t *look, uint32_t color, uint32_t shadow_color);
-// A small chip with its own fill and text colours (Groove's variant tag); its corners are Badge.chip's radius.
+// A small chip with its own fill and text colours (Jamsheet's variant tag); its corners are Badge.chip's radius.
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color);
 #define BADGE_HEIGHT 18
 // A status badge ("Posted", "Paid"): the Badge box (THEME_PART_BADGE) toned by the instance variable

@@ -1,6 +1,6 @@
-# Generating and verifying Groove samples
+# Generating and verifying Jamsheet samples
 
-This is the workflow for creating original sample assets for Groove: vocals now,
+This is the workflow for creating original sample assets for Jamsheet: vocals now,
 and drums, bass, instruments, textures and effects later. A generated take is raw
 material. It is not ready for the grid until its contents, attacks, duration and
 actual playback decoder have been checked.
@@ -60,7 +60,7 @@ Dance catalogue's median decoded duration was 3.384 seconds. That does **not**
 mean every reference vocal lasts two bars, nor prove every detail of eJay's UI.
 See [the container study](../../apps/groove/docs/dance-ejay-pxd.md#audio-payload).
 
-Groove uses `block_t.bars` for box width and snaps placement to quarter-bars.
+Jamsheet uses `block_t.bars` for box width and snaps placement to quarter-bars.
 Its rendered buffer fills the slot. At other tempos, match the engine's rounding:
 
 ```python
@@ -115,7 +115,7 @@ reproducible: retain the source takes if reproducing an edit matters.
 
 | Role | Request / production method | What to check |
 |---|---|---|
-| Drum or percussion hit | Single dry hit; existing Groove synth when suitable | Transient at the planned frame, full decay, no extra hits |
+| Drum or percussion hit | Single dry hit; existing Jamsheet synth when suitable | Transient at the planned frame, full decay, no extra hits |
 | Drum loop | Specific kit, isolated rhythm, exact intended hit pattern | Every hit, swing policy, bar endpoint, seamless repeat |
 | Bass or lead | Solo instrument, explicit short motif and requested notes | Note attacks, actual pitch, tail, no backing arrangement |
 | Chord stab | One isolated voiced chord, short release | Chord tones and attack, no hidden bass or drum layer |
@@ -214,7 +214,7 @@ ffmpeg -i master.wav -c:a libmp3lame -b:a 320k -write_xing 1 \
 ```
 
 MP3 encoders add delay and padding. Xing/LAME gapless information allows a
-supporting decoder to remove them. Verify using **Groove's decoder**, not only
+supporting decoder to remove them. Verify using **Jamsheet's decoder**, not only
 FFmpeg or an OS player. `decode_sample.c` uses the same `MP3D_SEEK_TO_SAMPLE` path,
 reports removed delay and dumps decoded PCM. `verify_sample.py` compiles it
 against the current repository headers automatically.
@@ -251,7 +251,7 @@ by downmix cancellation. Before/after rows use the same scale. It never stretche
 the picture to fit the box or independently normalizes rows to hide a difference.
 
 This example was regenerated from the previous and corrected MP3s through
-Groove's decoder. The middle attacks move onto the straight beat lines while
+Jamsheet's decoder. The middle attacks move onto the straight beat lines while
 both files remain two bars long:
 
 ![Decoded Light the Night before and after straight-beat correction](examples/light-the-night-grid.png)
@@ -285,7 +285,7 @@ spectrograms or perform automatic musical transcription.
 ## 7. Audition, install and reload
 
 Listen to the isolated sample, then alongside a 140 BPM click or simple kick
-pattern over several repeats, then in Groove. Keep audition clicks in separate
+pattern over several repeats, then in Jamsheet. Keep audition clicks in separate
 review files; never mix them into delivered isolated samples. Check consonants,
 pitch, artifacts, leftover backing, rhythm and loop seams. Record who auditioned
 the result; if nobody did, mark listening verification pending.
@@ -297,7 +297,7 @@ replacement. Other families should use an appropriate framework/app sample
 registration extension rather than being labelled vocals just to reuse a folder.
 
 Run `make share` to stage resources, or copy the approved assets to the matching
-`build/share/groove/vocals/` directory. Restart Groove to reload its rendered-audio
+`build/share/groove/vocals/` directory. Restart Jamsheet to reload its rendered-audio
 and waveform caches; a previously open app can still show and play old data.
 Do not kill an app with an unsaved arrangement to force that reload. Audio-only
 changes need decoder/timing/audition checks; control or decoder code changes also

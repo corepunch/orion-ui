@@ -64,8 +64,8 @@ On iPadOS and macOS, declare the supported catalog languages in the app's
 `CFBundleLocalizations` and set `CFBundleDevelopmentRegion` to `en`.
 `ui_system_language()` asks the bundle for the best match before loading any
 catalogs. This honors the app-specific language and the ordered list of
-system languages. Groove's packagers derive the list from its catalog files.
-Groove also accepts `--lang <tag>` at launch for testing.
+system languages. Jamsheet's packagers derive the list from its catalog files.
+Jamsheet also accepts `--lang <tag>` at launch for testing.
 
 ## What is translated automatically
 

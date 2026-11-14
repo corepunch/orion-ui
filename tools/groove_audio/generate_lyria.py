@@ -1,4 +1,4 @@
-"""Generate a raw Groove vocal take with Gemini's Lyria 3 Clip API (stdlib only)."""
+"""Generate a raw Jamsheet vocal take with Gemini's Lyria 3 Clip API (stdlib only)."""
 import argparse
 import base64
 import binascii
@@ -118,7 +118,7 @@ def main():
                         'created_at': datetime.now(timezone.utc).isoformat(),
                         'plan': plan, 'request': payload, 'status': 'request_prepared',
                         'limits': 'Raw 30-second generation. Tempo, lyrics and isolation are unverified. '
-                                  'Not registered in the Groove library until edited and verified.'}
+                                  'Not registered in the Jamsheet library until edited and verified.'}
             write_json(manifest_path, manifest)
         manifest['status'] = 'request_started'
         write_json(manifest_path, manifest)

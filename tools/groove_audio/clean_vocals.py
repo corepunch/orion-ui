@@ -187,8 +187,8 @@ def main():
                   'leading_signal_ms_at_minus55db': leading,
                   'attack_matches': matches, 'checks': checks, 'passed': all(checks.values())}
         reports.append(report)
-        draw_comparison([('Original lossless master', before, SR), ('Cleaned final / Groove MP3 decoder', decoded, SR)], 140, BEAT, beats, [], output/(name+'-comparison.png'))
-        (output/'verification.json').write_text(json.dumps({'settings': SETTINGS, 'decoder': 'Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE', 'limits': 'Computational and visual QA only; no listening performed. Preserved attack templates verify unchanged placement, not the musical accuracy of original annotations or absence of all generation/separation artifacts.', 'samples': reports}, indent=2)+'\n')
+        draw_comparison([('Original lossless master', before, SR), ('Cleaned final / Jamsheet MP3 decoder', decoded, SR)], 140, BEAT, beats, [], output/(name+'-comparison.png'))
+        (output/'verification.json').write_text(json.dumps({'settings': SETTINGS, 'decoder': 'Jamsheet minimp3_ex / MP3D_SEEK_TO_SAMPLE', 'limits': 'Computational and visual QA only; no listening performed. Preserved attack templates verify unchanged placement, not the musical accuracy of original annotations or absence of all generation/separation artifacts.', 'samples': reports}, indent=2)+'\n')
         print(f'{name}: {"PASS" if report["passed"] else "FAIL"}; {len(seams)} seams', flush=True)
         if not report['passed']:
             raise ValueError(f'{name}: {checks}')

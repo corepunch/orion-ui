@@ -33,7 +33,7 @@
   <string source="Listen" where="record_sample">Ouvir</string>
   <string source="Save Sample" where="record_sample">Salvar amostra</string>
   <string source="Cancel" where="record_sample,song_browser,save_song">Cancelar</string>
-  <string source="Groove" where="main_window">Groove</string>
+  <string source="Jamsheet" where="main_window">Jamsheet</string>
   <string source="Library" where="library_window">Biblioteca</string>
   <string source="Rewind (Home)" where="main_window">Ir para o início (Home)</string>
   <string source="Play / pause (Space)" where="main_window">Reproduzir / Pausar (Espaço)</string>
@@ -58,7 +58,7 @@
   <string source="1 bar" where="code">1 compasso</string>
   <string source="2 bars" where="code">2 compassos</string>
   <string source="4 bars" where="code">4 compassos</string>
-  <string source="Enable Microphone for Groove in system settings." where="code">Permita que o Groove acesse o microfone nos ajustes do sistema.</string>
+  <string source="Enable Microphone for Jamsheet in system settings." where="code">Permita que o Jamsheet acesse o microfone nos ajustes do sistema.</string>
   <string source="Microphone recording is unavailable on this platform." where="code">A gravação com microfone não está disponível nesta plataforma.</string>
   <string source="Allow microphone access, then press Record again." where="code">Permita o acesso ao microfone e pressione Gravar novamente.</string>
   <string source="Microphone unavailable. Check access and the input device." where="code">Microfone indisponível. Verifique as permissões e o dispositivo de entrada.</string>
@@ -68,7 +68,7 @@
   <string source="Enter a sample name." where="code">Digite um nome para a amostra.</string>
   <string source="Could not save the sample. Check available space." where="code">Não foi possível salvar a amostra. Verifique o espaço disponível.</string>
   <string source="Save failed" where="code">Falha ao salvar</string>
-  <string source="Could not read or write the Groove project." where="code">Não foi possível ler ou gravar o projeto do Groove.</string>
+  <string source="Could not read or write the Jamsheet project." where="code">Não foi possível ler ou gravar o projeto do Jamsheet.</string>
   <string source="Project unavailable" where="code">Projeto indisponível</string>
   <string source="Export Audio..." where="menu,main_window">Exportar áudio...</string>
   <string source="Share Audio..." where="menu">Compartilhar áudio...</string>
@@ -97,13 +97,13 @@
   <string source="Exporting: %s%%" where="code">Exportando: %s%%</string>
   <string source="Cancelling..." where="code">Cancelando...</string>
   <string source="Not enough memory to prepare the export." where="code">Memória insuficiente para preparar a exportação.</string>
-  <string source="Could not open this Groove song. The file may be damaged or use an unsupported version." where="code">Não foi possível abrir esta música do Groove. O arquivo pode estar danificado ou usar uma versão incompatível.</string>
+  <string source="Could not open this Jamsheet song. The file may be damaged or use an unsupported version." where="code">Não foi possível abrir esta música do Jamsheet. O arquivo pode estar danificado ou usar uma versão incompatível.</string>
   <string source="Open failed" where="code">Falha ao abrir</string>
-  <string source="Could not save the Groove song. Check the filename and available space." where="code">Não foi possível salvar a música do Groove. Verifique o nome do arquivo e o espaço disponível.</string>
-  <string source="Could not save the Groove song. Check the available space." where="code">Não foi possível salvar a música do Groove. Verifique o espaço disponível.</string>
-  <string source="Could not load this demo song. Check that Groove's demo files are installed." where="code">Não foi possível carregar esta demo. Verifique se os arquivos de demonstração do Groove estão instalados.</string>
+  <string source="Could not save the Jamsheet song. Check the filename and available space." where="code">Não foi possível salvar a música do Jamsheet. Verifique o nome do arquivo e o espaço disponível.</string>
+  <string source="Could not save the Jamsheet song. Check the available space." where="code">Não foi possível salvar a música do Jamsheet. Verifique o espaço disponível.</string>
+  <string source="Could not load this demo song. Check that Jamsheet's demo files are installed." where="code">Não foi possível carregar esta demo. Verifique se os arquivos de demonstração do Jamsheet estão instalados.</string>
   <string source="Demo unavailable" where="code">Demo indisponível</string>
-  <string source="Groove's song storage is unavailable on this device." where="code">O armazenamento de músicas do Groove está indisponível neste dispositivo.</string>
+  <string source="Jamsheet's song storage is unavailable on this device." where="code">O armazenamento de músicas do Jamsheet está indisponível neste dispositivo.</string>
   <string source="Enter a song name without slashes or colons." where="code">Digite um nome de música sem barras ou dois-pontos.</string>
   <string source="A song named &quot;%s&quot; already exists. Replace it?" where="code">Já existe uma música chamada “%s”. Deseja substituí-la?</string>
   <string source="Delete &quot;%s&quot;? This cannot be undone." where="code">Excluir “%s”? Esta ação não pode ser desfeita.</string>
@@ -114,11 +114,11 @@
   <string source="%s BPM  -  empty  -  %s" where="code">%s BPM – vazia – %s</string>
   <string source="%s BPM  -  Bars: %s  -  %s" where="code">%s BPM – Compassos: %s – %s</string>
   <string source="No sounds in this family" where="code">Nenhum som nesta categoria</string>
-  <string source="Groove cannot read this song" where="code">O Groove não consegue ler esta música</string>
+  <string source="Jamsheet cannot read this song" where="code">O Jamsheet não consegue ler esta música</string>
   <string source="Mute track" where="code">Silenciar faixa</string>
   <string source="Solo track" where="code">Colocar faixa em solo</string>
-  <string source="Groove Songs" where="code">Músicas do Groove</string>
-  <string source="Groove Song" where="code">Música do Groove</string>
+  <string source="Jamsheet Songs" where="code">Músicas do Jamsheet</string>
+  <string source="Jamsheet Song" where="code">Música do Jamsheet</string>
   <string source="All Files" where="code">Todos os arquivos</string>
   <string source="Audio / Video" where="code">Áudio / Vídeo</string>
   <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 kHz, 16 bits)</string>
@@ -141,7 +141,7 @@
   <string source="+ New Song" obsolete="true">+ Nova música</string>
   <string source="Start with an empty song" where="new_song_card">Comece com uma música vazia</string>
   <string source="Export Song..." where="menu">Exportar música...</string>
-  <string source="Could not read or write the Groove song." where="code">Não foi possível ler ou salvar a música do Groove.</string>
+  <string source="Could not read or write the Jamsheet song." where="code">Não foi possível ler ou salvar a música do Jamsheet.</string>
   <string source="Song unavailable" where="code">Música indisponível</string>
   <string source="Play" obsolete="true">Reproduzir</string>
   <string source="Forward" obsolete="true">Avançar</string>
@@ -209,8 +209,8 @@
   <string source="Could not prepare the MP3. Check available space and try again." where="code">Não foi possível preparar o MP3. Verifique o espaço disponível e tente novamente.</string>
   <string source="Could not create the link. Check your connection and try again." where="code">Não foi possível criar o link. Verifique a conexão e tente novamente.</string>
   <string source="Cover title:" where="export_media">Título da capa:</string>
-  <string source="Include Groove branding" where="export_media">Incluir logotipo do Groove</string>
-  <string source="Made with Groove" where="code">Feito com Groove</string>
+  <string source="Include Jamsheet branding" where="export_media">Incluir logotipo do Jamsheet</string>
+  <string source="Made with Jamsheet" where="code">Feito com Jamsheet</string>
   <string source="%s BPM" where="code">%s BPM</string>
   <string source="Untitled" where="export_media">Sem título</string>
 </strings>

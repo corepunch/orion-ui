@@ -115,7 +115,7 @@ static void export_portrait_cover(const export_canvas_t *canvas, irect16_t r) {
       int width = MIN(174, mark.w);
       int height = width * canvas->logo_size.y / canvas->logo_size.x;
       draw_rect_ex(canvas->logo, rect_center(mark, width, height), 0, 1.0f);
-    } else draw_text_clipped("Heading", ui_tr("Made with Groove"), &mark, secondary, TEXT_ALIGN_CENTER);
+    } else draw_text_clipped("Heading", ui_tr("Made with Jamsheet"), &mark, secondary, TEXT_ALIGN_CENTER);
   }
   irect16_t title_area = rect_split_top(rect_trim_top(safe, 98), 54);
   char title[256];
@@ -133,7 +133,7 @@ static void export_paint_backdrop(const export_canvas_t *canvas, irect16_t r) {
   fill_rect(get_sys_color(brControlBg), r);
   if (canvas->portrait) export_portrait_cover(canvas, r);
   else {
-    char title[80]; snprintf(title, sizeof(title), "Orion Groove  /  %d BPM", canvas->song->bpm);
+    char title[80]; snprintf(title, sizeof(title), "Orion Jamsheet  /  %d BPM", canvas->song->bpm);
     draw_text("Text", title, 32, 24, get_sys_color(brTextNormal));
   }
   irect16_t view = canvas->view;

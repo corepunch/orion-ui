@@ -1,6 +1,6 @@
-# Generate Groove vocals with Lyria 3 Clip
+# Generate Jamsheet vocals with Lyria 3 Clip
 
-Groove's audio production tools can call Google's Gemini API directly using
+Jamsheet's audio production tools can call Google's Gemini API directly using
 [`generate_lyria.py`](../../../../tools/groove_audio/generate_lyria.py).
 The generator uses Python's standard library; no Google SDK is required.
 This is an offline sample-production workflow, not an in-app network feature.
@@ -47,9 +47,9 @@ pending, fetch it with the same arguments plus `--resume INTERACTION_ID`.
 ## Prepare the library sample
 
 Keep the raw 30-second take as source material. Follow
-[Generating and verifying Groove samples](../../../../tools/groove_audio/sample-production.md)
+[Generating and verifying Jamsheet samples](../../../../tools/groove_audio/sample-production.md)
 to isolate any backing, select the complete phrase, observe its actual attacks,
-align with pitch preserved, and verify the final audio using Groove's decoder.
+align with pitch preserved, and verify the final audio using Jamsheet's decoder.
 At 140 BPM the requested two-bar slot is 151,200 mono frames at 44.1 kHz
 (3.428571 seconds). A duration or BPM tag alone does not verify rhythm.
 

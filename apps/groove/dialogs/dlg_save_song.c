@@ -1,4 +1,4 @@
-// iPad Save Song: asks for a name and saves into Groove's own song storage.
+// iPad Save Song: asks for a name and saves into Jamsheet's own song storage.
 
 #include "groove.h"
 
@@ -11,7 +11,7 @@ static const ctrl_binding_t kSaveBindings[] = {
 static bool save_named(window_t *win, const char *name) {
   char path[sizeof(g_app->filename)];
   if (!g_app->songs_dir[0]) {
-    message_box(win, ui_tr("Groove's song storage is unavailable on this device."), ui_tr("Save failed"), MB_OK);
+    message_box(win, ui_tr("Jamsheet's song storage is unavailable on this device."), ui_tr("Save failed"), MB_OK);
     return false;
   }
   if (!song_path_for_name(name, path, sizeof(path))) {
@@ -25,7 +25,7 @@ static bool save_named(window_t *win, const char *name) {
     if (message_box(win, prompt, ui_tr("Save Song"), MB_YESNO) != IDYES) return false;
   }
   if (!app_save_song(path)) {
-    message_box(win, ui_tr("Could not save the Groove song. Check the available space."), ui_tr("Save failed"), MB_OK);
+    message_box(win, ui_tr("Could not save the Jamsheet song. Check the available space."), ui_tr("Save failed"), MB_OK);
     return false;
   }
   return true;

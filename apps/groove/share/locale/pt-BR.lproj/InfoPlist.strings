@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Grave seus próprios sons e vozes para usar como amostras nas músicas do Groove.</string>
+	<string>Grave seus próprios sons e vozes para usar como amostras nas músicas do Jamsheet.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Salve na fototeca os vídeos exportados da linha do tempo do Groove.</string>
+	<string>Salve na fototeca os vídeos exportados da linha do tempo do Jamsheet.</string>
 </dict>
 </plist>

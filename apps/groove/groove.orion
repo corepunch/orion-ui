@@ -2,7 +2,7 @@
 <orion
     version="1"
     name="groove"
-    title="Groove"
+    title="Jamsheet"
     root="apps/groove">
 
     <plugins>
@@ -87,7 +87,7 @@
         </table>
       </database>
 
-      <!-- iPad: songs saved in Groove's own storage (axSettingsDirectory()/Songs), newest first. -->
+      <!-- iPad: songs saved in Jamsheet's own storage (axSettingsDirectory()/Songs), newest first. -->
       <database name="songs" class="groove_songs_db">
         <table name="songs" model="song_entry_t">
           <field name="id" type="integer" key="YES" />
@@ -146,7 +146,7 @@
             <TextBox name="title" placeholder="Untitled" />
           </Column>
         </GridView>
-        <CheckBox name="branding" text="Include Groove branding" />
+        <CheckBox name="branding" text="Include Jamsheet branding" />
         <Label name="details" text="Export the whole song, with current mute, solo and block levels." height="44" />
         <Label name="status" text="Ready to export." height="44" />
         <StackView name="actions" orientation="horizontal" spacing="6">
@@ -228,7 +228,7 @@
         </StackView>
       </form>
 
-      <form name="main_window" title="Groove" width="1180" height="760"
+      <form name="main_window" title="Jamsheet" width="1180" height="760"
             flags="WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE" spacing="0" padding="0">
         <Toolbar>
           <Button command="file.new" icon="phosphor-file-plus" tooltip="New Song" />

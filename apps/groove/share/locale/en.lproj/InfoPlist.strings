@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Record your own sounds and vocals as samples in Groove songs.</string>
+	<string>Record your own sounds and vocals as samples in Jamsheet songs.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Save exported Groove timeline videos to your photo library.</string>
+	<string>Save exported Jamsheet timeline videos to your photo library.</string>
 </dict>
 </plist>

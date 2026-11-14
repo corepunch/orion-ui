@@ -63,7 +63,7 @@ def main():
         'CFBundleIdentifier': args.bundle_id,
         'CFBundleExecutable': args.app,
         'CFBundleName': args.app,
-        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Groove', 'winamp': 'Winamp', 'ledger': 'Ledger'}[args.app],
+        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Jamsheet', 'winamp': 'Winamp', 'ledger': 'Ledger'}[args.app],
         'CFBundleDevelopmentRegion': 'en',
         'CFBundleInfoDictionaryVersion': '6.0',
         'CFBundlePackageType': 'APPL',
@@ -93,8 +93,8 @@ def main():
     if phone:
         info.update({'UIStatusBarHidden': True, 'UIViewControllerBasedStatusBarAppearance': False})
     if args.app == 'groove':
-        info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Groove songs.'
-        info['NSPhotoLibraryAddUsageDescription'] = 'Save exported Groove timeline videos to your photo library.'
+        info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Jamsheet songs.'
+        info['NSPhotoLibraryAddUsageDescription'] = 'Save exported Jamsheet timeline videos to your photo library.'
     (target / 'Info.plist').write_bytes(plistlib.dumps(info))
     (target / 'PkgInfo').write_bytes(b'APPL????')
     print('Packaged ' + str(target))

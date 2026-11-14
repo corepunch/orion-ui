@@ -1,4 +1,4 @@
-// Render marketing layouts around unchanged captures of the real Groove UI.
+// Render marketing layouts around unchanged captures of the real Jamsheet UI.
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const sharp = require('sharp');
@@ -54,7 +54,7 @@ async function main() {
     app.id = 0;
     const brand = (light, number) => `<clipPath id="brand-mask"><rect x="${140*X}" y="${80*Y}" width="${80*U}" height="${80*U}" rx="${18*U}"/></clipPath>
       <image x="${140*X}" y="${80*Y}" width="${80*U}" height="${80*U}" href="${icon}" clip-path="url(#brand-mask)"/>` +
-      text('Groove', 245, 143, 58, light ? '#ffffff' : '#133a91') +
+      text('Jamsheet', 245, 143, 58, light ? '#ffffff' : '#133a91') +
       text(`${number} / 05`, 2612, 138, 32, light ? '#c8dbff' : '#57709c', 500, 'end', 4);
     const svg = (inside, dark) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1645c7"/><stop offset="1" stop-color="#06286f"/></linearGradient>

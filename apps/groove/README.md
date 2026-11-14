@@ -1,4 +1,4 @@
-# Building Groove
+# Building Jamsheet
 
 The default Make build does not require `third_party/shine/`. WAV, M4A (AAC),
 and MP4 export remain available through their existing backends. MP3 import
@@ -34,7 +34,7 @@ and optionally include the editable project. See [hosting and verification](docs
 
 ## Sample packs
 
-Groove's App Store builds include a permanent starter bank: 175 of the 583
+Jamsheet's App Store builds include a permanent starter bank: 175 of the 583
 built-in sounds, including all sounds used in the three demos. Every sound can
 be auditioned. Sounds marked **Preview** require a pack before they can be
 dragged from the library into a song. Recordings and clips already in a song
@@ -54,7 +54,7 @@ again. Verify that other packs still require a purchase, then verify the full
 unlock, relaunch, and Restore Purchases. Use a signed TestFlight build to verify
 the App Store Connect catalog and the sandbox purchase sheet and restore flow.
 
-The seven products belong to [Groove in App Store Connect](https://appstoreconnect.apple.com/apps/6821380428/distribution).
+The seven products belong to [Jamsheet in App Store Connect](https://appstoreconnect.apple.com/apps/6821380428/distribution).
 Attach a screenshot of **Sample Packs…** with the purchase buttons visible to
 each product's App Review information. Submit the first purchases with the new
 app build that contains the store. A free download price is required for the

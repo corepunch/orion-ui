@@ -1,4 +1,4 @@
-// Read-only database view over Groove's synthesized block catalogue.
+// Read-only database view over Jamsheet's synthesized block catalogue.
 #include "groove.h"
 
 static const db_field_msg_binding_t kBlockBindings[] = {

@@ -1,4 +1,4 @@
-// FormEditor design-time stand-ins for Groove's runtime-only controls.
+// FormEditor design-time stand-ins for Jamsheet's runtime-only controls.
 #include <orion/ui.h>
 #include <orion/commctl/commctl.h>
 
@@ -30,4 +30,4 @@ static const fe_component_desc_t kGrooveComponents[] = {
     .default_h_align = LAYOUT_ALIGN_STRETCH, .default_v_align = LAYOUT_ALIGN_STRETCH },
 };
 
-GEM_CLASSES(kGrooveComponents, "Groove component previews", FE_PLUGIN_VERSION)
+GEM_CLASSES(kGrooveComponents, "Jamsheet component previews", FE_PLUGIN_VERSION)

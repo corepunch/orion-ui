@@ -32,7 +32,7 @@
     "master": "PCM24 WAV",
     "delivery": "libmp3lame 320 kbps MP3 with Xing gapless header and TBPM tag"
   },
-  "verification_limits": "Internal offsets are forward envelope proxies, not independent auditory validation. Raw audio and source isolation must be retained to reproduce the edits. Final decoder is Groove minimp3_ex.",
+  "verification_limits": "Internal offsets are forward envelope proxies, not independent auditory validation. Raw audio and source isolation must be retained to reproduce the edits. Final decoder is Jamsheet minimp3_ex.",
   "samples": [
     {
       "file": "01_feel_it_140bpm_1bar.mp3",

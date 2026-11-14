@@ -213,7 +213,7 @@ static void test_motion_video(void) {
 }
 
 int main(void) {
-  TEST_START("Groove export");
+  TEST_START("Jamsheet export");
   test_export_formats();
   test_audio_export();
   test_video_clock();

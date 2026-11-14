@@ -1,4 +1,4 @@
-// Groove — a block-based music sequencer in the spirit of Music 2000 and
+// Jamsheet — a block-based music sequencer in the spirit of Music 2000 and
 // Dance eDJay: drag pre-made musical blocks from the bin onto the sheet.
 
 #include "groove.h"
@@ -95,6 +95,6 @@ void gem_shutdown(void) {
   app_shutdown(g_app);
 }
 
-GEM_DEFINE("Groove", "0.1", gem_init, gem_shutdown, NULL)
+GEM_DEFINE("Jamsheet", "0.1", gem_init, gem_shutdown, NULL)
 
-GEM_STANDALONE_MAIN("Orion Groove", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H, g_app->win, g_app->accel)
+GEM_STANDALONE_MAIN("Orion Jamsheet", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H, g_app->win, g_app->accel)

@@ -106,7 +106,7 @@ Card {
 Card:hover   { background: color-mix(in srgb, var(--card-face), var(--button-hover)); }
 Card:checked { outline: var(--ring-width) solid var(--accent); }
 
-/* A tinted card (Groove's blocks; theme_draw_ex with CTRL_PLASTIC) is the plastic material over its
+/* A tinted card (Jamsheet's blocks; theme_draw_ex with CTRL_PLASTIC) is the plastic material over its
    whole bounds. The window's --surface is the tint. The margin is the shadow's room and the border
    the ring's, as on Card (--shadow-size and --ring-width above); :hover, :active, :checked and
    :disabled drive the shader. A theme may repaint it flat with a plain background and a border-color. */

@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Registra suoni e voci da usare come campioni nei tuoi brani Groove.</string>
+	<string>Registra suoni e voci da usare come campioni nei tuoi brani Jamsheet.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Salva nella libreria Foto i video esportati dalla timeline di Groove.</string>
+	<string>Salva nella libreria Foto i video esportati dalla timeline di Jamsheet.</string>
 </dict>
 </plist>

@@ -19,7 +19,7 @@ CFLAGS += -DORION_ALLOW_HIGHDPI=$(ALLOW_HIGHDPI)
 # Optimisation is opt-in: `make clean && make scener OPT=-O2` renders reels about 3x faster.
 OPT ?=
 CFLAGS += $(OPT)
-# Optional Groove MP3 export; requires apps/groove/third_party/shine/.
+# Optional Jamsheet MP3 export; requires apps/groove/third_party/shine/.
 GROOVE_USE_SHINE ?= 0
 CFLAGS += $(if $(filter 1,$(GROOVE_USE_SHINE)),-DGROOVE_USE_SHINE)
 
@@ -305,7 +305,7 @@ app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call a
 
 all: library apps tools $(if $(IS_WIN),,gems)
 
-# Build and run Groove: empty sheet, or preloaded with the demo song.
+# Build and run Jamsheet: empty sheet, or preloaded with the demo song.
 groove: share $(BIN_DIR)/groove$(EXE_EXT)
 	@cd $(BIN_DIR) && ./groove$(EXE_EXT)
 groove-demo: share $(BIN_DIR)/groove$(EXE_EXT)
@@ -719,13 +719,13 @@ help:
 	@echo "library   - Build shared libraries"
 	@echo "apps      - Build applications"
 	@echo "scener    - Build the Scener application"
-	@echo "groove    - Build and run Groove (empty); groove-demo preloads the demo song"
+	@echo "groove    - Build and run Jamsheet (empty); groove-demo preloads the demo song"
 	@echo "run-ledger-ru - Build and launch Russian Ledger with the original ru-2003 demo documents"
 	@echo "run-ledger-de - Build and launch German Ledger with the original de-2003 demo documents"
 	@echo "gems      - Build all .gem shared libraries"
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"
-	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Groove iPad bundles"
+	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Jamsheet iPad bundles"
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp (winamp is an iPhone app; ipad-deploy auto-selects one connected device)"
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
 	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"

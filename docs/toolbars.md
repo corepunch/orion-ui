@@ -19,7 +19,7 @@ Close and Split share the tab-strip background.
 
 An activity bar is a navigation toolbar, vertical by default. It uses the same button size
 as PencilTest's tool palette (`TB_SPACING`), theme painting, tooltips, and
-`TBSTYLE_CHECKGROUP` selection that Groove uses for its instrument filters.
+`TBSTYLE_CHECKGROUP` selection that Jamsheet uses for its instrument filters.
 Buttons send ordinary `evCommand` / `btnClicked` notifications to the parent;
 the app decides whether that command selects a page, a tool, or a filter.
 The bar sets `TOOLBAR_STYLE_SIDEBAR`, so its whole band paints as

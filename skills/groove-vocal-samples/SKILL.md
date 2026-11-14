@@ -1,13 +1,13 @@
 ---
 name: groove-vocal-samples
-description: Generate original isolated singing and scat samples for Groove, using eJay/MTV role references, prepared lyrics and prompts, pitch-preserving 140 BPM alignment, and decoded-audio waveform verification. Use for new vocal packs or correcting existing vocal timing.
+description: Generate original isolated singing and scat samples for Jamsheet, using eJay/MTV role references, prepared lyrics and prompts, pitch-preserving 140 BPM alignment, and decoded-audio waveform verification. Use for new vocal packs or correcting existing vocal timing.
 ---
 
-# Groove vocal samples
+# Jamsheet vocal samples
 
 Produce original vocal assets that begin immediately, occupy exact musical slots, and place their main sung attacks on the intended grid. A BPM tag and an exact file duration do not establish internal timing.
 
-Use the current checkout as the repository root. The original workspace is `/Users/igor/Developer/mapview/ui`. Respect its AGENTS.md and the user's destination, format, voice, count and rhythm. For direct Groove delivery, use `apps/groove/share/vocals/` and register the assets. For correction-only or skill/documentation requests, do not start new paid generations.
+Use the current checkout as the repository root. The original workspace is `/Users/igor/Developer/mapview/ui`. Respect its AGENTS.md and the user's destination, format, voice, count and rhythm. For direct Jamsheet delivery, use `apps/groove/share/vocals/` and register the assets. For correction-only or skill/documentation requests, do not start new paid generations.
 
 ## Study references and voice
 
@@ -49,10 +49,10 @@ Select one complete phrase; remove instrumental intros, repetitions and unwanted
 
 1. Annotate independently observed source landmarks in seconds. Record initial phoneme, main word/note attacks, and final release endpoint. Preserve consonant-to-vowel relationships and legato.
 2. Map source landmarks to planned beats. Keep requested and final schedules separately when a musical correction changes them. A two-to-four-bar change can preserve natural phrasing within a user's two-to-four-bar request; document it.
-3. Stretch intervals while preserving pitch and attack transients, apply short joins/fades, and pad the tail to the exact slot. Whole-file trimming/resampling cannot fix internal rhythm. Bundled [align_vocals.py](scripts/align_vocals.py) implements the proven FFmpeg `atempo` workflow and verifies output through the current Groove decoder. Read its schema/defaults in [alignment-and-qa.md](references/alignment-and-qa.md).
+3. Stretch intervals while preserving pitch and attack transients, apply short joins/fades, and pad the tail to the exact slot. Whole-file trimming/resampling cannot fix internal rhythm. Bundled [align_vocals.py](scripts/align_vocals.py) implements the proven FFmpeg `atempo` workflow and verifies output through the current Jamsheet decoder. Read its schema/defaults in [alignment-and-qa.md](references/alignment-and-qa.md).
 4. Verify actual decoded delivery: mono 44.1 kHz, exact frames, finite/nonzero signal, no clipping, first signal within 5 ms above −55 dBFS. Container duration alone misses encoder padding. Use independently observed final attacks or preserved source-template matching; never supply planned timestamps as observed evidence.
 5. Inspect **every** before/after and final waveform. NumPy/Pillow draws real PCM with shared time/amplitude axes and beat/bar lines; SciPy STFT can expose consonants/overlap. Do not use ImageGen or fabricate waveforms. Correlation proves placement of a supplied landmark, not annotation correctness: a prior scat passed correlation with a source anchor 68 ms late, caught by visual review.
-6. Check early/late attacks, leading pauses, repeats, chopped syllables, abrupt tails and separation artifacts. Listen against a temporary click and loop in Groove if hearing is available; never export the click. State limits when only computational/visual inspection was possible; do not claim to have listened.
+6. Check early/late attacks, leading pauses, repeats, chopped syllables, abrupt tails and separation artifacts. Listen against a temporary click and loop in Jamsheet if hearing is available; never export the click. State limits when only computational/visual inspection was possible; do not claim to have listened.
 
 ## Import and preserve evidence
 

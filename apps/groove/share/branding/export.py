@@ -25,15 +25,18 @@ with sync_playwright() as p:
       c.drawImage(IMG.hero,0,0,512,512);
       const background = mk(1536,512), foreground = mk(1536,512);
       const back = background.getContext('2d'), front = foreground.getContext('2d');
-      const word = 'Groove', size = 250, tracking = size * .02;
+      const word = 'Jamsheet', room = 980;
+      let size = 250, tracking = size * .02;
       const colors = ['#ffd21e','#ff7a2a','#ff4fa0','#36c95c','#1aa6f2','#a047f2'];
-      c.font = `700 ${size}px Fred`;
-      const widths = [...word].map(ch => c.measureText(ch).width);
-      let x = 1025 - (widths.reduce((sum,w) => sum + w,0) + tracking * (word.length-1)) / 2;
+      const measure = () => { c.font = `700 ${size}px Fred`; return [...word].map(ch => c.measureText(ch).width); };
+      let widths = measure();
+      const span = () => widths.reduce((sum,w) => sum + w,0) + tracking * (word.length-1);
+      if (span() > room) { size = Math.floor(size * room / span()); tracking = size * .02; widths = measure(); }
+      let x = 1025 - span() / 2;
       [...word].forEach((ch,i) => {
         const center = x + widths[i] / 2;
-        sticker(back,ch,center,330,size,colors[i],{depth:20});
-        sticker(front,ch,center,330,size,colors[i],{depth:0,ink:'transparent'});
+        sticker(back,ch,center,330,size,colors[i % colors.length],{depth:20});
+        sticker(front,ch,center,330,size,colors[i % colors.length],{depth:0,ink:'transparent'});
         x += widths[i] + tracking;
       });
       c.drawImage(background,0,0);

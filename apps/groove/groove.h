@@ -213,7 +213,7 @@ typedef struct {
   int           selected_track;
   char          filename[512];
   bool          song_dirty;
-  char          songs_dir[512]; // iPad: Groove's own song storage, never Files/iCloud; empty on desktop
+  char          songs_dir[512]; // iPad: Jamsheet's own song storage, never Files/iCloud; empty on desktop
   char          samples_dir[512]; // reusable WAV originals
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag

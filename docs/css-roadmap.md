@@ -43,7 +43,7 @@ letter-spacing: .05em }`.
   (`Card:checked { outline }`, which now follows the corner radius) and the
   accent edge (`border-left` sharing the rounded silhouette; the rounded-rect
   shader draws it as a browser does, with the elliptical padding edge) come
-  from `base.css`; `draw_card` is gone. The plastic material (Groove's block
+  from `base.css`; `draw_card` is gone. The plastic material (Jamsheet's block
   cards) is `Card::plastic` with `background: plastic(...)`, painted by the box
   renderer; flat themes give it a plain background instead
   ([drawing.md](drawing.md)).

@@ -1,6 +1,6 @@
 # Xcode projects
 
-Generate Groove's native macOS and iPadOS targets with Python 3.9 or newer:
+Generate Jamsheet's native macOS and iPadOS targets with Python 3.9 or newer:
 
 ```sh
 python3 tools/xcode/generate.py groove --unsigned
@@ -66,7 +66,7 @@ The navigator and Compile Sources phases reference generated unity files:
 `u_audio_input.m` and the target's `u_platform_macos.m` or `u_platform_ipad.m`.
 Each unity file includes the module's sources; individual implementation files
 in C and Objective-C are not listed or compiled separately. Both Apple targets
-also compile Groove's Swift StoreKit bridge. The Engine, Application and Native Sources
+also compile Jamsheet's Swift StoreKit bridge. The Engine, Application and Native Sources
 groups follow the same structure as Orca's Xcode projects. Generated files appear
 after the first build; the application form and resources remain directly accessible.
 The normal `build/generated/` headers and Makefile-built binaries/libraries are
@@ -77,13 +77,13 @@ Both targets use `AppIcon`, generated from `apps/groove/share/icon.png` in
 DerivedData. Xcode compiles the asset catalog and merges its icon metadata into
 the app's Info.plist; replacing the source PNG updates both targets on the next build.
 
-Groove's generated Info.plists declare `ITSAppUsesNonExemptEncryption` as Boolean
+Jamsheet's generated Info.plists declare `ITSAppUsesNonExemptEncryption` as Boolean
 `false`: the Apple builds use only system-provided encryption. Keep this declaration
-in the generator so regenerating the project preserves it. Revisit it if Groove or
+in the generator so regenerating the project preserves it. Revisit it if Jamsheet or
 its linked libraries gain non-exempt encryption. New uploads include the declaration;
 already-uploaded builds still need their export compliance questionnaire completed.
 
-Only Groove is supported initially. Adding or removing sources inside existing
+Only Jamsheet is supported initially. Adding or removing sources inside existing
 modules needs no project regeneration, including common-dialog sources. Regenerate
 after changing the generator's module layout or build settings.
 Existing source edits and `.orion` changes rebuild normally. IDs and generated

@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Записывайте свои звуки и вокал, чтобы использовать их как сэмплы в песнях Groove.</string>
+	<string>Записывайте свои звуки и вокал, чтобы использовать их как сэмплы в песнях Jamsheet.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Сохраняйте экспортированные видео таймлайна Groove в медиатеку Фото.</string>
+	<string>Сохраняйте экспортированные видео таймлайна Jamsheet в медиатеку Фото.</string>
 </dict>
 </plist>

@@ -10,7 +10,7 @@ On iPad, Save File saves in Documents, accessible in Files.
 File > Export Timeline Video (Ctrl+Shift+E) makes MP4 with H.264 video and
 AAC audio at 60 fps in 16:9 (1280×720), 21:9 (1680×720), or 9:16
 (1080×1920). The 9:16 format has an editable cover title and optional
-Groove branding, enabled by default. Use **Share…** to open the system
+Jamsheet branding, enabled by default. Use **Share…** to open the system
 share sheet with the finished MP4. The image comes from the actual arrangement:
 eight tracks, a beat ruler, original block names and sample waveforms,
 zoomed to about eight bars (four in 9:16). The timeline scrolls under a
@@ -53,7 +53,7 @@ pipes rendered frames to ffmpeg's stdin; it does not spool an uncompressed
 movie. Native sharing falls back to a saved file
 and explains how to use Save File on other platforms.
 
-Validation: Groove's tests check finite WAV duration, bit-exact playback PCM,
+Validation: Jamsheet's tests check finite WAV duration, bit-exact playback PCM,
 unchanged transport, cancellation cleanup, MP3 decode, both playhead
 ratios, and that the motion video scrolls and its spectrum follows the mix. Set `GROOVE_MEDIA_TEST_OUTPUT=/tmp/groove-media` when running
 `build/bin/test_groove_export_test` for real AAC and MP4 backend integration files;

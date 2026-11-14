@@ -6,7 +6,7 @@ import soundfile as sf
 from scipy.ndimage import median_filter
 
 from common import prepare_work, work_arguments
-parser = work_arguments('Estimate and render an eight-bar A-minor Groove sketch.')
+parser = work_arguments('Estimate and render an eight-bar A-minor Jamsheet sketch.')
 args = parser.parse_args()
 root = prepare_work(args)
 out = root/'synth-study'
@@ -133,7 +133,7 @@ metadata={'source_start_seconds':origin,'study_bpm':bpm,'duration_seconds':durat
           'estimated_dominant_melody_eighth_notes':[note_name(m) for m in lead_seq],
           'estimated_chords_per_bar':progression,
           'method':'Harmonic-template pitch estimates from separated bass and melodic stems. Chords chosen from A-minor diatonic triads. Drum pattern is a generic 909-style reconstruction, not a drum transcription.',
-          'limits':'Polyphonic melody and chords are estimates; octave errors and chord-tone substitutions are possible. Voice patches and effects are unchanged Groove defaults. This is a feasibility sketch, not a note-perfect or timbre-matched recreation.'}
+          'limits':'Polyphonic melody and chords are estimates; octave errors and chord-tone substitutions are possible. Voice patches and effects are unchanged Jamsheet defaults. This is a feasibility sketch, not a note-perfect or timbre-matched recreation.'}
 (out/'reconstruction-analysis.json').write_text(json.dumps(metadata,indent=2))
 print(json.dumps(metadata,indent=2),flush=True)
 

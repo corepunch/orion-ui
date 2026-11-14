@@ -10,7 +10,7 @@ A workspace owns document and utility windows. Document content uses `DOCK_FILL`
 menus, toolbars, and utility panes reserve bands at its edges. Floating panes remain
 children of the same workspace. Docking changes geometry and presentation without
 recreating controls, transferring ownership, or losing text, selection, or focus.
-Groove uses a fill arrangement and a bottom Library pane. Pencil Test uses the same
+Jamsheet uses a fill arrangement and a bottom Library pane. Pencil Test uses the same
 manager through application chrome for its menu, command toolbar, tools, options,
 and floating color palette. Its frame controls share the left tool strip.
 Ledger uses the same chrome with a docked menu and no toolbar band, passing
@@ -143,5 +143,5 @@ saved layouts across application launches are not implemented. They can build on
 the explicit side, ownership, and preferred-geometry state without adding app-level
 pointer routing.
 
-Regression coverage: `tests/dock_test.c`, toolbar/menu tests, Groove integration
+Regression coverage: `tests/dock_test.c`, toolbar/menu tests, Jamsheet integration
 tests, and Image Editor/Pencil Test layout and UI tests.

@@ -1,4 +1,4 @@
-Groove piano, bass guitar and guitar samples
+Jamsheet piano, bass guitar and guitar samples
 
 Upstream: FluidR3 3.1, Frank Wen
 Archive: https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz
@@ -9,7 +9,7 @@ acoustic.sf2 contains only the seven presets listed in acoustic.json:
 Yamaha Grand Piano, Bright Yamaha Grand, Fingered Bass, Steel String Guitar,
 Clean Guitar, Palm Muted Guitar and Distortion Guitar.
 No drum, synth, pad or choir preset is included. Wah uses Clean Guitar with a
-filter in Groove. The remaining Groove instruments retain their original models.
+filter in Jamsheet. The remaining Jamsheet instruments retain their original models.
 
 The subset preserves the original PCM samples and key/velocity zones, envelopes,
 loop points and tuning. acoustic.json records source/output SHA-256 values.

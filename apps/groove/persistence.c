@@ -1,4 +1,4 @@
-// Versioned project files for Groove arrangements.
+// Versioned project files for Jamsheet arrangements.
 
 #include "groove.h"
 #include <inttypes.h>
@@ -286,7 +286,7 @@ bool app_open_song(const char *path) {
   return true;
 }
 
-// ── Groove's own song storage (iPad) ─────────────────────────────────────
+// ── Jamsheet's own song storage (iPad) ─────────────────────────────────────
 // iPad songs live in the app's private Application Support area, like a
 // reader app's library, never in Files or iCloud. Desktop saves anywhere on disk.
 

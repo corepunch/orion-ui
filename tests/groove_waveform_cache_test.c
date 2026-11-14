@@ -201,7 +201,7 @@ static void test_card_margin(void) {
 }
 
 int main(void) {
-  TEST_START("Groove waveform cache");
+  TEST_START("Jamsheet waveform cache");
   test_shared_cache();
   test_failed_refresh();
   test_grid_viewport();

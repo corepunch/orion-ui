@@ -1,4 +1,4 @@
-// Database view over the songs saved in Groove's own storage: one row per
+// Database view over the songs saved in Jamsheet's own storage: one row per
 // .groove file in db->source_path, newest first. dbLoad rescans the folder;
 // dbDelete removes the file behind a row.
 #include "groove.h"

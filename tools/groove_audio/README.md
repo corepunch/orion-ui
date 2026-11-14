@@ -1,18 +1,18 @@
-# Groove audio study tools
+# Jamsheet audio study tools
 
 For original sample creation and grid verification, start with
-[Generating and verifying Groove samples](sample-production.md). It covers
+[Generating and verifying Jamsheet samples](sample-production.md). It covers
 generation prompts, isolation, musical attack alignment, gapless MP3 checks
-through Groove's decoder, and reproducible Python/Pillow waveform comparisons.
+through Jamsheet's decoder, and reproducible Python/Pillow waveform comparisons.
 `verify_sample.py` and `decode_sample.c` implement the file checks and plots.
 
 For direct Gemini API vocal generation, see
-[Lyria 3 Clip for Groove](../../apps/groove/docs/lyria-clip/README.md).
+[Lyria 3 Clip for Jamsheet](../../apps/groove/docs/lyria-clip/README.md).
 `generate_lyria.py` reads `GEMINI_API_KEY` from the environment, sends a prepared
 prompt, and preserves raw audio and generation evidence in an ignored workspace.
 
 These scripts preserve the workflow used to isolate vocals from **Take Me Higher**,
-cut WAV samples, and test whether its backing could be approximated with Groove's
+cut WAV samples, and test whether its backing could be approximated with Jamsheet's
 existing synthesizer. Source recordings, generated samples, model weights and
 rendered studies are deliberately excluded from this directory's Git history.
 
@@ -156,7 +156,7 @@ chords from that key; adapting it to another key requires changing its chord tab
 Polyphonic estimates can confuse octaves and chord tones with the melody. The 909
 pattern is generic, not a transcription of the recording's drums.
 
-| Part | Existing Groove voice / effect |
+| Part | Existing Jamsheet voice / effect |
 |---|---|
 | Bass | `I_MOOG`, dry |
 | Lead alternatives | `I_SAW`, `I_HPIANO`, `I_PLUCK`, `X_ECHO` |
@@ -166,14 +166,14 @@ pattern is generic, not a transcription of the recording's drums.
 Outputs in `synth-study/` include individual PCM24 WAVs, the combined sketch,
 reference backing, and `reference-then-groove.wav` (reference, one second of silence,
 then synth). CSV events use `start_seconds,duration_seconds,MIDI_note,gain`, without
-a header. Packaging adds editable MIDI, Groove recipe notes and ZIP archives for
+a header. Packaging adds editable MIDI, Jamsheet recipe notes and ZIP archives for
 both output packs. MIDI GM programs are placeholders; only the rendered WAVs use
-Groove's voices. Packaging validates levels, formats, sample ordering and ZIP
+Jamsheet's voices. Packaging validates levels, formats, sample ordering and ZIP
 integrity, and does not apply further fades when repeated.
 
 This demonstrates which sound families the existing mono synth can approximate.
 It is not an exact melody or timbre recreation; these study scripts themselves
-do not implement sample playback. Groove now has MP3 vocal sample rows, covered
+do not implement sample playback. Jamsheet now has MP3 vocal sample rows, covered
 in the sample-production guide. More accurate matching needs note corrections, patch
 tuning and possibly stereo voices. See
 [the engine guide](../../apps/groove/docs/sound-synthesis.md) for recipe syntax.

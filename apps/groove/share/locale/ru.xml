@@ -33,7 +33,7 @@
   <string source="Listen" where="record_sample">Слушать</string>
   <string source="Save Sample" where="record_sample">Сохранить сэмпл</string>
   <string source="Cancel" where="record_sample,song_browser,save_song">Отмена</string>
-  <string source="Groove" where="main_window">Groove</string>
+  <string source="Jamsheet" where="main_window">Jamsheet</string>
   <string source="Library" where="library_window">Библиотека</string>
   <string source="Rewind (Home)" where="main_window">В начало (Home)</string>
   <string source="Play / pause (Space)" where="main_window">Пуск / Пауза (Пробел)</string>
@@ -58,7 +58,7 @@
   <string source="1 bar" where="code">1 такт</string>
   <string source="2 bars" where="code">2 такта</string>
   <string source="4 bars" where="code">4 такта</string>
-  <string source="Enable Microphone for Groove in system settings." where="code">Разрешите Groove доступ к микрофону в настройках.</string>
+  <string source="Enable Microphone for Jamsheet in system settings." where="code">Разрешите Jamsheet доступ к микрофону в настройках.</string>
   <string source="Microphone recording is unavailable on this platform." where="code">Запись недоступна на этой платформе.</string>
   <string source="Allow microphone access, then press Record again." where="code">Разрешите доступ и нажмите «Записать» ещё раз.</string>
   <string source="Microphone unavailable. Check access and the input device." where="code">Микрофон недоступен. Проверьте доступ и устройство.</string>
@@ -68,7 +68,7 @@
   <string source="Enter a sample name." where="code">Введите название сэмпла.</string>
   <string source="Could not save the sample. Check available space." where="code">Не удалось сохранить сэмпл. Проверьте свободное место.</string>
   <string source="Save failed" where="code">Ошибка сохранения</string>
-  <string source="Could not read or write the Groove project." where="code">Не удалось прочитать или записать проект Groove.</string>
+  <string source="Could not read or write the Jamsheet project." where="code">Не удалось прочитать или записать проект Jamsheet.</string>
   <string source="Project unavailable" where="code">Проект недоступен</string>
   <string source="Export Audio..." where="menu,main_window">Экспортировать аудио...</string>
   <string source="Share Audio..." where="menu">Поделиться аудио...</string>
@@ -97,13 +97,13 @@
   <string source="Exporting: %s%%" where="code">Экспорт: %s%%</string>
   <string source="Cancelling..." where="code">Отмена...</string>
   <string source="Not enough memory to prepare the export." where="code">Недостаточно памяти для подготовки экспорта.</string>
-  <string source="Could not open this Groove song. The file may be damaged or use an unsupported version." where="code">Не удалось открыть песню Groove. Возможно, файл повреждён или создан в неподдерживаемой версии.</string>
+  <string source="Could not open this Jamsheet song. The file may be damaged or use an unsupported version." where="code">Не удалось открыть песню Jamsheet. Возможно, файл повреждён или создан в неподдерживаемой версии.</string>
   <string source="Open failed" where="code">Ошибка открытия</string>
-  <string source="Could not save the Groove song. Check the filename and available space." where="code">Не удалось сохранить песню Groove. Проверьте имя файла и свободное место.</string>
-  <string source="Could not save the Groove song. Check the available space." where="code">Не удалось сохранить песню Groove. Проверьте свободное место.</string>
-  <string source="Could not load this demo song. Check that Groove's demo files are installed." where="code">Не удалось загрузить демопесню. Проверьте, установлены ли демофайлы Groove.</string>
+  <string source="Could not save the Jamsheet song. Check the filename and available space." where="code">Не удалось сохранить песню Jamsheet. Проверьте имя файла и свободное место.</string>
+  <string source="Could not save the Jamsheet song. Check the available space." where="code">Не удалось сохранить песню Jamsheet. Проверьте свободное место.</string>
+  <string source="Could not load this demo song. Check that Jamsheet's demo files are installed." where="code">Не удалось загрузить демопесню. Проверьте, установлены ли демофайлы Jamsheet.</string>
   <string source="Demo unavailable" where="code">Демо недоступно</string>
-  <string source="Groove's song storage is unavailable on this device." where="code">Хранилище песен Groove недоступно на этом устройстве.</string>
+  <string source="Jamsheet's song storage is unavailable on this device." where="code">Хранилище песен Jamsheet недоступно на этом устройстве.</string>
   <string source="Enter a song name without slashes or colons." where="code">Введите название песни без косых черт и двоеточий.</string>
   <string source="A song named &quot;%s&quot; already exists. Replace it?" where="code">Песня «%s» уже существует. Заменить её?</string>
   <string source="Delete &quot;%s&quot;? This cannot be undone." where="code">Удалить «%s»? Это действие нельзя отменить.</string>
@@ -114,11 +114,11 @@
   <string source="%s BPM  -  empty  -  %s" where="code">%s уд/мин — пустая песня — %s</string>
   <string source="%s BPM  -  Bars: %s  -  %s" where="code">%s уд/мин — тактов: %s — %s</string>
   <string source="No sounds in this family" where="code">В этой категории нет звуков</string>
-  <string source="Groove cannot read this song" where="code">Не удалось прочитать песню</string>
+  <string source="Jamsheet cannot read this song" where="code">Не удалось прочитать песню</string>
   <string source="Mute track" where="code">Отключить звук дорожки</string>
   <string source="Solo track" where="code">Соло дорожки</string>
-  <string source="Groove Songs" where="code">Песни Groove</string>
-  <string source="Groove Song" where="code">Песня Groove</string>
+  <string source="Jamsheet Songs" where="code">Песни Jamsheet</string>
+  <string source="Jamsheet Song" where="code">Песня Jamsheet</string>
   <string source="All Files" where="code">Все файлы</string>
   <string source="Audio / Video" where="code">Аудио / видео</string>
   <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 кГц, 16 бит)</string>
@@ -141,7 +141,7 @@
   <string source="+ New Song" obsolete="true">+ Новая композиция</string>
   <string source="Start with an empty song" where="new_song_card">Начать с пустой композиции</string>
   <string source="Export Song..." where="menu">Экспортировать песню...</string>
-  <string source="Could not read or write the Groove song." where="code">Не удалось прочитать или сохранить песню Groove.</string>
+  <string source="Could not read or write the Jamsheet song." where="code">Не удалось прочитать или сохранить песню Jamsheet.</string>
   <string source="Song unavailable" where="code">Песня недоступна</string>
   <string source="Play" obsolete="true">Играть</string>
   <string source="Forward" obsolete="true">Вперёд</string>
@@ -209,8 +209,8 @@
   <string source="Could not prepare the MP3. Check available space and try again." where="code">Не удалось подготовить MP3. Проверьте свободное место и повторите попытку.</string>
   <string source="Could not create the link. Check your connection and try again." where="code">Не удалось создать ссылку. Проверьте подключение и повторите попытку.</string>
   <string source="Cover title:" where="export_media">Название на обложке:</string>
-  <string source="Include Groove branding" where="export_media">Показать логотип Groove</string>
-  <string source="Made with Groove" where="code">Сделано в Groove</string>
+  <string source="Include Jamsheet branding" where="export_media">Показать логотип Jamsheet</string>
+  <string source="Made with Jamsheet" where="code">Сделано в Jamsheet</string>
   <string source="%s BPM" where="code">%s уд/мин</string>
   <string source="Untitled" where="export_media">Без названия</string>
 </strings>

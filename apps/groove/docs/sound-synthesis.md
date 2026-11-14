@@ -1,6 +1,6 @@
-# How Groove makes its sounds
+# How Jamsheet makes its sounds
 
-Groove combines synthesized drums and electronic voices with sampled piano, bass guitar and guitar, plus original generated MP3 vocal samples. This document explains how recipes and samples become blocks, how blocks are tagged, and what the approach cannot do.
+Jamsheet combines synthesized drums and electronic voices with sampled piano, bass guitar and guitar, plus original generated MP3 vocal samples. This document explains how recipes and samples become blocks, how blocks are tagged, and what the approach cannot do.
 
 The main sound code is:
 
@@ -117,7 +117,7 @@ No separate snare or hat patterns were added. New entries are appended to keep
 saved source IDs stable. The local eJay catalogue does contain individual parts:
 its Dance product lists 55 snare and 52 hat clip files. Its other products also
 have loop groups. Those are file counts, including variations, not counts of
-unique musical ideas; their presence does not set Groove's desired balance.
+unique musical ideas; their presence does not set Jamsheet's desired balance.
 Commercial reference audio is not included in the app.
 
 `tests/groove_synth_test.c` checks high-note tuning, sustained gates, palm-mute
@@ -191,7 +191,7 @@ The approach follows [FabFilter's filter/envelope guidance](https://www.fabfilte
 and the oversampling and pre-decimation filtering principles documented by
 [JUCE](https://docs.juce.com/develop/classjuce_1_1dsp_1_1Oversampling.html) and
 [MathWorks](https://www.mathworks.com/help/signal/ug/signal-filtering-before-downsampling.html).
-The filters and synthesis remain implemented in Groove; no new DSP dependency
+The filters and synthesis remain implemented in Jamsheet; no new DSP dependency
 or audio asset is added.
 
 Validation: all six synth tests pass, including alias suppression, early release,
@@ -209,7 +209,7 @@ and drum models are unchanged by this revision.
 
 Vocal `M(...)` rows play original generated MP3 samples from `share/vocals/`.
 Their production and timing checks are documented in
-[Generating and verifying Groove samples](../../../tools/groove_audio/sample-production.md).
+[Generating and verifying Jamsheet samples](../../../tools/groove_audio/sample-production.md).
 The [October 9 batch catalogue](vocals-2026-10-09/index.csv) adds 30 female samples:
 18 lyrical hooks and 12 wordless scat, vowel or humming phrases. There are 21
 two-bar and nine four-bar slots at 140 BPM. The
@@ -227,7 +227,7 @@ rap and hype samples: eight two-bar and twelve four-bar slots at 140 BPM.
 The [manifest](male-rap-2026-10-09/manifest.json) preserves requested and delivered
 lyrics, generation task IDs through `tasks.json`, source landmarks and processing
 settings. The [verification](male-rap-2026-10-09/verification.json) checks the actual
-Groove decoder output; every before/after and final waveform was visually reviewed.
+Jamsheet decoder output; every before/after and final waveform was visually reviewed.
 Speech recognition is advisory and has ambiguous results for several calls.
 Listening-based quality, voice consistency and complete backing removal remain
 unverified. Raw takes, stems and PCM masters stay in the ignored audio work folder.
@@ -384,7 +384,7 @@ A typical synthesized block renders in about 10 ms unoptimized. The slowest, a f
 
 - **Sampled voices need their bank.** Piano, bass guitar and guitars use the bundled bank in `share/instruments/`. The 61 vocal blocks use MP3s from `share/vocals/`. The rest of the library uses synthesis.
 - **Electronic sounds are close; acoustic ones are sketches.** Drum machines, acid, FM bass, saw stacks and noise sweeps are what the original hardware did, so they hold up. Strings, brass, choir and upright bass remain simple models. Piano, bass guitar and guitar now use multisamples; their perceived quality still requires listening review.
-- **Mono.** A block is one channel. The reference also stored mono clips and split wide sounds into L and R halves; Groove has no stereo pairs, and chorus here only thickens the sound.
+- **Mono.** A block is one channel. The reference also stored mono clips and split wide sounds into L and R halves; Jamsheet has no stereo pairs, and chorus here only thickens the sound.
 - **One fixed sound per block.** There is no per-clip pitch, filter or volume. A block in another key needs another row.
 - **One key.** Everything tonal is in A minor. That keeps blocks compatible and limits harmony to the chords of that key.
 - **Fixed effect settings.** Reverb, echo and drive have one setting each; a row can only switch them on.
@@ -392,14 +392,14 @@ A typical synthesized block renders in about 10 ms unoptimized. The slowest, a f
 - **Decay times do not follow tempo.** Envelopes are in seconds, so at 180 BPM long kicks overlap and at 70 BPM short sounds leave gaps.
 - **Folded tails.** A `LOOP` or `WIDE` block starts with the tail of its own ending, which is right when it repeats and slightly wrong the first time it plays.
 - **A small pause on first use.** A block that was never rendered is rendered on click or drop. On a slow machine a long pad can take a noticeable moment.
-- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 583 blocks, including 61 vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
+- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Jamsheet has 583 blocks, including 61 vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
 - **Not checked by ear in CI.** The tests verify that every block renders, is finite, levelled and the right length. They cannot tell whether it sounds good.
 
 ## Adding a block
 
 1. Add a row to `kDefs` in `library.c`, under the genre it mainly belongs to. Pick the family, the genre tags, the bars, a kit or instrument, effect flags and the pattern. Vocal sample rows use `M(...)` and a matching MP3 in `share/vocals/`.
 2. If no existing voice fits, add one to `synth.c`, give it a name in `sy_inst_t` and a case in `sy_voice()`.
-3. Run the Groove tests. `test_blocks` renders every row and fails on a pattern that does not fit, a duplicate name, silence or a bad level.
+3. Run the Jamsheet tests. `test_blocks` renders every row and fails on a pattern that does not fit, a duplicate name, silence or a bad level.
 4. Listen to it in the app next to a kick and a bass from the same genre.
 
 ## Studying a reference recording

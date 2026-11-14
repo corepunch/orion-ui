@@ -1,4 +1,4 @@
-# Image Editor, Pencil Test and Groove on iPad
+# Image Editor, Pencil Test and Jamsheet on iPad
 
 These are separate, statically linked iPad apps built directly with Xcode SDK
 commands, following `books`' Makefile workflow. No Xcode project or third-party
@@ -7,8 +7,8 @@ iOS dependencies are required. The default deployment target is iPadOS 16.
 ```sh
 make ipad-all                         # all three device bundles
 make ipad APP=imageeditor         # one device bundle
-make ipad APP=groove              # Groove device bundle
-make ipad-run APP=groove          # build, install, launch Groove in Simulator
+make ipad APP=groove              # Jamsheet device bundle
+make ipad-run APP=groove          # build, install, launch Jamsheet in Simulator
 make ipad-simulator APP=penciltest
 make ipad-run APP=penciltest       # build, install, launch in Simulator
 make list-devices
@@ -70,7 +70,7 @@ page margin, and extend its tile background to square edges for the iPad mask.
 `tools/ipad/bundle.py` produces the required icon sizes with `sips` and compiles
 the asset catalog with `actool`.
 
-Groove uses `apps/groove/share/icon.png` as its universal 1024×1024 master.
+Jamsheet uses `apps/groove/share/icon.png` as its universal 1024×1024 master.
 The same opaque PNG ships with the app's shared resources and supplies every
 iPad icon size. It was redrawn with the built-in imagegen tool from the supplied
 music-note character reference, preserving its headphones, wink, glossy yellow

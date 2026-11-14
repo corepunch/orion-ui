@@ -318,7 +318,7 @@ Use only [Phosphor](https://phosphoricons.com/) for app and UI icons.
 
 # Sample reference
 
-Groove sound, role, and timbre decisions are judged against two local WAV
+Jamsheet sound, role, and timbre decisions are judged against two local WAV
 libraries. They are listed in `.gitignore`. Leave them untracked.
 
 | Library | Path | Catalogue |
@@ -330,7 +330,7 @@ Read the catalogue, then the clip. Dance eJay folders are musical families. MTV
 folders are the instrument pool; the genre of a riff is the `genre` column.
 The eJay container format is `apps/groove/docs/dance-ejay-pxd.md`.
 
-Keep the commercial audio and the original titles out of the app. Groove
+Keep the commercial audio and the original titles out of the app. Jamsheet
 synthesizes or records its own material in the same roles.
 
 # Repository layout

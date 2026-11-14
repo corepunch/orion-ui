@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Align reviewed vocal landmarks to Groove's 140 BPM grid and verify decoded MP3s.
+"""Align reviewed vocal landmarks to Jamsheet's 140 BPM grid and verify decoded MP3s.
 
-Requires NumPy, SciPy, SoundFile, Pillow, imageio-ffmpeg and the Groove checkout.
+Requires NumPy, SciPy, SoundFile, Pillow, imageio-ffmpeg and the Jamsheet checkout.
 This helper neither generates nor separates audio. See references/alignment-and-qa.md.
 """
 import argparse
@@ -159,7 +159,7 @@ def match_attacks(source, decoded, row, intervals):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--repo', required=True, type=Path, help='Current Groove checkout')
+    parser.add_argument('--repo', required=True, type=Path, help='Current Jamsheet checkout')
     parser.add_argument('--plan', required=True, type=Path)
     parser.add_argument('--out-dir', required=True, type=Path)
     parser.add_argument('--ffmpeg', help='Optional FFmpeg executable path')
@@ -227,7 +227,7 @@ def main():
                     [str(decoder), str(mp3), str(raw)], text=True).split())
                 pcm = np.fromfile(raw, dtype=np.dtype('=i2'))
                 if count != len(pcm) or channels != 1 or hz != SR or not len(pcm):
-                    raise ValueError(f'{mp3}: invalid actual Groove decode')
+                    raise ValueError(f'{mp3}: invalid actual Jamsheet decode')
                 decoded = pcm.astype('float64') / 32768
                 matches, observed = match_attacks(source, decoded, row, row['intervals'])
                 signal = np.flatnonzero(np.abs(decoded) > 10 ** (-55/20))
@@ -239,7 +239,7 @@ def main():
                               supplied_attack_placement=all(m['verified'] for m in matches))
                 report = {**row, 'file': mp3.name, 'frames': count, 'settings': SETTINGS,
                           'source_sha256': sha(source_path), 'mp3_sha256': sha(mp3), 'wav_sha256': sha(wav),
-                          'decoder': 'Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE',
+                          'decoder': 'Jamsheet minimp3_ex / MP3D_SEEK_TO_SAMPLE',
                           'removed_encoder_delay_samples': delay, 'leading_signal_ms_at_minus55db': leading,
                           'attack_matches': matches, 'checks': checks, 'checks_pass': all(checks.values()),
                           'visual_review_required': True, 'limits': LIMITS}

@@ -122,12 +122,12 @@ static void export_media_start(window_t *win, export_media_t *st, bool share) {
     if (!settings || snprintf(dir, sizeof(dir), "%s/Exports", settings) >= (int)sizeof(dir) || !axMkDir(settings) || !axMkDir(dir)) {
       set_window_item_text(win, ID_EXPORT_MEDIA_STATUS, "%s", ui_tr("Could not create the export folder. Try Save File.")); return;
     }
-    snprintf(st->path, sizeof(st->path), "%s/Groove-%lld-%u.%s", dir, (long long)time(NULL), (unsigned)rand(), ext);
+    snprintf(st->path, sizeof(st->path), "%s/Jamsheet-%lld-%u.%s", dir, (long long)time(NULL), (unsigned)rand(), ext);
   } else {
     char filter[60]; snprintf(filter, sizeof(filter), "Audio / Video");
     size_t n = strlen(filter) + 1;
     snprintf(filter + n, sizeof(filter) - n, "*.%s", ext); filter[n + strlen(filter + n) + 1] = 0;
-    snprintf(st->path, sizeof(st->path), "Groove.%s", ext);
+    snprintf(st->path, sizeof(st->path), "Jamsheet.%s", ext);
     openfilename_t ofn = {.lStructSize = sizeof(ofn), .hwndOwner = win, .lpstrFile = st->path,
       .nMaxFile = sizeof(st->path), .lpstrFilter = filter, .Flags = OFN_OVERWRITEPROMPT};
     if (!get_save_filename(&ofn)) return;

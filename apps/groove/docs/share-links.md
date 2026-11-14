@@ -1,4 +1,4 @@
-# Sharing Groove songs
+# Sharing Jamsheet songs
 
 On iPad and Mac, open **Share Song…** in the toolbar or File menu.
 

@@ -43,7 +43,7 @@ def decode(path, work, cc):
     if channels < 1 or len(audio) != count or count % channels:
         raise ValueError(f'Invalid decoded sample count: {path}')
     return audio.reshape(-1, channels).astype('float64') / 32768, rate, {
-        'decoder': 'Groove minimp3_ex / MP3D_SEEK_TO_SAMPLE',
+        'decoder': 'Jamsheet minimp3_ex / MP3D_SEEK_TO_SAMPLE',
         'removed_encoder_delay_samples_per_channel': delay // channels,
     }
 
@@ -115,7 +115,7 @@ def main():
     parser.add_argument('--cc', default=os.environ.get('CC', 'cc'))
     args = parser.parse_args()
     if not math.isfinite(args.bpm) or not 70 <= args.bpm <= 180 or not 1 <= args.bars <= 4:
-        parser.error('Use Groove tempo 70–180 and 1–4 bars')
+        parser.error('Use Jamsheet tempo 70–180 and 1–4 bars')
     if not math.isfinite(args.tolerance_ms) or args.tolerance_ms < 0:
         parser.error('Tolerance must be finite and nonnegative')
     if args.max_leading_ms is not None and (not math.isfinite(args.max_leading_ms) or args.max_leading_ms < 0):
@@ -153,7 +153,7 @@ def main():
               'post_boundary_envelope_rise_ms': [envelope_rise(audio, rate, a, b) for a, b in zip(bounds, bounds[1:])],
               'checks': checks, 'checks_pass': all(checks.values()),
               'limits': 'Envelope rises are forward-only proxies, not proof of perceptual timing or absent accompaniment. '
-                        'Annotated offsets are only as reliable as supplied annotations. Listen against a click and in Groove.'}
+                        'Annotated offsets are only as reliable as supplied annotations. Listen against a click and in Jamsheet.'}
     (work / 'verification.json').write_text(json.dumps(report, indent=2) + '\n')
     series = []
     if args.before:
