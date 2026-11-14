@@ -33,7 +33,8 @@ IS_WIN   = 1
 CFLAGS  += -D_USE_MATH_DEFINES
 LIBS    += -lglew32 -lopengl32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi -lxmllite
 LIB_EXT  = dll
-LIB_FLAGS = -shared
+# A vendored header that marks its API dllexport (bmplib) would otherwise switch off ld's automatic export of everything else.
+LIB_FLAGS = -shared -Wl,--export-all-symbols
 EXE_EXT  = .exe
 IMPLIB_FLAGS    = -Wl,--out-implib,$@.a
 LDFLAGS_EXAMPLE = -mwindows
