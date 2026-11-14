@@ -5,6 +5,7 @@
 #include "script_internal.h"
 #include <orion/user/file.h>
 #include <orion/user/page_host.h>
+#include <orion/user/svg_icon_loader.h>
 #include <orion/commdlg/commdlg.h>
 #include <platform/platform.h>
 #include <stdio.h>
@@ -29,11 +30,11 @@ struct script_application_s {
 static script_application_t *applications;
 
 static bool app_is_display_group(const database_t *database) { return !strcmp(database->class_name, "db_display_group"); }
-// A page that fills its lists while rendering changes an in-memory datasource;
-// that change arrives during the refresh and needs no second one.
+// A page filling its lists as it renders, or a change made while pages
+// refresh, needs no second refresh.
 static void app_data_changed(database_t *database, void *userdata) {
   script_application_t *app = userdata;
-  if (app->refreshing) return;
+  if (app->refreshing || script_page_filling_lists()) return;
   app->refreshing = true;
   for (int i = 0; i < app->page_count; i++) {
     if (app_is_display_group(database)) script_page_update(app->pages[i]);
@@ -132,9 +133,21 @@ static const char *application_api_write(lua_State *L, const char *filename, con
   if (!ok) { remove(temporary); script_refuse(L, ui_tr("The document could not be written.")); return NULL; }
   return app->output;
 }
+// A page of the open host is selected, as a sidebar click selects it.
+static script_page_t *app_hosted_page(script_application_t *app, const char *form) {
+  script_page_t *page = script_application_page(app, form);
+  window_t *win = script_page_window(page), *host = win ? win->parent : NULL;
+  const form_def_t *def = host && host->userdata ? script_page_form(host->userdata) : NULL;
+  for (int i = 0; def && def->role == WINDOW_ROLE_HOST && i < def->page_binding_count; i++)
+    if (page_host_page(host, def->page_bindings[i].command) == win)
+      return page_host_select(host, def->page_bindings[i].command) ? page : NULL;
+  return NULL;
+}
 static int application_api_open(lua_State *L, const char *form) {
   char error[1024];
-  script_page_t *page = app_open_form(application_context(L), form, error, sizeof(error));
+  script_page_t *page = app_hosted_page(application_context(L), form);
+  if (page) return script_page_handle(page);
+  page = app_open_form(application_context(L), form, error, sizeof(error));
   if (!page) { script_refuse(L, error); return 0; }
   return script_page_handle(page);
 }
@@ -178,6 +191,8 @@ static script_application_t *app_open(const char *manifest, const char *data_dir
   axMkDir(app->data);
   char locale[1400]; snprintf(locale, sizeof(locale), "%s/locale", app->directory);
   ui_add_string_catalog_dir(locale);
+  char icons[1400]; snprintf(icons, sizeof(icons), "%s/icons", app->directory);
+  if (axPathExists(icons)) svg_add_icons_dir(0, icons);
   register_commctl_classes(); DB_CLASS(db_schema_xml); DB_CLASS(db_display_group);
   for (int i = 0; i < form_library_schema_count(app->library); i++) {
     const db_schema_def_t *schema = form_library_schema_at(app->library, i);
@@ -250,5 +265,12 @@ void script_application_close(script_application_t *app) {
   free(app);
 }
 script_page_t *script_application_main(script_application_t *app) { return app && app->page_count ? app->pages[0] : NULL; }
+script_page_t *script_application_page(script_application_t *app, const char *form) {
+  for (int i = app ? app->page_count - 1 : -1; form && i >= 0; i--) {
+    const form_def_t *def = script_page_form(app->pages[i]);
+    if (def && def->id && !strcmp(def->id, form)) return app->pages[i];
+  }
+  return NULL;
+}
 script_runtime_t *script_application_runtime(script_application_t *app) { return app ? app->runtime : NULL; }
 void script_application_quit_on_close(script_application_t *app, bool quit) { if (app) app->quit_on_close = quit; }

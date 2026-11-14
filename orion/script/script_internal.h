@@ -36,6 +36,8 @@ int luaopen_orion(lua_State *L);
 int luaopen_orion_db(lua_State *L);
 int luaopen_orion_window_native(lua_State *L);
 // UI-thread-only page lookup; NULL if closed or from a different Lua state.
+// True while a page replaces the rows of its lists= tables.
+bool script_page_filling_lists(void);
 window_t *script_page_remote_window(lua_State *L, int handle);
 void script_page_remote_refresh(lua_State *L, int handle);
 

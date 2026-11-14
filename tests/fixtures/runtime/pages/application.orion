@@ -6,7 +6,7 @@
       <field name="title" type="string" length="80"/>
       <field name="done" type="boolean"/>
     </table></database>
-    <database name="desk_views" class="db_schema_xml"><table name="open_tasks">
+    <database name="desk_views" class="db_schema_xml"><table name="open_tasks" transient="true">
       <field name="id" type="integer" key="YES"/>
       <field name="title" type="string" length="80"/>
     </table></database>

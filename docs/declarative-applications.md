@@ -147,9 +147,16 @@ numbered by the loader, so no `command=` is needed.
 <form name="today" title="Today" icon="today" role="page" controller="today" width="900" height="600">...</form>
 ```
 
+`orion.application.open("reservations")` selects a page that is already
+docked in the host, as a sidebar click does.
+
+SVG icons named by `icon=` and `checked-icon=` come from the application
+folder's `icons/` directory, then Orion's shared icons.
+
 A page's `data()` may return `lists = {name = rows}` for a TableView whose
-`source=` is a table of an in-memory database (one without `source=`): the
-host replaces that table's rows. Use it for computed views such as today's
+`source=` is a `transient="true"` table of an in-memory database (one without
+`source=`): the host replaces that table's rows. Transient tables bypass the
+application model, and filling them does not refresh the other pages. Use it for computed views such as today's
 arrivals; persistent tables are never filled this way.
 
 ## Lua models and computed properties

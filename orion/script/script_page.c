@@ -168,14 +168,39 @@ static void clear_table(database_t *db, const db_table_schema_t *t) {
     for (result_node_t *node = list; node; node = (result_node_t *)node->next)
       ids[n++] = *(const int *)((const char *)*(void **)node->data + t->meta[key].offset);
     free_result_list(list);
-    for (int i = 0; i < n; i++) send_db_message(db, dbDelete, (uint32_t)t->table_id, (void *)(intptr_t)ids[i]);
+    int deleted = 0;
+    for (int i = 0; i < n; i++) deleted += send_db_message(db, dbDelete, (uint32_t)t->table_id, (void *)(intptr_t)ids[i]) != 0;
     free(ids);
+    if (deleted < n) {
+      fprintf(stderr, "[script] lists: %s.%s refused to delete %d of %d rows: %s\n", db->name, t->name, n - deleted, n, db->error);
+      fflush(stderr);
+      return;
+    }
   }
 }
 
 // lists = {name = rows}: a TableView over one of the add-on's own tables
 // shows exactly these rows.
+static int filling_lists;
+bool script_page_filling_lists(void) { return filling_lists > 0; }
+static void fill_rows(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx);
+typedef struct { script_page_t *page; const form_ctrl_def_t *d; window_t *ctrl; } fill_args_t;
+static int fill_protected(lua_State *L) {
+  fill_args_t *a = lua_touserdata(L, 1);
+  fill_rows(a->page, a->d, a->ctrl, L, 2);
+  return 0;
+}
+// Marked while it runs, so the application does not refresh its pages for
+// the rows it replaces.
 static void fill_list(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  fill_args_t args = { page, d, ctrl };
+  lua_pushcfunction(L, fill_protected); lua_pushlightuserdata(L, &args); lua_pushvalue(L, idx);
+  filling_lists++;
+  int rc = lua_pcall(L, 2, 0, 0);
+  filling_lists--;
+  if (rc != LUA_OK) lua_error(L);
+}
+static void fill_rows(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
   char db_name[64], table[128];
   if (!class_is(d, "TableView") || !source_parts(d, db_name, sizeof(db_name), table, sizeof(table)))
     luaL_error(L, "lists.%s: not a TableView with source=\"db.table\"", d->name);
@@ -391,8 +416,8 @@ static void push_input(script_page_t *page, const form_ctrl_def_t *d, window_t *
   lua_State *L = page->L;
   if (class_is(d, "CheckBox")) { lua_pushboolean(L, send_message(ctrl, btnGetCheck, 0, NULL) != 0); return; }
   if (class_is(d, "ComboBox") && d->lparam) {
-    int value = (int)send_message(ctrl, cbGetCurrentValue, 0, NULL);
-    if (value) lua_pushinteger(L, value); else lua_pushnil(L);
+    int value = (int)send_message(ctrl, cbGetCurrentValue, 0, NULL);  // kComboBoxError: nothing chosen
+    if (value && value != kComboBoxError) lua_pushinteger(L, value); else lua_pushnil(L);
     return;
   }
   if (class_is(d, "ComboBox")) {
