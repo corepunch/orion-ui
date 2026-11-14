@@ -234,11 +234,12 @@ static void test_ribbon_declaration(void) {
   const char *menus = "<menus><menu name=\"file\" label=\"File\"><item name=\"new\" label=\"New...\" shortcut=\"Ctrl+N\"/>"
     "<item name=\"quit\" label=\"Exit\"/></menu><menu name=\"edit\" label=\"Edit\"><item name=\"find\" label=\"Find\"/>"
     "<item name=\"lost\" label=\"Lost\"/></menu><menu name=\"view\" label=\"View\"><item name=\"zoom\" label=\"Zoom\"/></menu></menus>";
-  char fixture[4000];
+  char fixture[6000];
   snprintf(fixture, sizeof(fixture), "<orion>%s<ribbon layout=\"simplified\"><ApplicationMenu menu=\"file\"/>"
     "<QuickAccessToolbar><Button command=\"file.new\" icon=\"page-plus\"/></QuickAccessToolbar>"
     "<Tab label=\"Home\"><Group label=\"Editing\"><Button command=\"edit.find\" icon=\"search\" text=\"Find\" size=\"large\" toggle=\"true\"/>"
-    "<Separator/><Button command=\"file.new\"/><DropDown menu=\"view\" text=\"View\"/></Group></Tab></ribbon></orion>", menus);
+    "<Separator/><Button command=\"file.new\"/><DropDown menu=\"view\" text=\"View\"/></Group></Tab>"
+    "<Tab label=\"Table\" context=\"table\"><Group><Button command=\"view.zoom\"/></Group></Tab></ribbon></orion>", menus);
   ASSERT_EQUAL(run_orionc(fixture, "ribbon", out, sizeof(out)), 0);
   ASSERT_TRUE(contains(out, "static const ribbon_def_t test_ribbon"));
   ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_BUTTON, ID_EDIT_FIND, \"search\", \"Find\", NULL, RIBBON_ITEM_LARGE | RIBBON_ITEM_CHECK, NULL, 0, NULL }"));
@@ -247,6 +248,9 @@ static void test_ribbon_declaration(void) {
   ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_SEPARATOR }"));
   ASSERT_TRUE(contains(out, ".menu_label = \"File\", .menu_items = MENU_FILE_ITEMS"));
   ASSERT_TRUE(contains(out, ".quick_access = &test_ribbon_quick_access, .layout = RIBBON_LAYOUT_SIMPLIFIED"));
+  ASSERT_TRUE(contains(out, "#define TEST_RIBBON_CONTEXT_TABLE (1u << 0)"));
+  ASSERT_TRUE(contains(out, "{ \"Table\", test_ribbon_tab1_groups, ARRAY_LEN(test_ribbon_tab1_groups), TEST_RIBBON_CONTEXT_TABLE }"));
+  ASSERT_TRUE(contains(out, "{ \"Home\", test_ribbon_tab0_groups, ARRAY_LEN(test_ribbon_tab0_groups), 0 }"));
   ASSERT_TRUE(contains(out, "warning: command 'edit.lost' is not reachable from the ribbon"));
   ASSERT_FALSE(contains(out, "'edit.find' is not reachable"));
   ASSERT_FALSE(contains(out, "'view.zoom' is not reachable"));
@@ -256,6 +260,7 @@ static void test_ribbon_declaration(void) {
     { "<ribbon><ApplicationMenu menu=\"nope\"/></ribbon>", "<ApplicationMenu" },
     { "<ribbon><Tab><Group/></Tab></ribbon>", "needs a label" },
     { "<ribbon layout=\"tall\"/>", "classic or simplified" },
+    { "<ribbon><Tab label=\"T\" context=\"two words\"><Group/></Tab></ribbon>", "context is an identifier" },
     { "<ribbon><Tab label=\"T\"><Group><Button command=\"edit.find\" size=\"huge\"/></Group></Tab></ribbon>", "large or small" },
     { "<ribbon><Tab label=\"T\"><Button command=\"edit.find\"/></Tab></ribbon>", "holds <Group>" },
   };

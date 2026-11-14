@@ -1579,7 +1579,7 @@ static void test_vertical_ideal_size(void) {
 }
 
 static void test_sidebar_label_tooltips(void) {
-  TEST("tooltip: sidebar labels suppress hints, collapsed icons show them, and expansion dismisses them");
+  TEST("tooltip: captions suppress hints, bare icons show them, and expansion dismisses them");
   test_env_init();
   int old_w = ui_get_system_metrics(kSystemMetricScreenWidth), old_h = ui_get_system_metrics(kSystemMetricScreenHeight);
   ui_update_screen_size(640 * UI_WINDOW_SCALE, 480 * UI_WINDOW_SCALE);
@@ -1609,10 +1609,9 @@ static void test_sidebar_label_tooltips(void) {
   send_message(bar, tbSetStyle, TOOLBAR_STYLE_SIDEBAR | TOOLBAR_STYLE_SHOW_LABELS, NULL);
   r = tb->item_rects[0];
   ASSERT_FALSE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
-  send_message(bar, tbSetStyle, TOOLBAR_STYLE_LIST, NULL);
+  send_message(bar, tbSetStyle, TOOLBAR_STYLE_LIST, NULL);   // any toolbar that shows captions, not only a sidebar
   r = tb->item_rects[0];
-  ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
-  ASSERT_STR_EQUAL(text, item.tooltip);
+  ASSERT_FALSE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
   test_env_shutdown();
   ui_update_screen_size(old_w * UI_WINDOW_SCALE, old_h * UI_WINDOW_SCALE);
   PASS();

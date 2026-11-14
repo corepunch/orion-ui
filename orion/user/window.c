@@ -1253,6 +1253,16 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   return win;
 }
 
+bool set_host_page_toolbars(window_t *host, bool shown) {
+  if (!host || host->role != WINDOW_ROLE_HOST || (!host->pages && !(host->pages = calloc(1, sizeof(*host->pages))))) {
+    fprintf(stderr, "[window] set_host_page_toolbars rejected host=%p role=%d\n", (void *)host, host ? (int)host->role : -1);
+    fflush(stderr);
+    return false;
+  }
+  host->pages->page_toolbars_hidden = !shown;
+  return true;
+}
+
 bool set_host_page(window_t *host, window_t *page) {
   if (!host || host->role != WINDOW_ROLE_HOST) {
     fprintf(stderr, "[window] set_host_page rejected host=%p role=%d\n",
@@ -1287,7 +1297,7 @@ bool set_host_page(window_t *host, window_t *page) {
   }
   host->pages->active_page = page;
   // The host's own items (a title, say) lead; the active page contributes the rest.
-  int own = host->pages->toolbar_count, contributed = page ? page->pages->toolbar_count : 0;
+  int own = host->pages->toolbar_count, contributed = page && !host->pages->page_toolbars_hidden ? page->pages->toolbar_count : 0;
   toolbar_item_t *items = own + contributed ? calloc((size_t)(own + contributed), sizeof(*items)) : NULL;
   if (own + contributed && !items) {
     fprintf(stderr, "[window] set_host_page toolbar allocation failed host=%u count=%d\n", host->id, own + contributed);

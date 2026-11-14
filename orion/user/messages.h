@@ -623,7 +623,9 @@ enum {
   rbGetMinimized,               // nonzero while only the tab row shows
   rbSetMinimized,               // wparam = nonzero hides the command panel (≈ Ctrl+F1)
   rbGetItemRect,                // wparam = command ident; lparam = irect16_t* out, in control coordinates; false when not shown
-  rbGetTabRect,                 // wparam = tab index, -1 = the application-menu button; lparam = irect16_t* out
+  rbGetTabRect,                 // wparam = tab index, -1 = the application-menu button; lparam = irect16_t* out; false for a hidden contextual tab
+  rbGetContexts,                // returns the mask of contexts whose tabs show
+  rbSetContexts,                // wparam = mask of ribbon_tab_t.context bits; lparam nonzero opens the first tab this reveals
 };
 // Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.
 // SpriteSlider also answers slSetRange / slSetPos / slGetPos and notifies with sliderValueChanged,

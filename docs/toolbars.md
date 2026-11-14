@@ -94,6 +94,9 @@ New manifests should use fully qualified references such as
 `command="repo.refresh"`. The older `menu="repo"` scope form remains supported
 for compatibility, but does not make the target action as explicit.
 
+A tooltip belongs to a bare icon. A button that shows its caption (the list
+and labels styles) has none: the tooltip would repeat it.
+
 ## The descriptor
 
 Defined in `orion/user/messages.h`:
@@ -275,7 +278,9 @@ belongs to its containing form.
 
 For normal windows and hosts, a nested `<Toolbar>` automatically enables
 `WINDOW_TOOLBAR`. A `role="page"` form publishes the same metadata without
-reserving its own toolbar band because the active host renders it.
+reserving its own toolbar band because the active host renders it. A host whose pages' commands show
+elsewhere (a [ribbon](ribbon.md#contextual-tabs)'s contextual tabs) turns that off with
+`set_host_page_toolbars(host, false)`.
 
 ## Creating a toolbar window
 

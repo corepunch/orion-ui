@@ -146,6 +146,7 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_RIBBON]                 = {"Ribbon"},
   [THEME_PART_RIBBON_TABS]            = {"Ribbon", "tabs"},
   [THEME_PART_RIBBON_TAB]             = {"Ribbon", "tab"},
+  [THEME_PART_RIBBON_CONTEXT_TAB]     = {"Ribbon", "tab", "contextual"},
   [THEME_PART_RIBBON_MENU]            = {"Ribbon", "tab", "menu"},
   [THEME_PART_RIBBON_BUTTON]          = {"Ribbon", "button"},
   [THEME_PART_RIBBON_GROUP]           = {"Ribbon", "group"},

@@ -241,7 +241,9 @@ typedef struct {
 } ribbon_item_t;
 
 typedef struct { const char *label; const ribbon_item_t *items; int count; } ribbon_group_t;
-typedef struct { const char *label; const ribbon_group_t *groups; int count; } ribbon_tab_t;
+// context: 0 for a tab that always shows; otherwise one bit, and the tab shows while rbSetContexts
+// includes it (≈ a contextual tab: the commands of what is selected or open).
+typedef struct { const char *label; const ribbon_group_t *groups; int count; uint32_t context; } ribbon_tab_t;
 
 typedef struct {
   const ribbon_tab_t          *tabs;
