@@ -48,7 +48,7 @@ static void test_persistence_and_page(void) {
   unregister_database("lodge"); destroy_database(hotel); hotel = NULL;
   char directory[128], target[160], error[2048];
   snprintf(directory, sizeof(directory), "/tmp/orion-lodge-app-%ld", (long)getpid());
-  mkdir(directory, 0700);
+  test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   FILE *in = fopen(hotel_path, "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
@@ -195,7 +195,7 @@ static void test_persistence_and_page(void) {
 static void test_refused_migration(void) {
   TEST("legacy fractional-cent balance refuses migration without changing the original");
   char directory[128], target[160], error[2048], contents[1024];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-old-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-old-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   const char *xml = "<lodge><rooms><room id=\"1\" name=\"101\" capacity=\"2\" rate=\"10\"/></rooms>"
     "<guests><guest id=\"1\" name=\"Guest\"/></guests><reservations>"
@@ -259,7 +259,7 @@ static void test_refused_migration(void) {
 static void test_payment_form(void) {
   TEST("payment form retries one request and refunds a cancelled reservation");
   char directory[128], target[160], error[2048];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-payment-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-payment-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
@@ -318,7 +318,7 @@ static void test_payment_form(void) {
 static void test_nightly_prices(void) {
   TEST("nightly prices validate, journal, save and reject closed edits");
   char directory[128], target[160], error[2048];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-night-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-night-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
@@ -360,7 +360,7 @@ static void test_nightly_prices(void) {
 static void test_service(void) {
   TEST("service enforces roles, redacts housekeeping and runs booking workflows");
   char directory[128], target[160], error[2048];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-service-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-service-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
@@ -476,7 +476,7 @@ static void test_service(void) {
 static void test_currency_setup(void) {
   TEST("Russia/RUB setup is explicit, immutable and survives reopening");
   char directory[128], target[160], error[2048];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-currency-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-currency-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
@@ -498,7 +498,7 @@ static void test_currency_setup(void) {
 static void test_group_form(const char *country, const char *currency) {
   TEST("group form creates both room reservations together");
   char directory[128], target[160], error[2048];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-group-%ld-%s", (long)getpid(), country); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-group-%ld-%s", (long)getpid(), country); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);

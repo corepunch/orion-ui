@@ -32,8 +32,8 @@ static void test_scrolled_navigation(void) {
   char build[512], generated[512], image[512];
   snprintf(build, sizeof(build), "%s/build", path);
   snprintf(generated, sizeof(generated), "%s/build/generated", path);
-  ASSERT_EQUAL(mkdir(build, 0700), 0);
-  ASSERT_EQUAL(mkdir(generated, 0700), 0);
+  ASSERT_EQUAL(test_mkdir(build, 0700), 0);
+  ASSERT_EQUAL(test_mkdir(generated, 0700), 0);
   snprintf(image, sizeof(image), "%s/build/generated/image.png", path);
   FILE *file = fopen(image, "w");
   ASSERT_NOT_NULL(file);
@@ -41,9 +41,9 @@ static void test_scrolled_navigation(void) {
   for (int i = 0; i < 20; i++) {
     char entry[512];
     snprintf(entry, sizeof(entry), "%s/a%02d", path, i);
-    ASSERT_EQUAL(mkdir(entry, 0700), 0);
+    ASSERT_EQUAL(test_mkdir(entry, 0700), 0);
     snprintf(entry, sizeof(entry), "%s/z%02d", path, i);
-    ASSERT_EQUAL(mkdir(entry, 0700), 0);
+    ASSERT_EQUAL(test_mkdir(entry, 0700), 0);
   }
   window_t *host = create_window("Open", WINDOW_DIALOG, MAKERECT(20, 30, 340, 260), NULL, navigation_host, 0, NULL);
   form_ctrl_def_t initial = {.text = path};

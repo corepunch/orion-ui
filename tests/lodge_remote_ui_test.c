@@ -31,7 +31,7 @@ static void test_recovered_request(void) {
   ASSERT_EQUAL(remote_outbox_save_at(getenv("ORION_REMOTE_PROFILE"), "lodge", getenv("ORION_SERVER_URL"), company, "tester", body), REMOTE_OUTBOX_OK);
   char error[2048], directory[128];
   ASSERT_TRUE(script_remote_configure_from_environment(error, sizeof(error)));
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-recovery-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-recovery-%ld", (long)getpid()); test_mkdir(directory, 0700);
   test_env_init();
   script_application_t *app = script_application_open("apps/lodge/share/remote/remote.orion", directory, error, sizeof(error));
   ASSERT_NOT_NULL(app); script_page_t *page = script_application_main(app); ASSERT_NOT_NULL(page);
@@ -62,7 +62,7 @@ static void test_lodge_remote_ui(void) {
   TEST("remote Lodge form drives a shared-server stay");
   char error[2048], directory[128];
   ASSERT_TRUE(script_remote_configure_from_environment(error, sizeof(error)));
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-remote-ui-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-remote-ui-%ld", (long)getpid()); test_mkdir(directory, 0700);
   test_env_init();
   script_application_t *app = script_application_open("apps/lodge/share/remote/remote.orion", directory, error, sizeof(error));
   if (!app) fprintf(stderr, "%s\n", error);

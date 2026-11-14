@@ -369,9 +369,9 @@ static void test_shape_modifier_stack(void) {
     "<shape closed=\"1\" pos=\"0 1200 0\"><v x=\"0\" y=\"0\"/><v x=\"10\" y=\"0\"/><v x=\"0\" y=\"10\"/><extrude amount=\"20\"/><shell amount=\"2\"/></shape>"
     "</scene>";
   Scene scene = {0};
-  FILE *sink = fopen("/dev/null", "w"), *saved = stderr; stderr = sink;
+  int saved_err = test_stderr_silence();
   ASSERT_TRUE(window_test_load(&scene, xml));
-  stderr = saved; fclose(sink);
+  test_stderr_restore(saved_err);
   ASSERT_EQUAL(scene.nobjs, 3);
   ASSERT_EQUAL(issues_of_kind(&scene, "shape"), 2);
   ASSERT_EQUAL(issues_of_kind(&scene, "element"), 0);
@@ -742,9 +742,11 @@ static void test_scene_query_records(void){
 	int parts=0;
 	for(int i=0;i<s.nobjs;i++) if(s.objs[i].record==table) parts++;
 	ASSERT_EQUAL(parts,5);
-	char *text=NULL; size_t size=0;
-	FILE *out=open_memstream(&text,&size);
+	FILE *out=tmpfile(); ASSERT_NOT_NULL(out);
 	scene_query(&s,out);
+	long size=ftell(out); rewind(out);
+	char *text=calloc((size_t)size+1,1); ASSERT_NOT_NULL(text);
+	size_t got=fread(text,1,(size_t)size,out); (void)got;
 	fclose(out);
 	ASSERT_TRUE(strstr(text,"\"source\": \"furniture/dining_table\"") && strstr(text,"\"center\": [0, 78, -150]"));
 	ASSERT_TRUE(strstr(text,"\"furniture/chair\": {") && strstr(text,"\"seat\": [0, 47.5, 0]"));
@@ -973,7 +975,7 @@ static void test_window_cut_transforms_and_union(void){
 static int window_test_write_prefab(const char *name,const char *xml){
 	char dir[WINDOW_TEST_MAX_PATH],path[WINDOW_TEST_MAX_PATH];
 	snprintf(dir,sizeof(dir),"%s/prefabs",window_test_temp_dir());
-	mkdir(dir,0777);
+	test_mkdir(dir,0777);
 	snprintf(path,sizeof(path),"%s/%s.blk",dir,name);
 	FILE *file=fopen(path,"w"); if(!file) return 0;
 	fputs(xml,file); fclose(file); return 1;

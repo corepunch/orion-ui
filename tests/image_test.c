@@ -3,6 +3,7 @@
 // Self-contained: pulls in user/image.c directly so no SDL/GL is required.
 
 #include "test_framework.h"
+#include "test_env.h"  // before libjpeg: windows.h redefines its INT32
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
