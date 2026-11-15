@@ -1294,8 +1294,13 @@ void test_compact_application_toolbar(void) {
   TEST("Compact application toolbar shares menu row, routes clicks and falls back at narrow widths");
   test_env_init();
   menu_def_t menu = {"File", NULL, 0};
-  toolbar_item_t item = {TOOLBAR_ITEM_BUTTON, 91, NULL, 0, 0, NULL, "Action"};
-  application_toolbar_t def = {&item, 1, TOOLBAR_PRESENTATION_COMPACT};
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 91, .text = "Action"},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 92},
+    {.type = TOOLBAR_ITEM_SPACER},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 93},
+  };
+  application_toolbar_t def = {items, ARRAY_LEN(items), TOOLBAR_PRESENTATION_COMPACT};
   window_t *chrome = create_application_chrome("Compact", test_menubar_proc,
       &menu, 1, test_chrome_toolbar_proc, &def, 7);
   ASSERT_NOT_NULL(chrome);
@@ -1307,9 +1312,15 @@ void test_compact_application_toolbar(void) {
   ASSERT_NOT_NULL(bar);
   ASSERT_EQUAL(bar->frame.y, 0);
   ASSERT_EQUAL(bar->frame.h, MENUBAR_HEIGHT);
-  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (ui_px("Toolbar.compact", "gap") - 2 * ui_px("Toolbar.compact", "padding"))); // restore button one pitch away
   toolbar_state_t *tb = require_toolbar_state(bar);
   irect16_t r = tb->item_rects[0];
+  irect16_t next = tb->item_rects[1], last = tb->item_rects[3];
+  int button_gap = next.x - (r.x + r.w);
+  int group_gap = last.x - (next.x + next.w);
+  int restore_gap = 600 - MENUBAR_HEIGHT - (bar->frame.x + last.x + last.w);
+  ASSERT_EQUAL(button_gap, ui_px("Toolbar.compact", "gap"));
+  ASSERT_EQUAL(restore_gap, ui_px("Toolbar.compact", "--restore-gap"));
+  ASSERT(group_gap > button_gap && restore_gap > button_gap, "group boundaries have more space than adjacent buttons");
   ASSERT_EQUAL(r.y, 2);
   ASSERT_EQUAL(r.w, r.h);
   ASSERT_EQUAL(r.y + r.h, MENUBAR_HEIGHT - 2);

@@ -56,7 +56,7 @@ Badge {
 }
 Window              { --drag-shadow: 0 8px 6px #000000E0; }
 Scrollbar           { --overlay: 0; }
-Toolbar.compact     { padding: 2px; gap: 6px; --icon-size: var(--compact-icon-size); margin-left: 8px; }
+Toolbar.compact     { padding: 2px; gap: 2px; --restore-gap: 4px; --icon-size: var(--compact-icon-size); margin-left: 8px; }
 Toolbar::grip       { width: 12px; }
 Toolbar::split-arrow { width: 12px; }
 TabView::bar        { padding-left: 0; padding-top: 1px; }

@@ -28,22 +28,22 @@ static void app_chrome_resize_children(window_t *win) {
   int menu_h = st->ribbon && st->menubar ? ribbon_tabs_height(st->menubar) : ui_px("MenuBar", "height");
   window_t *bar = app_chrome_toolbar(win);
   if (bar && bar->dock && bar->dock->side == DOCK_TOP && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
+    int padding = ui_px("Toolbar.compact", "padding");
     send_message(bar, tbModifyStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, (void *)(uintptr_t)(TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP));
-    send_message(bar, tbSetButtonSize, menu_h - 2 * ui_px("Toolbar.compact", "padding"), NULL);
-    isize16_t ideal = {2 * ui_px("Toolbar.compact", "padding"), 0};
+    send_message(bar, tbSetButtonSize, menu_h - 2 * padding, NULL);
+    isize16_t ideal = {2 * padding, 0};
     send_message(bar, tbGetIdealSize, 0, &ideal);
     int width = ideal.w;
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
+    // Restore occupies the last square of the row. The toolbar already includes its own end padding.
+    int restore_slot = menu_h + ui_px("Toolbar.compact", "--restore-gap") - padding;
     bool compact = st->menubar && st->menubar->dock && st->menubar->dock->side == DOCK_TOP &&
-                   width + menu_width + menu_h + ui_px("Toolbar.compact", "gap") - 2 * ui_px("Toolbar.compact", "padding") + ui_px("Toolbar.compact", "margin-left") <= win->frame.w;
+                   width + menu_width + restore_slot + ui_px("Toolbar.compact", "margin-left") <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
     toolbar_set_dock_hint(bar, dock);
     if (compact) {
-      // The menu bar's restore button fills the last menu_h square. Its centre sits one
-      // compact pitch (button + ui_px("Toolbar.compact", "gap")) past the last button's centre.
       irect16_t row = rect_split_top(get_client_rect(win), menu_h);
-      int slot = menu_h + ui_px("Toolbar.compact", "gap") - 2 * ui_px("Toolbar.compact", "padding");
-      bar->frame = rect_split_right(rect_trim_right(row, slot), width);
+      bar->frame = rect_split_right(rect_trim_right(row, restore_slot), width);
       invalidate_window(bar);
     } else {
       send_message(bar, tbModifyStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, (void *)(uintptr_t)TOOLBAR_STYLE_GRIP);
