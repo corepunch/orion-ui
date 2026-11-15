@@ -144,7 +144,7 @@ run(struct android_app *app)
   snprintf(exe, sizeof(exe), "%s/" ORION_ANDROID_APP, bin);
   if (mkdir(bin, 0700) && errno != EEXIST) { LOG("Cannot create %s", bin); return; }
   // Documents and HOME are the app's external files directory, visible over USB.
-  char const *documents = axDocumentsDirectory();
+  char const *documents = app->activity->externalDataPath ? app->activity->externalDataPath : root;
   if (documents && documents[0]) {
     setenv("HOME", documents, 1);
     if (chdir(documents)) LOG("Cannot enter %s", documents);
