@@ -110,7 +110,7 @@ $(BUILD_ROOT)/deps/bmplib/%.o: vendor/bmplib/%.c orion/user/bmplib_config/config
 	$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
 $(HOST_TOOL): tools/orionc.c $(wildcard orion/user/*.h)
 	@mkdir -p "$(@D)"
-	$(HOST_CC) -std=c11 -O2 -I. $(HOST_XML_CFLAGS) $< $(HOST_XML_LIBS) -o "$@"
+	$(HOST_CC) -std=c11 -D_DEFAULT_SOURCE -Werror=implicit-function-declaration -O2 -I. $(HOST_XML_CFLAGS) $< $(HOST_XML_LIBS) -o "$@"
 $(GENERATED): $(APP_DIR)/$(APP_SOURCE).orion $(HOST_TOOL)
 	@mkdir -p "$(@D)"
 	"$(HOST_TOOL)" --input $< --output $@ --prefix $(APP_SOURCE)
