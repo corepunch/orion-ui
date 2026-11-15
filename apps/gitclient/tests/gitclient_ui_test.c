@@ -1250,6 +1250,36 @@ static void test_gitclient_pane_layout(void) {
   PASS();
 }
 
+static void test_push_badge_tracks_unpushed_commits(void) {
+  TEST("Push shows the number of commits ahead of the current upstream");
+  test_env_init();
+  memset(g_gc, 0, sizeof(*g_gc));
+  ASSERT_TRUE(gct_git(s_repo, "branch badge-upstream"));
+  ASSERT_TRUE(gct_git(s_repo, "branch --set-upstream-to=badge-upstream"));
+  g_gc->repo = git_repo_open(s_repo);
+  ASSERT_NOT_NULL(g_gc->repo);
+  g_gc->tab = GC_TAB_CHANGES;
+  g_gc->sync_loads = true;
+  gc_create_menubar();
+  window_t *ribbon = app_chrome_ribbon(g_gc->chrome_win);
+  ASSERT_NOT_NULL(ribbon);
+  g_gc->main_win = test_env_create_window("Changes", 0, 0, 640, 480, overview_test_host, NULL);
+  ASSERT_NOT_NULL(g_gc->main_win);
+  gc_update_status();
+  ASSERT_EQUAL(send_message(ribbon, rbGetBadge, ID_REMOTE_PUSH, NULL), 0);
+  ASSERT_TRUE(gct_git(s_repo, "commit --allow-empty -m badge-test"));
+  gc_update_status();
+  ASSERT_EQUAL(send_message(ribbon, rbGetBadge, ID_REMOTE_PUSH, NULL), 1);
+  ASSERT_TRUE(gct_git(s_repo, "push . HEAD:refs/heads/badge-upstream"));
+  gc_update_status();
+  ASSERT_EQUAL(send_message(ribbon, rbGetBadge, ID_REMOTE_PUSH, NULL), 0);
+  git_repo_close(g_gc->repo);
+  test_env_shutdown();
+  free_accelerators(g_gc->accel);
+  memset(g_gc, 0, sizeof(*g_gc));
+  PASS();
+}
+
 int main(void) {
     if (!setup_repo()) {
         printf("ERROR: could not create test repository (is git in PATH?)\n");
@@ -1278,6 +1308,7 @@ int main(void) {
     test_activitybar_navigation();
     test_history_latest_commit_diff();
     test_gitclient_pane_layout();
+    test_push_badge_tracks_unpushed_commits();
 
     gct_remove_dir(s_repo);
 

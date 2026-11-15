@@ -14,12 +14,16 @@ extern window_t *get_root_window(window_t *window);
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
+      win->ink_overflow = theme_ink_overflow_in(win, THEME_PART_CHECKBOX, CTRL_FOCUSED);
       win->frame.w = MAX(win->frame.w,
                          text_strwidth(ui_selector(win, "CheckBox"), win->title) +
                          CHECKBOX_BOX_SIZE + CHECKBOX_GAP);
       win->frame.h = MAX(win->frame.h,
                          text_char_height(ui_selector(win, "CheckBox")) + 4);
       return true;
+    case evThemeChanged:
+      win->ink_overflow = theme_ink_overflow_in(win, THEME_PART_CHECKBOX, CTRL_FOCUSED);
+      return false;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {

@@ -10,6 +10,7 @@
 // buttons become small. RIBBON_LAYOUT_SIMPLIFIED is the single row of Office
 // on a tablet. See docs/ribbon.md.
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,8 @@ typedef enum { RB_NONE, RB_MENU, RB_TAB, RB_ITEM, RB_TOGGLE, RB_RESTORE } rb_tar
 typedef struct { rb_target_t kind; int index; } rb_hit_t;                 // index: tab, or item within the active tab
 typedef enum { RB_FORM_LARGE, RB_FORM_SMALL, RB_FORM_ICON, RB_FORM_SEPARATOR } rb_form_t;
 typedef struct { irect16_t rect; rb_form_t form; int group; } rb_cell_t;
+typedef struct { int flags, badge; } rb_command_state_t;
+typedef enum { RB_COMMAND_FLAGS, RB_COMMAND_BADGE } rb_command_field_t;
 
 typedef struct {
   const ribbon_def_t  *def;
@@ -33,8 +36,7 @@ typedef struct {
   uint32_t             contexts;    // whose contextual tabs show
   ribbon_layout_t      layout;
   bool                 minimized;
-  uint8_t             *states;      // TBSTATE_* per item, tab after tab
-  int                  item_total;
+  rb_command_state_t  *states;      // per item, tab after tab
   rb_cell_t           *cells;       // the active tab's items, laid out for laid_w
   int                  cell_count, laid_w;
   irect16_t            groups[RIBBON_MAX_GROUPS];
@@ -76,20 +78,21 @@ static const ribbon_item_t *rb_item(const ribbon_state_t *st, int index) {
   return NULL;
 }
 
-static uint8_t *rb_item_state(const ribbon_state_t *st, int index) {
+static const rb_command_state_t *rb_item_state(const ribbon_state_t *st, int index) {
   return &st->states[rb_tab_first(st, st->active) + index];
 }
 
-// Every placement of a command shares its state, so a button on two tabs checks together.
-static int rb_command_state(const ribbon_state_t *st, uint16_t ident, int set) {
+// Every placement of a command shares its state. Return the previous value.
+static int rb_command_value(const ribbon_state_t *st, uint32_t ident, rb_command_field_t field, int set) {
   int found = -1, flat = 0;
   for (int t = 0; st->def && t < st->def->tab_count; t++)
     for (int g = 0; g < st->def->tabs[t].count; g++)
       for (int i = 0; i < st->def->tabs[t].groups[g].count; i++, flat++) {
         const ribbon_item_t *it = &st->def->tabs[t].groups[g].items[i];
         if (it->type == RIBBON_ITEM_SEPARATOR || it->ident != ident) continue;
-        if (set >= 0) st->states[flat] = (uint8_t)set;
-        found = st->states[flat];
+        int *value = field == RB_COMMAND_BADGE ? &st->states[flat].badge : &st->states[flat].flags;
+        found = *value;
+        if (set >= 0) *value = set;
       }
   return found;
 }
@@ -177,20 +180,27 @@ static int rb_caption_break(const char *sel, const char *text) {
   return best;
 }
 
-static int rb_item_width(const window_t *win, const ribbon_item_t *it, rb_form_t form) {
+static int rb_badge_width(int count, char *text, size_t cap) {
+  if (!count) return 0;
+  return measure_status_badge(ui_format_number(count, 0, text, cap), NULL);
+}
+
+static int rb_item_width(const window_t *win, const ribbon_item_t *it, rb_form_t form, int count) {
   const char *btn = rb_sel(win, "Ribbon::button");
   const char *text = it->text ? ui_tr(it->text) : "";
   int pad = ui_px(btn, "padding-left"), gap = ui_px(btn, "gap");
   int arrow = it->type == RIBBON_ITEM_DROPDOWN ? gap + ui_px(rb_sel(win, "Ribbon::arrow"), "width") : 0;
+  char badge_text[48];
+  int badge = count ? gap + rb_badge_width(count, badge_text, sizeof(badge_text)) : 0;
   switch (form) {
     case RB_FORM_SEPARATOR: return ui_px(rb_sel(win, "Ribbon::separator"), "width");
-    case RB_FORM_ICON:      return ui_px(btn, "--icon-size") + 2 * pad + arrow;
-    case RB_FORM_SMALL:     return (it->icon ? ui_px(btn, "--icon-size") + gap : 0) + text_strwidth(btn, text) + 2 * pad + arrow;
+    case RB_FORM_ICON:      return ui_px(btn, "--icon-size") + 2 * pad + arrow + badge;
+    case RB_FORM_SMALL:     return (it->icon ? ui_px(btn, "--icon-size") + gap : 0) + text_strwidth(btn, text) + 2 * pad + arrow + badge;
     case RB_FORM_LARGE: {
       int at = rb_caption_break(btn, text);   // a one-line caption leaves the second line to the arrow
       int w = at < 0 ? text_strwidth(btn, text)
                      : MAX(text_strnwidth(btn, text, at), text_strwidth(btn, text + at + 1) + arrow);
-      return MAX(ui_px(btn, "min-width"), MAX(w, ui_px(btn, "--large-icon-size")) + 2 * pad);
+      return MAX(ui_px(btn, "min-width"), MAX(w, ui_px(btn, "--large-icon-size") + badge) + 2 * pad);
     }
   }
   return 0;
@@ -214,7 +224,7 @@ static int rb_layout_pass(window_t *win, ribbon_state_t *st, const int *scale) {
   irect16_t panel = rect_inset(rb_panel_rect(win, st), ui_px(rb_sel(win, "Ribbon"), "padding"));
   int gap = ui_px(rb_sel(win, "Ribbon"), "gap"), side = ui_px(rb_sel(win, "Ribbon::group"), "padding-left");
   int rows = rb_rows(st), row_h = rb_row_height(win, st), sep = ui_px(rb_sel(win, "Ribbon::separator"), "width");
-  int x = panel.x, cell = 0;
+  int x = panel.x, cell = 0, first_item = rb_tab_first(st, st->active);
   for (int g = 0; tab && g < tab->count; g++) {
     const ribbon_group_t *group = &tab->groups[g];
     int first = cell, cx = x + side, row = 0, column_w = 0;
@@ -225,7 +235,7 @@ static int rb_layout_pass(window_t *win, ribbon_state_t *st, const int *scale) {
       // A full column, a column-high item or the group's end closes the column of small buttons.
       if (row && (!stacks || row == rows)) { cx += column_w + gap; row = 0; column_w = 0; }
       if (!it) break;
-      int w = rb_item_width(win, it, form);
+      int w = rb_item_width(win, it, form, st->states[first_item + cell].badge);
       if (stacks) {
         st->cells[cell++] = (rb_cell_t){R(cx, panel.y + row * row_h, w, row_h), form, g};
         column_w = MAX(column_w, w); row++;
@@ -366,7 +376,7 @@ static bool rb_set_ribbon(window_t *win, ribbon_state_t *st, const ribbon_def_t 
     total += rb_tab_items(&def->tabs[t]);
     widest = MAX(widest, rb_tab_items(&def->tabs[t]));
   }
-  uint8_t *states = calloc(MAX(1, total), sizeof(*states));
+  rb_command_state_t *states = calloc(MAX(1, total), sizeof(*states));
   rb_cell_t *cells = calloc(MAX(1, widest), sizeof(*cells));
   if (!def || !states || !cells) {
     fprintf(stderr, "[ribbon] definition rejected win=%u def=%p items=%d\n", win->id, (void *)def, total);
@@ -375,7 +385,7 @@ static bool rb_set_ribbon(window_t *win, ribbon_state_t *st, const ribbon_def_t 
     return false;
   }
   free(st->states); free(st->cells);
-  st->def = def; st->states = states; st->cells = cells; st->item_total = total;
+  st->def = def; st->states = states; st->cells = cells;
   st->active = st->home = 0; st->layout = def->layout; st->cell_count = 0;
   for (int t = 0; t < def->tab_count; t++)
     if (!def->tabs[t].context) { st->active = st->home = t; break; }
@@ -401,7 +411,8 @@ static void rb_draw_item(window_t *win, ribbon_state_t *st, int index) {
     theme_draw_in(win, THEME_PART_RIBBON_SEPARATOR, r, CTRL_NORMAL);
     return;
   }
-  uint8_t bits = *rb_item_state(st, index);
+  const rb_command_state_t *command = rb_item_state(st, index);
+  int bits = command->flags;
   bool checked = (bits & TBSTATE_CHECKED) != 0;
   ctrl_state_t state = rb_state(st, (rb_hit_t){RB_ITEM, index}, (bits & TBSTATE_DISABLED) != 0, checked);
   uint32_t ink = theme_foreground_in(win, THEME_PART_RIBBON_BUTTON, state);
@@ -409,13 +420,22 @@ static void rb_draw_item(window_t *win, ribbon_state_t *st, int index) {
   const char *text = it->text ? ui_tr(it->text) : "";
   int pad = ui_px(btn, "padding-left"), gap = ui_px(btn, "gap"), line = text_char_height(btn);
   int arrow_w = it->type == RIBBON_ITEM_DROPDOWN ? ui_px(rb_sel(win, "Ribbon::arrow"), "width") : 0;
-  irect16_t arrow = R(0, 0, 0, 0);
+  char badge_text[48];
+  int badge_w = rb_badge_width(command->badge, badge_text, sizeof(badge_text));
+  irect16_t badge = {0}, arrow = {0};
   theme_draw_in(win, THEME_PART_RIBBON_BUTTON, r, state);
   if (cell->form == RB_FORM_LARGE) {
     int size = ui_px(btn, "--large-icon-size"), at = rb_caption_break(btn, text);
     // The content is as tall as rb_large_height() and centred in the cell.
     irect16_t body = rect_center(r, r.w - 2 * pad, rb_large_height(win) - 2 * ui_px(btn, "padding-top"));
-    if (icon) rb_draw_icon(win, icon, rect_split_top(body, size), size, ink);
+    irect16_t top = rect_split_top(body, size);
+    if (badge_w) {
+      int icons_w = icon ? size + gap : 0;
+      top = rect_center(top, icons_w + badge_w, size);
+      badge = rect_split_right(top, badge_w);
+      top = rect_split_left(top, size);
+    }
+    if (icon) rb_draw_icon(win, icon, top, size, ink);
     irect16_t caption = rect_split_top(rect_trim_top(body, size + ui_px(btn, "--caption-gap")), line);
     irect16_t second = rect_offset(caption, 0, line);
     if (at < 0) {
@@ -435,6 +455,10 @@ static void rb_draw_item(window_t *win, ribbon_state_t *st, int index) {
   } else {
     irect16_t body = rect_inset_xy(r, pad, 0);
     if (arrow_w) { arrow = rect_split_right(body, arrow_w); body = rect_trim_right(body, arrow_w + gap); }
+    if (badge_w) {
+      badge = rect_split_right(body, badge_w);
+      body = rect_trim_right(body, badge_w + gap);
+    }
     int size = ui_px(btn, "--icon-size");
     if (icon) {
       rb_draw_icon(win, icon, rect_split_left(body, size), size, ink);
@@ -444,6 +468,13 @@ static void rb_draw_item(window_t *win, ribbon_state_t *st, int index) {
       irect16_t label = rect_center(body, body.w, line);
       draw_text_ellipsized(btn, text, label.x, label.y, label.w, ink);
     }
+  }
+  if (badge_w) {
+    ui_style_vars_t tone = {0};
+    ui_style_vars_set(&tone, "--tone", state & CTRL_DISABLED ? "var(--text-disabled)" : "var(--accent)");
+    badge = rect_center(badge, badge.w, MIN(BADGE_HEIGHT, badge.h));
+    draw_status_badge_in(win, badge, badge_text, NULL, &tone,
+                         state & (CTRL_SELECTED | CTRL_PRESSED) ? CTRL_SELECTED : CTRL_NORMAL);
   }
   if (arrow_w) theme_draw_in(win, THEME_PART_RIBBON_ARROW, arrow, state & CTRL_DISABLED);
 }
@@ -506,7 +537,8 @@ static void rb_click(window_t *win, ribbon_state_t *st, rb_hit_t hit) {
       break;
     case RB_ITEM: {
       const ribbon_item_t *it = rb_item(st, hit.index);
-      if (it->style & RIBBON_ITEM_CHECK) rb_command_state(st, it->ident, *rb_item_state(st, hit.index) ^ TBSTATE_CHECKED);
+      if (it->style & RIBBON_ITEM_CHECK)
+        rb_command_value(st, it->ident, RB_COMMAND_FLAGS, rb_item_state(st, hit.index)->flags ^ TBSTATE_CHECKED);
       send_message(win, evCommand, MAKEDWORD(it->ident, btnClicked), win);
       break;
     }
@@ -558,7 +590,7 @@ result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     case evLeftButtonDown: {
       rb_hit_t hit = rb_hit(win, st, point);
       const ribbon_item_t *it = hit.kind == RB_ITEM ? rb_item(st, hit.index) : NULL;
-      if (it && (*rb_item_state(st, hit.index) & TBSTATE_DISABLED)) return true;
+      if (it && (rb_item_state(st, hit.index)->flags & TBSTATE_DISABLED)) return true;
       // Menus open on the press, as a menu bar's do; the popup takes the pointer from here.
       if (hit.kind == RB_MENU) { rb_open_menu(win, st, hit, st->def->menu_items, st->def->menu_count); return true; }
       if (it && it->type == RIBBON_ITEM_DROPDOWN) { rb_open_menu(win, st, hit, it->menu, it->menu_count); return true; }
@@ -632,15 +664,27 @@ result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     case rbSetRibbon:    return rb_set_ribbon(win, st, lparam);
     case rbGetActiveTab: return (result_t)st->active;
     case rbSetActiveTab: return rb_select_tab(win, st, (int)wparam);
-    case rbGetState:     return (result_t)rb_command_state(st, (uint16_t)wparam, -1);
+    case rbGetState:     return rb_command_value(st, wparam, RB_COMMAND_FLAGS, -1);
     case rbSetState: {
       uint32_t bits = (uint32_t)(uintptr_t)lparam;
-      if ((bits & ~(TBSTATE_CHECKED | TBSTATE_DISABLED)) || rb_command_state(st, (uint16_t)wparam, (int)bits) < 0) {
+      if ((bits & ~(TBSTATE_CHECKED | TBSTATE_DISABLED)) || rb_command_value(st, wparam, RB_COMMAND_FLAGS, (int)bits) < 0) {
         fprintf(stderr, "[ribbon] state rejected win=%u ident=%u state=0x%x\n", win->id, (unsigned)wparam, (unsigned)bits);
         fflush(stderr);
         return false;
       }
       invalidate_window(win);
+      return true;
+    }
+    case rbGetBadge:     return rb_command_value(st, wparam, RB_COMMAND_BADGE, -1);
+    case rbSetBadge: {
+      intptr_t count = (intptr_t)lparam;
+      int old = count >= 0 && count <= INT_MAX ? rb_command_value(st, wparam, RB_COMMAND_BADGE, (int)count) : -1;
+      if (old < 0) {
+        fprintf(stderr, "[ribbon] badge rejected win=%u ident=%u count=%ld\n", win->id, wparam, (long)count);
+        fflush(stderr);
+        return false;
+      }
+      if (old != count) rb_relayout(win, st);
       return true;
     }
     case rbGetLayout:    return (result_t)st->layout;

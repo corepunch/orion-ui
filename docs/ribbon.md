@@ -108,6 +108,7 @@ button, as Office does on a Mac. The ribbon window is also what
 | `rbSetRibbon` | `lparam` = `const ribbon_def_t *` (borrowed static data) |
 | `rbGetActiveTab`, `rbSetActiveTab` | The tab that shows |
 | `rbGetState`, `rbSetState` | A command's `TBSTATE_CHECKED` / `TBSTATE_DISABLED`, by ident. A command placed on several tabs has one state |
+| `rbGetBadge`, `rbSetBadge` | A command's count badge, by ident. Zero hides it. The button includes the badge in its width in every layout |
 | `rbGetLayout`, `rbSetLayout` | `RIBBON_LAYOUT_CLASSIC` or `RIBBON_LAYOUT_SIMPLIFIED` |
 | `rbGetMinimized`, `rbSetMinimized` | Only the tab row shows |
 | `rbGetContexts`, `rbSetContexts` | The contexts whose tabs show |

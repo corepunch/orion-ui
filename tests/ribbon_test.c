@@ -133,6 +133,31 @@ static void test_commands(void) {
   PASS();
 }
 
+static void test_badges(void) {
+  TEST("A count badge fits in both layouts and follows a command across tabs");
+  test_env_init();
+  window_t *ribbon = make_ribbon(900);
+  ASSERT_NOT_NULL(ribbon);
+  irect16_t small = item_rect(ribbon, ID_SAVE), large = item_rect(ribbon, ID_NEW);
+  ASSERT_TRUE(send_message(ribbon, rbSetBadge, ID_SAVE, (void *)(intptr_t)1));
+  ASSERT_TRUE(send_message(ribbon, rbSetBadge, ID_NEW, (void *)(intptr_t)1234));
+  int badged_width = item_rect(ribbon, ID_SAVE).w;
+  ASSERT(badged_width > small.w, "the small button makes room for its badge");
+  ASSERT(item_rect(ribbon, ID_NEW).w > large.w, "the large button makes room for a wide badge");
+  ASSERT_TRUE(send_message(ribbon, rbSetActiveTab, 1, NULL));
+  ASSERT_EQUAL(item_rect(ribbon, ID_SAVE).w, badged_width);
+  ASSERT_TRUE(send_message(ribbon, rbSetLayout, RIBBON_LAYOUT_SIMPLIFIED, NULL));
+  int icon_with_badge = item_rect(ribbon, ID_SAVE).w;
+  ASSERT_TRUE(send_message(ribbon, rbSetBadge, ID_SAVE, NULL));
+  ASSERT(item_rect(ribbon, ID_SAVE).w < icon_with_badge, "clearing the badge gives its space back");
+  ASSERT_EQUAL(send_message(ribbon, rbGetBadge, ID_SAVE, NULL), 0);
+  ASSERT_FALSE(send_message(ribbon, rbSetBadge, ID_SAVE, (void *)(intptr_t)-1));
+  ASSERT_FALSE(send_message(ribbon, rbSetBadge, 999, (void *)(intptr_t)1));
+  destroy_window(ribbon);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_layouts(void) {
   TEST("three rows stack small buttons beside large ones; one row lays them side by side; minimizing leaves the tabs");
   test_env_init();
@@ -242,6 +267,7 @@ int main(void) {
   TEST_START("Ribbon");
   test_tabs_and_state();
   test_commands();
+  test_badges();
   test_layouts();
   test_scaling();
   test_contextual_tabs();

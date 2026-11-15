@@ -310,6 +310,9 @@ void gc_render_status(void) {
   const git_sync_status_t *st = gc->sync_valid ? &gc->sync : NULL;
   git_sync_status_t none = {0};
   if (!st) st = &none;
+  window_t *ribbon = app_chrome_ribbon(gc->chrome_win);
+  if (ribbon)
+    send_message(ribbon, rbSetBadge, ID_REMOTE_PUSH, (void *)(intptr_t)(gc->repo ? MAX(0, st->ahead) : 0));
 
   char status[768];
   snprintf(status, sizeof(status), "%s", ui_tr("No repository"));

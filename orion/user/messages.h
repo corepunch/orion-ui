@@ -624,6 +624,8 @@ enum {
   rbGetTabRect,                 // wparam = tab index, -1 = the application-menu button; lparam = irect16_t* out; false for a hidden contextual tab
   rbGetContexts,                // returns the mask of contexts whose tabs show
   rbSetContexts,                // wparam = mask of ribbon_tab_t.context bits; lparam nonzero opens the first tab this reveals
+  rbGetBadge,                   // wparam = command ident; returns the count, or -1 when absent
+  rbSetBadge,                   // wparam = command ident; lparam = (void *)(intptr_t) count; 0 hides the badge
 };
 // Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.
 // SpriteSlider also answers slSetRange / slSetPos / slGetPos and notifies with sliderValueChanged,
