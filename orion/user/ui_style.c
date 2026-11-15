@@ -8,6 +8,7 @@
 #include "theme.h"
 #include "style.h"
 #include "ui_style.h"
+#include "ansi.h"
 
 style_sheet_t *ui_stylesheet(void) { return theme_stylesheet(get_theme()); }
 
@@ -453,6 +454,20 @@ uint32_t ui_color(const char *selector, const char *property) {
       fprintf(stderr, "[ui_style] %s { %s: %s } is not a colour\n", selector, property, v); fflush(stderr);
     }
   });
+}
+
+void ui_ansi_palette(const char *selector, uint32_t out[16]) {
+  static const char *props[16] = {   // literals: the style cache keys on the pointers
+    "--ansi-black",        "--ansi-red",        "--ansi-green",        "--ansi-yellow",
+    "--ansi-blue",         "--ansi-magenta",    "--ansi-cyan",         "--ansi-white",
+    "--ansi-bright-black", "--ansi-bright-red", "--ansi-bright-green", "--ansi-bright-yellow",
+    "--ansi-bright-blue",  "--ansi-bright-magenta", "--ansi-bright-cyan", "--ansi-bright-white",
+  };
+  for (int i = 0; i < 16; i++) {
+    char v[64];
+    uint32_t c = ui_string(selector, props[i], v, sizeof(v)) ? ui_color(selector, props[i]) : 0, k = kAnsi16[i];
+    out[i] = c ? c : i >= 8 ? out[i - 8] : (k & 0xFF00FF00u) | ((k >> 16) & 0xFFu) | ((k & 0xFFu) << 16);
+  }
 }
 
 int ui_role(const char *selector, const char *property) {

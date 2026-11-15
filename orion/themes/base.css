@@ -341,4 +341,11 @@ TableView::detail, TableView::subtitle, Icon, IconView::cell, Toolbar::label, Wi
 TableView::group { font: var(--text-heading); }
 Window::title    { font: var(--text-title); }
 Terminal, DiffView { font: var(--text-mono); }
-DiffView { background: #1E1E1E; color: #D4D4D4; --hunk-selection: #553333; }
+/* A diff is a well in the theme's own colours, light or dark; git's ANSI
+   colours map onto the status roles. */
+DiffView {
+  background: var(--column-view-bg); color: var(--text-normal);
+  --hunk-selection: color-mix(in srgb, var(--accent) 14%, var(--column-view-bg));
+  --ansi-black: var(--text-secondary); --ansi-red:     var(--text-error);   --ansi-green: var(--text-success); --ansi-yellow: var(--text-warning);
+  --ansi-blue:  var(--text-info);      --ansi-magenta: var(--folder-text);  --ansi-cyan:  var(--text-info);    --ansi-white:  var(--text-normal);
+}

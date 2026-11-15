@@ -677,19 +677,37 @@ void draw_text_cells(ui_font_t font, const text_cell_t *cells, int count, int x,
 }
 
 // ANSI palette entries are 0xAARRGGBB; drawing takes 0xAABBGGRR.
-static uint32_t text_ansi_color(int index) {
-  uint32_t c = kAnsi256[clamp_ansi_index(index)];
-  return (c & 0xFF00FF00u) | ((c >> 16) & 0xFFu) | ((c & 0xFFu) << 16);
-}
-
 static uint32_t text_argb(uint32_t abgr) {
   return (abgr & 0xFF00FF00u) | ((abgr >> 16) & 0xFFu) | ((abgr & 0xFFu) << 16);
 }
 
+static uint32_t text_ansi_color(int index, const uint32_t *palette) {
+  index = clamp_ansi_index(index);
+  return palette && index < 16 ? palette[index] : text_argb(kAnsi256[index]);
+}
+
+static int text_nearest_ansi(uint32_t abgr, const uint32_t *palette) {
+  if (!palette) return nearest_ansi_index(text_argb(abgr));
+  int best = 0; uint32_t best_d = UINT32_MAX;
+  for (int i = 0; i < 16; i++) {
+    int dr = (int)(abgr & 0xFF) - (int)(palette[i] & 0xFF);
+    int dg = (int)((abgr >> 8) & 0xFF) - (int)((palette[i] >> 8) & 0xFF);
+    int db = (int)((abgr >> 16) & 0xFF) - (int)((palette[i] >> 16) & 0xFF);
+    uint32_t d = (uint32_t)(dr * dr + dg * dg + db * db);
+    if (d < best_d) { best_d = d; best = i; }
+  }
+  return best;
+}
+
 int text_cells_from_ansi(const char *line, text_cell_t *out, int max, uint32_t fg, uint32_t bg) {
+  return text_cells_from_ansi_palette(line, out, max, fg, bg, NULL);
+}
+
+int text_cells_from_ansi_palette(const char *line, text_cell_t *out, int max, uint32_t fg, uint32_t bg,
+                                 const uint32_t *palette) {
   if (!line || !out || max <= 0) return 0;
   if (!(kAnsi256[255] >> 24)) ansi_init_palette256();
-  int def_fg = nearest_ansi_index(text_argb(fg)), def_bg = nearest_ansi_index(text_argb(bg));
+  int def_fg = text_nearest_ansi(fg, palette), def_bg = text_nearest_ansi(bg, palette);
   int cur_fg = def_fg, cur_bg = def_bg, n = 0, len = (int)strlen(line);
   bool bold = false;   // a colour left at its default keeps the caller's exact value
   for (int i = 0; i < len && n < max;) {
@@ -712,8 +730,8 @@ int text_cells_from_ansi(const char *line, text_cell_t *out, int max, uint32_t f
     uint32_t cp = utf8_codepoint(line + i, len - i, &length);
     i += length > 0 ? length : 1;
     out[n].codepoint = cp;
-    out[n].fg = cur_fg != def_fg ? text_ansi_color(cur_fg) : fg;
-    out[n].bg = cur_bg != def_bg ? text_ansi_color(cur_bg) : bg;
+    out[n].fg = cur_fg != def_fg ? text_ansi_color(cur_fg, palette) : fg;
+    out[n].bg = cur_bg != def_bg ? text_ansi_color(cur_bg, palette) : bg;
     n++;
   }
   return n;

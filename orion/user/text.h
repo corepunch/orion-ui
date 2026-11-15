@@ -54,6 +54,11 @@ void draw_text_cells(ui_font_t font, const text_cell_t *cells, int count, int x,
 // Converts a line with ANSI SGR colour codes (ESC[...m) into cells, starting
 // from the default colours; returns how many cells it wrote (at most max).
 int  text_cells_from_ansi(const char *line, text_cell_t *out, int max, uint32_t fg, uint32_t bg);
+// The same with the 16 basic colours (0xAABBGGRR, black..bright white) taken
+// from palette, as ui_ansi_palette() reads them from a style sheet; NULL keeps
+// the built-in palette.
+int  text_cells_from_ansi_palette(const char *line, text_cell_t *out, int max, uint32_t fg, uint32_t bg,
+                                  const uint32_t *palette);
 
 // ── Advanced text rendering ───────────────────────────────────────────────────
 typedef struct {

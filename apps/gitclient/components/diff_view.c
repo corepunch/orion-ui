@@ -3,8 +3,8 @@
 #include <orion/user/rect.h>
 
 // The diff draws in the DiffView font and colours (orion/themes/base.css):
-// background, color, and --hunk-selection behind the current hunk. Git's
-// ANSI colours paint over them.
+// background, color, --hunk-selection behind the current hunk, and the
+// --ansi-* palette git's colour codes select.
 
 static int visible_lines(window_t *win) {
   int ch = text_char_height("DiffView");
@@ -207,6 +207,8 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
 
       fill_rect(ui_color("DiffView", "background"), cr);
       uint32_t ink = ui_color("DiffView", "color"), hunk = ui_color("DiffView", "--hunk-selection");
+      uint32_t palette[16];
+      ui_ansi_palette("DiffView", palette);
 
       int ch = text_char_height("DiffView");
       int vis_cols = cr.w / MAX(1, text_cell_width("DiffView"));
@@ -219,7 +221,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       if (!st || !st->lines || st->line_count <= 0) {
         if (st) {
           const char *text = "No local changes";
-          int n = text_cells_from_ansi(text, cells, vis_cols, ink, 0);
+          int n = text_cells_from_ansi_palette(text, cells, vis_cols, ink, 0, palette);
           int col = MAX(0, (vis_cols - n) / 2);
           draw_text_cells("DiffView", cells, n, cr.x + col * text_cell_width("DiffView"), cr.y + (vis_rows / 2) * ch);
         }
@@ -234,7 +236,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
           marked = line_idx >= st->hunk_offsets[st->current_hunk] && line_idx < st->hunk_offsets[st->current_hunk + 1];
         for (int h = 0; h < st->hunk_count; h++) marked |= line_idx == st->hunk_offsets[h];   // hunk headers
         if (marked) fill_rect(hunk, R(cr.x, cr.y + row * ch, cr.w, ch));
-        int n = text_cells_from_ansi(st->lines[line_idx], cells, vis_cols, ink, 0);
+        int n = text_cells_from_ansi_palette(st->lines[line_idx], cells, vis_cols, ink, 0, palette);
         draw_text_cells("DiffView", cells, n, cr.x, cr.y + row * ch);
       }
       return true;

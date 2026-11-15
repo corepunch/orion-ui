@@ -73,6 +73,10 @@ int  ui_px(const char *selector, const char *property);            // first leng
 int  ui_radius(const char *selector);                              // border-radius, capsule = CORNER_RADIUS_CIRCULAR
 float ui_number(const char *selector, const char *property);       // a number or a percentage (0.5 for 50%)
 uint32_t ui_color(const char *selector, const char *property);
+// The 16 ANSI colours a terminal-like control paints with, from --ansi-black ..
+// --ansi-white and --ansi-bright-black .. --ansi-bright-white. A bright colour
+// left unset is its plain one; a plain one left unset keeps the built-in value.
+void ui_ansi_palette(const char *selector, uint32_t out[16]);
 int  ui_role(const char *selector, const char *property);          // the colour role var(--role) names, 0 for none
 bool ui_flag(const char *selector, const char *property);          // set, and not none, 0 or false
 bool ui_keyword_is(const char *selector, const char *property, const char *keyword);
