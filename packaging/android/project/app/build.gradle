@@ -11,7 +11,8 @@ android {
     defaultConfig {
         applicationId project.findProperty('orionApplicationId') ?: 'org.orion.app'
         minSdk 28
-        // 35 would force edge-to-edge drawing, and Orion does not yet lay out around system bars.
+        // 35 forces edge-to-edge drawing; Orion does not yet lay out around system bars, so the
+        // manifest also hides the status bar (Theme.Material.NoActionBar.Fullscreen).
         targetSdk 34
         versionCode((project.findProperty('orionVersionCode') ?: '1') as int)
         versionName project.findProperty('orionVersionName') ?: '0.0'

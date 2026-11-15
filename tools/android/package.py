@@ -17,7 +17,7 @@ MANIFEST = '''<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-feature android:glEsVersion="0x00030000" android:required="true" />
   <application android:label={label} android:icon="@mipmap/ic_launcher" android:hasCode="true"
-      android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar">
+      android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
     <activity android:name="org.orion.OrionActivity" android:exported="true" android:launchMode="singleTask"
         android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|density|navigation"
         android:windowSoftInputMode="adjustNothing|stateHidden">
