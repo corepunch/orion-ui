@@ -45,11 +45,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      # The host runs orionc (libxml2); the NDK builds everything in the APK.
+      # The host runs orionc (libxml2, GL headers); the NDK builds everything in the APK.
       - name: Install host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-dev pkg-config cmake
+          sudo apt-get install -y libxml2-dev libgl1-mesa-dev pkg-config cmake
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -9,7 +9,7 @@ debug-signed APK. The minimum is Android 9 (API 28).
 
 - Android NDK r26 or later, with `ANDROID_NDK_HOME` set.
 - Android SDK with platform 35 (`ANDROID_HOME`), Java 17 and Gradle 8.
-- CMake and curl, for libxml2; a host C compiler and libxml2, for `orionc`.
+- CMake and curl, for libxml2; a host C compiler, libxml2 and OpenGL headers, for `orionc`.
 
 Together they take several gigabytes; GitHub Actions builds them for you.
 
