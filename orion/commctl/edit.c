@@ -116,13 +116,13 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       return true;
     }
-#ifdef AX_PLATFORM_IOS
+#ifdef AX_PLATFORM_TOUCH
     case evKillFocus:
       axSetTextInput(FALSE);
       return true;
 #endif
     case evDestroy:
-#ifdef AX_PLATFORM_IOS
+#ifdef AX_PLATFORM_TOUCH
       axSetTextInput(FALSE);
 #endif
       free(win->userdata);
@@ -132,7 +132,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (g_ui_runtime.focused == win) {
         invalidate_window(win);
         window_set_state(win, WINDOW_STATE_EDITING, true);
-#ifdef AX_PLATFORM_IOS
+#ifdef AX_PLATFORM_TOUCH
         axSetTextInput(TRUE);
 #endif
         int text_x = textedit_text_x(win);

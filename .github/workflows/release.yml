@@ -32,17 +32,29 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
 
+  android:
+    needs: version
+    uses: ./.github/workflows/android.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
   # Each platform contributes orion-<pkg>-<version>-<platform>.tar.gz and
   # packages-<platform>.tsv for the package manager, plus version-free
-  # <app>-<platform>.{zip,tar.gz} downloads and SHA256SUMS-<platform>.txt.
+  # <app>-<platform>.{zip,tar.gz} downloads and SHA256SUMS-<platform>.txt;
+  # android.yml adds <app>-android-<version>.apk.
   release:
-    needs: [version, package]
+    needs: [version, package, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: packages-*
+          path: release
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: apk-*
           path: release
           merge-multiple: true
       - name: Publish release

@@ -3,9 +3,7 @@
 
 #include "config.h"  // Tunable framework parameters
 
-#ifdef __APPLE__
-#include <TargetConditionals.h>
-#endif
+#include <platform/platform.h>  // AX_PLATFORM_TOUCH
 
 typedef enum {
   TOOLTIP_PLACE_ABOVE, TOOLTIP_PLACE_BELOW, TOOLTIP_PLACE_LEFT, TOOLTIP_PLACE_RIGHT
@@ -401,7 +399,7 @@ typedef struct {
 // icons centre with equal integer padding on every side.
 #define SYSICON_SIZE      24              // canonical size of sysicon/toolbar SVG tiles
 #define TITLEBAR_HEIGHT   (FONT_SIZE + 15)
-#if defined(__APPLE__) && TARGET_OS_IOS
+#ifdef AX_PLATFORM_TOUCH
 #define TOOLBAR_HEIGHT    42
 #define BUTTON_HEIGHT     40
 #else
@@ -482,7 +480,7 @@ enum {
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_TRANSPARENT    (1u << 3) // retain the parent's surface behind toolbar items (TBSTYLE_TRANSPARENT)
 #define TOOLBAR_STYLE_WRAPABLE       (1u << 7) // vertical toolbar flows into a new column at the window height (≈ TBSTYLE_WRAPABLE)
-#if defined(__APPLE__) && TARGET_OS_IOS
+#ifdef AX_PLATFORM_TOUCH
 #define TOOLBAR_COMPACT_ICON_SIZE   20
 #else
 #define TOOLBAR_COMPACT_ICON_SIZE   16

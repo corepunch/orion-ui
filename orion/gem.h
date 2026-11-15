@@ -195,8 +195,15 @@ extern hinstance_t g_gem_hinstance;
     return axRunApplication(argc, argv, gem_ios_start, gem_ios_frame, gem_ios_stop); \
   }
 #else
+// NativeActivity enters at android_main() (packaging/android/android_main.c),
+// which unpacks the bundled files and then runs this blocking loop.
+#ifdef AX_PLATFORM_ANDROID
+#define GEM_ENTRY_POINT orion_main
+#else
+#define GEM_ENTRY_POINT main
+#endif
 #define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_)     \
-  int main(int argc, char *argv[]) {                                        \
+  int GEM_ENTRY_POINT(int argc, char *argv[]) {                             \
     const char *gem_screenshot_path = NULL;                                 \
     const char *gem_appearance = NULL;                                      \
     uint16_t gem_rc_port = 0;                                                \

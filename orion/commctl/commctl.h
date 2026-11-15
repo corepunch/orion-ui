@@ -139,7 +139,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 
 // Height of the menu bar strip — matches the generous dropdown row rhythm.
 // FONT_SIZE is a compile-time constant from kernel/kernel.h (included via user/user.h).
-#ifdef AX_PLATFORM_IOS
+#ifdef AX_PLATFORM_TOUCH
 #define MENUBAR_HEIGHT 29
 #else
 #define MENUBAR_HEIGHT (FONT_SIZE + 12)

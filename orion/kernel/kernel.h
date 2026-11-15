@@ -85,7 +85,7 @@ typedef struct bitmap_strip_s bitmap_strip_t;
 // FONT_SIZE       — system chrome font height
 // FONT_SIZE_SMALL — content font height
 // FONT_PIXEL_SIZE — rendered system line height (for vertical centering)
-#if defined(AX_PLATFORM_IOS)
+#if defined(AX_PLATFORM_TOUCH)
 #  define FONT_SIZE        15
 #  define FONT_PIXEL_SIZE  20
 #  define FONT_SIZE_SMALL  15

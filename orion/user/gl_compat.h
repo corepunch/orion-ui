@@ -10,6 +10,9 @@
   #else
     #include <OpenGL/gl3.h>
   #endif
+#elif defined(__ANDROID__)
+  #define ORION_OPENGL_ES 1
+  #include <GLES3/gl3.h>
 #elif defined(_WIN32) || defined(_WIN64)
   /* Windows platform - use GLEW for OpenGL extension loading */
   #define WIN32_LEAN_AND_MEAN

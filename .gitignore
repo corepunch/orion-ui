@@ -102,3 +102,6 @@ fonts/
 /apps/groove/ejay-samples/
 /apps/groove/mtv-samples/
 /apps/groove/reel
+
+# Gradle state for the Android packaging project
+packaging/android/project/.gradle/

@@ -19,6 +19,9 @@
     <target name="iPad Simulator" run="make ipad-run APP=${app}">
         <param name="app" choices="imageeditor groove penciltest" />
     </target>
+    <target name="Android APK" kind="build" run="make android APP=${app}">
+        <param name="app" choices="imageeditor penciltest groove winamp" />
+    </target>
     <target name="All apps" kind="build" run="make" />
     <target name="Tests" kind="test" run="make test" />
     <target name="Business server checks" kind="test" run="make business-server-check" />

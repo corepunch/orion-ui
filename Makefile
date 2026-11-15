@@ -546,7 +546,7 @@ plugins: $(COMPONENT_PLUGIN_BINS)
 # orionc, cgen) are left out so the refresh cannot form a cycle.
 LINKED_BINS      = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(BIN_DIR)/doom-ed$(EXE_EXT) $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
 BUILT_APP_BINS   = $(filter-out $(MAKECMDGOALS),$(wildcard $(LINKED_BINS)))
-NO_REFRESH_GOALS = clean help install% ipad% mac-deploy list-devices app-source check-lua launch-check .launch-check-database refresh-built-apps
+NO_REFRESH_GOALS = clean help install% ipad% android% mac-deploy list-devices app-source check-lua launch-check .launch-check-database refresh-built-apps
 NO_REFRESH_FILES = $(filter-out $(LINKED_BINS) $(TEST_BINS),$(filter $(BUILD_DIR)/%,$(MAKECMDGOALS)))
 REFRESH_GOALS    = $(filter-out $(NO_REFRESH_GOALS) $(NO_REFRESH_FILES),$(MAKECMDGOALS))
 .PHONY: refresh-built-apps
@@ -727,6 +727,7 @@ help:
 	@echo "test      - Build and run tests"
 	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Jamsheet iPad bundles"
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp (winamp is an iPhone app; ipad-deploy auto-selects one connected device)"
+	@echo "android / android-all - Debug APKs in build/android/apk; APP=imageeditor|penciltest|groove|winamp, ABIS=\"arm64-v8a x86_64\""
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
 	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
@@ -762,6 +763,14 @@ ipad-all:
 	$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
 	$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
 	$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
+# Android debug APKs (build/android/apk/orion-<app>.apk); needs ANDROID_NDK_HOME,
+# the Android SDK, Java 17 and Gradle. See packaging/android/README.md.
+ABIS ?= arm64-v8a
+.PHONY: android android-all
+android:
+	$(MAKE) -f packaging/android/build.mk APP=$(APP) ABIS="$(ABIS)" apk
+android-all:
+	@for app in imageeditor penciltest groove winamp; do $(MAKE) -f packaging/android/build.mk APP=$$app ABIS="$(ABIS)" apk || exit 1; done
 mac-deploy:
 	$(MAKE) -f packaging/macos/build.mk APP=$(APP) APP_SOURCE=$(or $(PHONY_APPS_SRC_$(APP)),$(APP)) deploy
 

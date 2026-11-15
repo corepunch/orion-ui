@@ -1,0 +1,33 @@
+// packaging/android/build.mk stages the native library, assets, manifest and
+// launcher icon under -PorionBuild; this project adds the Java activity and
+// packages them.
+plugins { id 'com.android.application' }
+
+def staged = file(project.findProperty('orionBuild') ?: "$rootDir/../../../build/android/gradle")
+
+android {
+    namespace 'org.orion'
+    compileSdk 35
+    defaultConfig {
+        applicationId project.findProperty('orionApplicationId') ?: 'org.orion.app'
+        minSdk 28
+        // 35 would force edge-to-edge drawing, and Orion does not yet lay out around system bars.
+        targetSdk 34
+        versionCode((project.findProperty('orionVersionCode') ?: '1') as int)
+        versionName project.findProperty('orionVersionName') ?: '0.0'
+    }
+    sourceSets.main {
+        manifest.srcFile new File(staged, 'AndroidManifest.xml')
+        assets.srcDirs = [new File(staged, 'assets')]
+        jniLibs.srcDirs = [new File(staged, 'jniLibs')]
+        res.srcDirs = [new File(staged, 'res')]
+        java.srcDirs = ['src/main/java']
+    }
+    // Keep dot-files and _folders: android_main unpacks every listed asset.
+    androidResources { ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~' }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildTypes { release { minifyEnabled false } }
+}

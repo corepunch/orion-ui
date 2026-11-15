@@ -61,7 +61,7 @@ static void init_atlas_mesh(font_atlas_t *atlas) {
 }
 
 static float text_platform_scale(void) {
-#if defined(AX_PLATFORM_IOS)
+#if defined(AX_PLATFORM_TOUCH)
   return 1.2f;
 #elif UI_WINDOW_SCALE == 1
   return 1.0f;

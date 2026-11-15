@@ -1,0 +1,110 @@
+name: Android
+
+# Debug-signed APKs for the touch apps (packaging/android/build.mk), each with
+# arm64-v8a and x86_64 libraries, and an emulator start-up check. Runs on
+# changes to the framework, these apps or the Android packaging, by hand, and
+# from release.yml, which attaches the APKs to the release.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'orion/**'
+      - 'share/**'
+      - 'platform'
+      - 'vendor/**'
+      - 'apps/imageeditor/**'
+      - 'apps/groove/**'
+      - 'apps/winamp/**'
+      - 'packaging/android/**'
+      - 'tools/android/**'
+      - 'tools/orionc.c'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Release version; empty for a CI build
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: ${{ matrix.app }}
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [imageeditor, penciltest, groove, winamp]
+    runs-on: ubuntu-24.04
+    env:
+      GROOVE_USE_SHINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # The host runs orionc (libxml2); the NDK builds everything in the APK.
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-dev pkg-config cmake
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Cache libxml2
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/android/downloads
+            build/android/*/deps
+          key: android-libxml2-2.13.5-${{ hashFiles('tools/android/libxml2.py') }}
+      - name: Build APK (arm64-v8a, x86_64)
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        run: |
+          make android APP=${{ matrix.app }} ABIS="arm64-v8a x86_64" VERSION_CODE=${{ github.run_number }} \
+            ${{ inputs.version != '' && format('VERSION_NAME={0}', inputs.version) || '' }}
+          mkdir -p dist
+          cp build/android/apk/orion-${{ matrix.app }}.apk "dist/${{ matrix.app }}-android${{ inputs.version != '' && format('-{0}', inputs.version) || '' }}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.app }}
+          path: dist/*.apk
+          retention-days: ${{ inputs.version != '' && 90 || 14 }}
+
+  # Starts Image Editor on an API 34 x86_64 emulator and checks it stays up.
+  emulator:
+    needs: apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk-imageeditor
+          path: build/android/apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Smoke test Image Editor (API 34, x86_64)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: sh packaging/android/smoke-test.sh "$(ls build/android/apk/*.apk)" org.orion.imageeditor build/android/smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-smoke-imageeditor
+          path: build/android/smoke/

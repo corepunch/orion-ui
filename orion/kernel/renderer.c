@@ -30,7 +30,10 @@ const char *ui_get_exe_dir(void) {
   static char buf[4096];
   buf[0] = '\0';
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(AX_PLATFORM_ANDROID)
+  // Bundled files are unpacked to private storage as bin/../share, like a desktop install.
+  snprintf(buf, sizeof(buf), "%s/bin", axLibDirectory());
+#elif defined(_WIN32) || defined(_WIN64)
   DWORD len = GetModuleFileNameA(NULL, buf, (DWORD)sizeof(buf));
   if (len == 0 || len >= (DWORD)sizeof(buf)) { buf[0] = '\0'; return buf; }
   char *last = strrchr(buf, '\\');

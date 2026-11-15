@@ -58,7 +58,7 @@ static bool theme_role_var(const char *name, char *out, size_t n, void *ctx) {
   return true;
 }
 
-#if defined(__APPLE__) && TARGET_OS_IOS
+#ifdef AX_PLATFORM_TOUCH
 #define THEME_MENUBAR_HEIGHT 29
 #else
 #define THEME_MENUBAR_HEIGHT (FONT_SIZE + 12)
