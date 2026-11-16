@@ -1844,11 +1844,6 @@ void R_SetClipRoundedRect(int x, int y, int w, int h, float radius) {
 }
 void R_DisableScissor(void) { glDisable(GL_SCISSOR_TEST); }
 
-void R_PrintDeviceInfo(void) {
-  printf("GL_VERSION  : %s\n", glGetString(GL_VERSION));
-  printf("GLSL_VERSION: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-}
-
 // ── Compositor ────────────────────────────────────────────────────────────────────────────
 // The window system describes each redirected surface (position, shape, shadow, border); the
 // compositor owns how they reach the screen: one reusable physical-pixel target, shadows, SDF

@@ -230,8 +230,6 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
   }
 #endif
 
-  R_PrintDeviceInfo();
-
   if (!(flags & UI_INIT_HIDDEN))
     axSetSwapInterval(1);
 
