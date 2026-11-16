@@ -204,8 +204,9 @@ static window_visual_t window_animation_visual(const window_t *win, const window
   float scale = fmaxf(fmaxf(v.rect.w / w, v.rect.h / h), 1e-3f);
   float sw = fminf(w, v.rect.w / scale), sh = fminf(h, v.rect.h / scale);
   v.source = (frect_t){(w - sw) / 2, (h - sh) / 2, sw, sh};
-  // Opaque within the first part of the way out of `from`, so the thumbnail below hands over to it.
-  if (wa->flags & AW_BLEND) v.opacity = fminf(1, fmaxf(0, p / .35f));
+  // Zooming, it is opaque within the first part of the way out of `from`, so the thumbnail below
+  // hands over to it; a plain blend fades over the whole animation.
+  if (wa->flags & AW_BLEND) v.opacity = fminf(1, fmaxf(0, (wa->flags & AW_ZOOM) ? p / .35f : p));
   return v;
 }
 

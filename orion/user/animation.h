@@ -110,7 +110,8 @@ void window_cache_validate(window_t *win);         // framework: the surface was
 // ── AnimateWindow ──────────────────────────────────────────────────────────
 // ≈ AnimateWindow(hwnd, time, AW_*) with DrawAnimatedRects(IDANI_CAPTION)'s zoom from a rectangle,
 // but asynchronous. AW_ZOOM grows the window out of `from` (its own coordinates) into its frame, its
-// content aspect-filled and cropped to the growing rectangle; AW_BLEND fades it in as it leaves `from`.
+// content aspect-filled and cropped to the growing rectangle; AW_BLEND fades it in as it leaves `from`
+// (without AW_ZOOM, over the whole animation).
 // With AW_HIDE it runs backwards into `from` and hides the window at the end. The window is shown at
 // the start and takes no input until it ends. When it ends (or is replaced by another animate_window
 // call) the parent receives evCommand MAKEDWORD(win->id, awnFinished) with lparam = win.
