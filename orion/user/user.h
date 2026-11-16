@@ -520,6 +520,8 @@ typedef struct {
   bool visible;            // bar is currently drawn (auto show/hide via set_scroll_info)
   bool enabled;            // bar accepts mouse interaction (enable_scroll_bar)
   int8_t visible_mode;     // SB_VIS_AUTO / SB_VIS_HIDE / SB_VIS_SHOW (see user/messages.h)
+  bool bounce;             // touch pans rubber-band past the ends, even when the content fits
+  bool rubber;             // pos is stretched past the range by a pan or its spring-back
   bool dragging;           // thumb drag in progress
   int  drag_start_mouse;   // axis coord (window-local) when drag began
   int  drag_mouse;         // accumulated axis coord while dragging
@@ -993,6 +995,9 @@ void set_scroll_info(window_t *win, int bar, scroll_info_t const *info, bool red
 void get_scroll_info(window_t *win, int bar, scroll_info_t *info);
 int  get_scroll_pos(window_t *win, int bar);
 void enable_scroll_bar(window_t *win, int bar, bool enable);
+// UIKit's alwaysBounceVertical/Horizontal: a touch pan stretches past either end
+// with rubber-band resistance, even when the content fits, and springs back.
+void set_scroll_bounce(window_t *win, int bar, bool bounce);
 // Publish pixel content extent and position; resolve both gutters and relayout.
 void set_scroll_content(window_t *win, int width, int height, int x, int y);
 // Managed pixel scrolling. Zero width fills the viewport; empty content has no padding extent.

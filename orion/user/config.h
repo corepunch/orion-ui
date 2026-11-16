@@ -36,6 +36,12 @@
 #define FLING_START_SPEED       0.05f
 #define FLING_MIN_SPEED         0.005f
 
+// UIKit rubber band: a pan past the end moves the content by
+// (1 - 1 / (x * BOUNCE_RESISTANCE / page + 1)) * page, and released content
+// springs back on a critically damped curve with this rate per millisecond.
+#define BOUNCE_RESISTANCE       0.55f
+#define BOUNCE_SPRING_RATE      0.0125f
+
 // ──────────────────────────────────────────────────────────────────────────
 // Window System
 // ──────────────────────────────────────────────────────────────────────────

@@ -256,6 +256,78 @@ static void test_touch_pan(void) {
   PASS();
 }
 
+// Advances the momentum timer in real time until the content rests or the deadline passes.
+static void run_fling(window_t *win, uint32_t timer, uint32_t ms) {
+  uint32_t end = (uint32_t)axGetMilliseconds() + ms;
+  while (scrollbar_is_flinging(win) && (uint32_t)axGetMilliseconds() < end) {
+    axSleep(8);
+    ui_event_t tick = {.target = win, .message = kEventTimer, .wParam = timer};
+    dispatch_message(&tick);
+  }
+}
+
+static uint32_t next_timer(window_t *win) {
+  uint32_t id = axSetTimer(win, 100000, NULL, false);
+  axCancelTimer(id);
+  return id + 1;
+}
+
+static void test_touch_bounce(void) {
+  TEST("a bouncing view rubber-bands a swipe even when its content fits, never clicks, and springs back");
+  test_env_init();
+  set_theme(THEME_CLASSIC);
+  window_t *shelf = create_window("Shelf", WINDOW_NOTITLE | WINDOW_VSCROLL, MAKERECT(0, 0, 200, 300), NULL, row_proc, 0, NULL);
+  window_t *book = create_window("Book", WINDOW_NOTITLE, MAKERECT(0, 100, 100, 100), shelf, row_proc, 0, NULL);
+  show_window(shelf, true); show_window(book, true);
+  set_scroll_content(shelf, 200, 200, 0, 0);
+  ASSERT_FALSE(scrollbar_can_pan(shelf));
+  set_scroll_bounce(shelf, SB_VERT, true);
+  ASSERT_TRUE(scrollbar_can_pan(shelf));
+
+  presses = releases = 0;
+  dispatch_finger(kEventLeftButtonDown, 50, 150, 1000);
+  dispatch_finger(kEventLeftButtonUp, 50, 150, 1010);
+  ASSERT_EQUAL(presses, 1); ASSERT_EQUAL(releases, 1);
+
+  presses = releases = 0;
+  dispatch_finger(kEventLeftButtonDown, 50, 150, 2000);
+  dispatch_finger(kEventLeftButtonDragged, 50, 170, 2016);
+  dispatch_finger(kEventLeftButtonDragged, 50, 210, 2032);
+  // 60 points of travel past the slop's 8: (1 - 1 / (52 * 0.55 / 300 + 1)) * 300 = 26.
+  ASSERT_EQUAL(shelf->vscroll.pos, -26);
+  ASSERT_TRUE(shelf->vscroll.rubber);
+  set_scroll_content(shelf, 200, 200, 0, shelf->vscroll.pos);
+  ASSERT_EQUAL(shelf->vscroll.pos, -26);
+  uint32_t timer = next_timer(shelf);
+  dispatch_finger(kEventLeftButtonUp, 50, 210, 2300);
+  ASSERT_EQUAL(presses, 0); ASSERT_EQUAL(releases, 0);
+  ASSERT_TRUE(scrollbar_is_flinging(shelf));
+  run_fling(shelf, timer, 2000);
+  ASSERT_FALSE(scrollbar_is_flinging(shelf));
+  ASSERT_EQUAL(shelf->vscroll.pos, 0);
+  ASSERT_FALSE(shelf->vscroll.rubber);
+
+  // Catching the band mid-spring holds it; letting go springs it back without a click.
+  dispatch_finger(kEventLeftButtonDown, 50, 150, 3000);
+  dispatch_finger(kEventLeftButtonDragged, 50, 110, 3016);
+  ASSERT_TRUE(shelf->vscroll.pos > 0);
+  timer = next_timer(shelf);
+  dispatch_finger(kEventLeftButtonUp, 50, 110, 3300);
+  ASSERT_TRUE(scrollbar_is_flinging(shelf));
+  dispatch_finger(kEventLeftButtonDown, 50, 150, 3310);
+  ASSERT_FALSE(scrollbar_is_flinging(shelf));
+  int held = shelf->vscroll.pos;
+  ASSERT_TRUE(held > 0);
+  timer = next_timer(shelf);
+  dispatch_finger(kEventLeftButtonUp, 50, 150, 3320);
+  ASSERT_EQUAL(presses, 0);
+  run_fling(shelf, timer, 2000);
+  ASSERT_EQUAL(shelf->vscroll.pos, 0);
+  destroy_window(shelf);
+  test_env_shutdown();
+  PASS();
+}
+
 static int long_press_count;
 static ipoint16_t long_press_point;
 static result_t long_press_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -302,6 +374,7 @@ int main(void) {
   test_hidden_scrollbar_pan();
   test_pan_axis_availability();
   test_touch_pan();
+  test_touch_bounce();
   test_stationary_long_press();
   TEST_END();
 }

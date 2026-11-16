@@ -35,6 +35,19 @@ Touching moving content stops its momentum. Cancellation never starts a fling.
 Positions clamp at the normal scroll limits, and updates send the same
 `evHScroll` / `evVScroll` notifications as other scrolling input.
 
+### Rubber-band bouncing
+
+`set_scroll_bounce(win, SB_VERT, true)` is UIKit's `alwaysBounceVertical`: a
+finger swipe pans the axis even when its content fits, so the swipe never
+reaches the items under it as a click. Past either end the content follows the
+finger with UIKit's resistance, `(1 - 1 / (x * 0.55 / page + 1)) * page`, and
+on release it springs back on a critically damped curve. Momentum that reaches
+an end carries past it and springs back the same way; catching the content
+mid-spring holds it under the finger. While stretched, the scroll position lies
+outside its range (`win_sb_t::rubber`), so layout, painting and hit-testing
+share the one offset; a wheel ends the stretch at once. Without bounce an axis
+pans only when it overflows and clamps at its ends.
+
 ### Two-finger panning
 
 Built-in scrollbars also handle native multitouch `evGesture` automatically

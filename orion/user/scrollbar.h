@@ -11,6 +11,8 @@ void scrollbar_handle_builtin_wheel(window_t *win, void *lparam);
 bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture);
 // True when either built-in scrollbar has room to move.
 bool scrollbar_can_scroll(window_t *win);
+// True when a touch pan moves either axis: it can scroll or it bounces.
+bool scrollbar_can_pan(window_t *win);
 // Momentum after a touch swipe: content velocity in points/ms per axis,
 // decaying by FLING_DECAY until it stops or reaches an edge.
 void scrollbar_fling(window_t *win, float vx, float vy);

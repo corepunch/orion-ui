@@ -18,6 +18,10 @@
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+static int ui_sb_max_pos(win_sb_t const *sb) {
+  return MAX(sb->min_val, sb->max_val - sb->page);
+}
+
 static int ui_sb_clamp_range(win_sb_t const *sb, int pos) {
   int max_pos = sb->max_val - sb->page;
   if (max_pos < sb->min_val) max_pos = sb->min_val;
@@ -38,7 +42,7 @@ static int ui_sb_thumb_off(win_sb_t const *sb, int track, int tl) {
   if (travel <= 0) return 0;
   int tt = track - tl;
   if (tt <= 0) return 0;
-  return (sb->pos - sb->min_val) * tt / travel;
+  return CLAMP((sb->pos - sb->min_val) * tt / travel, 0, tt);
 }
 
 // ── Overlay reveal / hide ─────────────────────────────────────────────────────
@@ -75,10 +79,11 @@ static void set_scroll_info_one(win_sb_t *sb, scroll_info_t const *info) {
   if (info->fMask & SIF_PAGE) {
     sb->page = info->nPage;
   }
+  // A rubber-banding position stays where the pan or spring put it.
   if (info->fMask & SIF_POS) {
-    sb->pos = ui_sb_clamp_range(sb, info->nPos);
+    sb->pos = sb->rubber ? info->nPos : ui_sb_clamp_range(sb, info->nPos);
   }
-  if (info->fMask & (SIF_RANGE | SIF_PAGE)) {
+  if ((info->fMask & (SIF_RANGE | SIF_PAGE)) && !sb->rubber) {
     sb->pos = ui_sb_clamp_range(sb, sb->pos);
   }
   if (sb->visible_mode == SB_VIS_HIDE) {
@@ -238,6 +243,16 @@ void enable_scroll_bar(window_t *win, int bar, bool enable) {
   invalidate_window(win);
 }
 
+void set_scroll_bounce(window_t *win, int bar, bool bounce) {
+  if (!win || (bar != SB_HORZ && bar != SB_VERT && bar != SB_BOTH)) {
+    fprintf(stderr, "[sb] set_scroll_bounce rejected win=%u bar=%d\n", win ? win->id : 0, bar);
+    fflush(stderr);
+    return;
+  }
+  if (bar == SB_HORZ || bar == SB_BOTH) win->hscroll.bounce = bounce;
+  if (bar == SB_VERT || bar == SB_BOTH) win->vscroll.bounce = bounce;
+}
+
 void show_scroll_bar(window_t *win, int bar, bool show) {
   if (!win) return;
   if (bar == SB_HORZ || bar == SB_BOTH) {
@@ -270,10 +285,11 @@ static int sb_mouse_axis_delta(void *lparam, bool vertical) {
 
 // ── Scroll helpers ────────────────────────────────────────────────────────────
 
-// Attempt to scroll to new_pos.  Returns true if the position changed.
-// In overlay mode, also reveals the thumb and restarts the hide timer.
-static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
-  new_pos = ui_sb_clamp_range(sb, new_pos);
+// Moves to new_pos, which lies past the range only while rubber-banding.
+// Returns true if the position changed. In overlay mode, also reveals the
+// thumb and restarts the hide timer.
+static bool sb_move(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
+  sb->rubber = new_pos != ui_sb_clamp_range(sb, new_pos);
   if (new_pos == sb->pos) return false;
   sb->pos = new_pos;
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
@@ -295,6 +311,10 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
       send_message(win, evMouseMove, MAKEDWORD((uint16_t)lx, (uint16_t)ly), NULL);
   }
   return true;
+}
+
+static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int new_pos) {
+  return sb_move(win, sb, scroll_msg, ui_sb_clamp_range(sb, new_pos));
 }
 
 void window_ensure_rect_visible(window_t *win, irect16_t rect, int bar) {
@@ -580,16 +600,41 @@ static bool sb_available(window_t *win, win_sb_t *sb, uint32_t flag) {
   return (win->flags & flag) && (sb->visible || sb->visible_mode == SB_VIS_HIDE) && sb->enabled && sb->max_val - sb->page > sb->min_val;
 }
 
+// A touch pan moves the axis: it has room to scroll, or it rubber-bands.
+static bool sb_pannable(window_t *win, win_sb_t *sb, uint32_t flag) {
+  return sb_available(win, sb, flag) || ((win->flags & flag) && sb->bounce);
+}
+
 bool scrollbar_can_scroll(window_t *win) {
   return win && (sb_available(win, &win->hscroll, WINDOW_HSCROLL) || sb_available(win, &win->vscroll, WINDOW_VSCROLL));
 }
 
+bool scrollbar_can_pan(window_t *win) {
+  return win && (sb_pannable(win, &win->hscroll, WINDOW_HSCROLL) || sb_pannable(win, &win->vscroll, WINDOW_VSCROLL));
+}
+
+// The content shown for a finger offset past the end, and its inverse.
+static float sb_rubber(float excess, float page) {
+  if (page <= 0) return 0;
+  return copysignf((1 - 1 / (fabsf(excess) * BOUNCE_RESISTANCE / page + 1)) * page, excess);
+}
+
+static float sb_unrubber(float shown, float page) {
+  if (page <= 1) return 0;
+  float a = MIN(fabsf(shown), page - 1);
+  return copysignf(a * page / ((page - a) * BOUNCE_RESISTANCE), shown);
+}
+
 // One global momentum record: only one touch fling or pan gesture is live at a time.
+// An axis either coasts (velocity) or springs back to an end (spring), where its
+// offset from the end follows (from + (speed + k * from) * t) * e^(-k * t).
 static struct {
   uint32_t win_id, timer_id, time;
   float pos[2], velocity[2];
+  bool spring[2];
+  float edge[2], from[2], speed[2], elapsed[2];
 } g_fling;
-static struct { uint32_t win_id; bool active[2]; float remainder[2]; } g_pan;
+static struct { uint32_t win_id; bool active[2]; float finger[2]; } g_pan;
 
 static void fling_cancel(void) {
   if (g_fling.timer_id) axCancelTimer(g_fling.timer_id);
@@ -606,32 +651,57 @@ bool scrollbar_stop_fling(window_t *win) {
   return true;
 }
 
+static void fling_spring(int axis, win_sb_t *sb, float pos, float speed) {
+  g_fling.spring[axis] = true;
+  g_fling.edge[axis] = pos < sb->min_val ? (float)sb->min_val : (float)ui_sb_max_pos(sb);
+  g_fling.from[axis] = pos - g_fling.edge[axis];
+  g_fling.speed[axis] = speed;
+  g_fling.elapsed[axis] = 0;
+}
+
 void scrollbar_fling(window_t *win, float vx, float vy) {
   if (!win || !isfinite(vx) || !isfinite(vy)) {
     fprintf(stderr, "[sb] fling rejected win=%u vx=%f vy=%f\n", win ? win->id : 0, vx, vy);
     fflush(stderr);
     return;
   }
-  fling_cancel();
+  // A new fling on the same window restarts the motion on its running timer.
+  uint32_t timer = g_fling.win_id == win->id ? g_fling.timer_id : 0;
+  if (timer) memset(&g_fling, 0, sizeof(g_fling));
+  else fling_cancel();
   win_sb_t *axes[] = {&win->hscroll, &win->vscroll};
   const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
   const float velocity[] = {vx, vy};
   bool any = false;
   for (int axis = 0; axis < 2; axis++) {
-    if (!sb_available(win, axes[axis], flags[axis]) || fabsf(velocity[axis]) < FLING_START_SPEED) continue;
-    g_fling.velocity[axis] = velocity[axis];
-    g_fling.pos[axis] = (float)axes[axis]->pos;
+    win_sb_t *sb = axes[axis];
+    if (!sb_pannable(win, sb, flags[axis])) continue;
+    if (sb->rubber) fling_spring(axis, sb, (float)sb->pos, velocity[axis]);
+    else if (fabsf(velocity[axis]) >= FLING_START_SPEED) g_fling.velocity[axis] = velocity[axis];
+    else continue;
+    g_fling.pos[axis] = (float)sb->pos;
     any = true;
   }
-  if (!any) return;
+  if (!any) { if (timer) axCancelTimer(timer); return; }
   g_fling.win_id = win->id;
   g_fling.time = (uint32_t)axGetMilliseconds();
-  g_fling.timer_id = axSetTimer(win, 16, NULL, true);
+  g_fling.timer_id = timer ? timer : axSetTimer(win, 16, NULL, true);
   if (!g_fling.timer_id) {
     fprintf(stderr, "[sb] fling timer unavailable win=%u\n", win->id);
     fflush(stderr);
     memset(&g_fling, 0, sizeof(g_fling));
+    for (int axis = 0; axis < 2; axis++)
+      if (axes[axis]->rubber) sb_try_scroll(win, axes[axis], axis ? evVScroll : evHScroll, axes[axis]->pos);
   }
+}
+
+// Advances a spring by dt; returns false once it rests at its end.
+static bool fling_spring_step(int axis, float dt) {
+  float k = BOUNCE_SPRING_RATE, t = g_fling.elapsed[axis] += dt;
+  float a = g_fling.from[axis], b = g_fling.speed[axis] + k * a, decay = expf(-k * t);
+  float offset = (a + b * t) * decay, speed = (b - k * (a + b * t)) * decay;
+  g_fling.pos[axis] = g_fling.edge[axis] + offset;
+  return fabsf(offset) >= 0.5f || fabsf(speed) >= FLING_MIN_SPEED;
 }
 
 static void sb_fling_step(window_t *win) {
@@ -646,12 +716,27 @@ static void sb_fling_step(window_t *win) {
   bool live = false;
   for (int axis = 0; axis < 2; axis++) {
     win_sb_t *sb = axes[axis];
-    if (g_fling.velocity[axis] == 0) continue;
-    if (!sb_available(win, sb, flags[axis])) { g_fling.velocity[axis] = 0; continue; }
-    float lo = (float)sb->min_val, hi = (float)(sb->max_val - sb->page);
+    if (g_fling.velocity[axis] == 0 && !g_fling.spring[axis]) continue;
+    if (!sb_pannable(win, sb, flags[axis])) { g_fling.velocity[axis] = 0; g_fling.spring[axis] = false; continue; }
+    if (g_fling.spring[axis]) {
+      if (fling_spring_step(axis, dt)) { sb_move(win, sb, messages[axis], (int)lroundf(g_fling.pos[axis])); live = true; }
+      else { g_fling.spring[axis] = false; sb_try_scroll(win, sb, messages[axis], (int)g_fling.edge[axis]); }
+      continue;
+    }
+    float lo = (float)sb->min_val, hi = (float)ui_sb_max_pos(sb);
     float pos = g_fling.pos[axis] + g_fling.velocity[axis] * travel;
-    g_fling.pos[axis] = CLAMP(pos, lo, hi);
     g_fling.velocity[axis] *= decay;
+    if ((pos < lo || pos > hi) && sb->bounce) {
+      // Momentum that reaches an end carries past it and springs back.
+      fling_spring(axis, sb, pos < lo ? lo - 0.5f : hi + 0.5f, g_fling.velocity[axis]);
+      g_fling.from[axis] = 0;
+      g_fling.velocity[axis] = 0;
+      g_fling.pos[axis] = g_fling.edge[axis];
+      sb_try_scroll(win, sb, messages[axis], (int)g_fling.edge[axis]);
+      live = true;
+      continue;
+    }
+    g_fling.pos[axis] = CLAMP(pos, lo, hi);
     sb_try_scroll(win, sb, messages[axis], (int)lroundf(g_fling.pos[axis]));
     if (g_fling.pos[axis] != pos || fabsf(g_fling.velocity[axis]) < FLING_MIN_SPEED) g_fling.velocity[axis] = 0;
     else live = true;
@@ -674,6 +759,9 @@ void scrollbar_handle_builtin_timer(window_t *win, uint32_t timer_id) {
 void scrollbar_handle_builtin_wheel(window_t *win, void *lparam) {
   if (!win) return;
   scrollbar_stop_fling(win);
+  // A wheel ends any rubber band at once.
+  if (win->hscroll.rubber) sb_try_scroll(win, &win->hscroll, evHScroll, win->hscroll.pos);
+  if (win->vscroll.rubber) sb_try_scroll(win, &win->vscroll, evVScroll, win->vscroll.pos);
   // sb_try_scroll already calls sb_overlay_reveal in overlay mode when the
   // position changes, so no additional reveal call is needed here.
   if ((win->flags & WINDOW_HSCROLL) && win->hscroll.visible && win->hscroll.enabled) {
@@ -699,26 +787,32 @@ bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture
   const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
   const uint32_t messages[] = {evHScroll, evVScroll};
   const float deltas[] = {gesture->previous_x - gesture->x, gesture->previous_y - gesture->y};
-  bool handled = false;
+  bool handled = false, settle = false;
   for (int axis = 0; axis < 2; axis++) {
     win_sb_t *sb = axes[axis];
-    bool available = sb_available(win, sb, flags[axis]);
+    bool available = sb_pannable(win, sb, flags[axis]);
+    float lo = (float)sb->min_val, hi = (float)ui_sb_max_pos(sb);
     if (gesture->phase == AX_GESTURE_BEGIN) {
       if (axis == 0) { scrollbar_stop_fling(win); memset(&g_pan, 0, sizeof(g_pan)); g_pan.win_id = win->id; }
       g_pan.active[axis] = available;
+      // The finger picks up a stretched band where it shows the content.
+      float edge = CLAMP((float)sb->pos, lo, hi);
+      g_pan.finger[axis] = edge + sb_unrubber((float)sb->pos - edge, (float)sb->page);
     }
     if (g_pan.win_id != win->id || !g_pan.active[axis]) continue;
     handled = true;
     if (gesture->phase == AX_GESTURE_UPDATE && available) {
-      float pos = CLAMP(sb->pos + g_pan.remainder[axis] + deltas[axis], sb->min_val, sb->max_val - sb->page);
-      int next = (int)lroundf(pos);
-      g_pan.remainder[axis] = pos - next;
-      sb_try_scroll(win, sb, messages[axis], next);
+      float finger = g_pan.finger[axis] + deltas[axis];
+      if (!sb->bounce) finger = CLAMP(finger, lo, hi);
+      g_pan.finger[axis] = finger;
+      float edge = CLAMP(finger, lo, hi);
+      sb_move(win, sb, messages[axis], (int)lroundf(edge + sb_rubber(finger - edge, (float)sb->page)));
     } else if (gesture->phase == AX_GESTURE_END || gesture->phase == AX_GESTURE_CANCEL) {
       g_pan.active[axis] = false;
-      g_pan.remainder[axis] = 0;
+      settle |= sb->rubber;
     }
   }
+  if (settle) scrollbar_fling(win, 0, 0);
   return handled;
 }
 

@@ -538,7 +538,7 @@ static window_t *touch_scroller_at(int px, int py, bool *consumed, bool *long_pr
     result_t drag = *long_press ? DRAG_NONE : send_message(w, evQueryDrag, MAKEDWORD(LOCAL_X(px, py, w), LOCAL_Y(px, py, w)), NULL);
     if (drag == DRAG_NOW) return NULL;
     if (drag == DRAG_AFTER_HOLD) *long_press = true;
-    if (scrollbar_can_scroll(w)) return w;
+    if (scrollbar_can_pan(w)) return w;
   }
   return NULL;
 }
@@ -625,12 +625,14 @@ static bool touch_filter(ui_event_t *msg) {
         touch.scroller = NULL;
         return false;
       }
+      // A press that caught moving content lets a stretched band spring back.
+      if (phase == TOUCH_PENDING && touch.consumed && touch_scroller_alive()) scrollbar_fling(touch.scroller, 0, 0);
       if (phase == TOUCH_PANNING) {
         touch_send_gesture(AX_GESTURE_END, msg->x, msg->y);
         touch.phase = TOUCH_IDLE;
         bool moving = touch_time(msg) - touch.time < 50;
-        if (moving && touch_scroller_alive())
-          scrollbar_fling(touch.scroller, -SCALE_POINT(touch.vx), -SCALE_POINT(touch.vy));
+        if (touch_scroller_alive())
+          scrollbar_fling(touch.scroller, moving ? -SCALE_POINT(touch.vx) : 0, moving ? -SCALE_POINT(touch.vy) : 0);
       }
       touch_reset();
       return phase == TOUCH_PENDING || phase == TOUCH_PANNING;
