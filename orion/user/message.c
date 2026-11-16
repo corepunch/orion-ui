@@ -275,7 +275,10 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   // A rounded pane, or a child with a compositor visual, paints its subtree into its own surface.
   window_visual_t visual;
   bool has_visual = msg == evPaint && g_ui_runtime.running && win->parent && window_get_visual(win, &visual);
-  bool redirected = rounded_pane || has_visual;
+  // A cached window (≈ WPF BitmapCache) paints into its surface once and is composited from it after.
+  bool cached = msg == evPaint && g_ui_runtime.running && win->parent && window_is_cached(win);
+  bool reuse = cached && window_cache_current(win);
+  bool redirected = rounded_pane || has_visual || cached;
   // Call registered hooks
   for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
     if (msg == hook->msg) {
@@ -342,7 +345,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
           if (redirected) set_draw_surface(previous_surface);
           return false;
         }
-        if (redirected) R_ClearWindowTarget(window_surface(win)->fbo);
+        if (redirected && !reuse) R_ClearWindowTarget(window_surface(win)->fbo);
         if (lifted_now(win)) paint_lift_shadow(root, win);
         if (win->parent && (win->flags & WINDOW_TOOLBAR)) toolbar_draw_non_client(win);
         int t = titlebar_height(root);
@@ -414,6 +417,9 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     case tbModifyStyle:
       (void)toolbar_handle_message(win, msg, wparam, lparam);
       break;
+    case evThemeChanged:
+      window_invalidate_cache(win);
+      break;
     case evStatusBar:
       if (lparam) {
         strncpy(win->statusbar_text, (const char*)lparam, sizeof(win->statusbar_text) - 1);
@@ -458,7 +464,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   float saved_projection[16];
   bool view_paint = msg == evPaint && g_ui_runtime.running && window_has_view(win);
   if (view_paint) begin_draw_transform(&win->view->matrix, saved_projection);
-  value = win->proc(win, msg, wparam, lparam);
+  value = reuse ? true : win->proc(win, msg, wparam, lparam);
   if (!is_window(win)) {
     if (view_paint) end_draw_transform(saved_projection);
     return value;
@@ -622,7 +628,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
                       (uint16_t)MAX(1, win->frame.h));
   }
   // Fallback for windows that do not paint their own disabled state.
-  if (msg == evPaint && !(win->flags & WINDOW_DRAWS_DISABLED) && window_is_disabled(win)) {
+  if (msg == evPaint && !reuse && !(win->flags & WINDOW_DRAWS_DISABLED) && window_is_disabled(win)) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
     // Render in FBO-local coordinates.
@@ -632,7 +638,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   // Draw built-in scrollbars on top of window content.
   // The bars are drawn in the root-relative coordinate space established by
   // paint setup, regardless of the window procedure's projection.
-  if (msg == evPaint && g_ui_runtime.running &&
+  if (msg == evPaint && g_ui_runtime.running && !reuse &&
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
@@ -663,7 +669,10 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     ipoint16_t origin = {window_screen_x(win) - root->frame.x, window_screen_y(win) - root->frame.y};
     int dx, dy;
     window_lift_offset(win, &dx, &dy);
-    if (has_visual) {
+    if (cached) window_cache_validate(win);
+    if (has_visual || cached) {
+      if (!has_visual)
+        visual = (window_visual_t){{0, 0, win->frame.w, win->frame.h}, {0, 0, win->frame.w, win->frame.h}, 1};
       paint_visual(surf, &visual, win->frame.w, win->frame.h, origin.x + dx, origin.y + dy);
     } else {
       irect16_t r = rect_offset(R(0, 0, win->frame.w, win->frame.h), origin.x + dx, origin.y + dy);

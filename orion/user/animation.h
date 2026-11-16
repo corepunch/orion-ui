@@ -96,6 +96,17 @@ typedef struct {
 void window_set_visual(window_t *win, const window_visual_t *visual);   // NULL restores identity
 bool window_get_visual(const window_t *win, window_visual_t *visual);   // false when identity
 
+// ── Bitmap cache (≈ WPF UIElement.CacheMode = BitmapCache) ─────────────────
+// A cached child paints its subtree into its surface once; later frames composite those pixels,
+// through its visual when it has one, without calling its window procedures. A scaled or fading
+// cached window therefore never lays out or rasterizes its text again. The cache is repainted after
+// window_invalidate_cache() (call it when the content changes), a theme change, or a new size.
+void window_set_cache(window_t *win, bool cached);
+void window_invalidate_cache(window_t *win);
+bool window_is_cached(const window_t *win);
+bool window_cache_current(const window_t *win);   // framework: the cached pixels can be reused
+void window_cache_validate(window_t *win);         // framework: the surface was just repainted
+
 // ── AnimateWindow ──────────────────────────────────────────────────────────
 // ≈ AnimateWindow(hwnd, time, AW_*) with DrawAnimatedRects(IDANI_CAPTION)'s zoom from a rectangle,
 // but asynchronous. AW_ZOOM grows the window out of `from` (its own coordinates) into its frame, its

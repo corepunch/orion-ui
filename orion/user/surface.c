@@ -14,6 +14,7 @@ typedef struct {
   int attr[WCA_COUNT];
   window_visual_t visual;
   bool has_visual;
+  bool cached, cache_valid;
 } surface_entry_t;
 static surface_entry_t *g_surfaces;
 static int g_surface_count, g_surface_cap;
@@ -137,7 +138,7 @@ void window_set_visual(window_t *win, const window_visual_t *visual) {
   if (!visual) {
     if (!e || !e->has_visual) return;
     e->has_visual = false;
-    R_DestroyWindowTarget(&e->surface.fbo, &e->surface.tex, &e->surface.w, &e->surface.h);
+    if (!e->cached) R_DestroyWindowTarget(&e->surface.fbo, &e->surface.tex, &e->surface.w, &e->surface.h);
     return;
   }
   if (!e) { window_surface_ensure(win); e = surface_find(win); }
@@ -151,4 +152,46 @@ bool window_get_visual(const window_t *win, window_visual_t *visual) {
   if (!e || !e->has_visual) return false;
   if (visual) *visual = e->visual;
   return true;
+}
+
+// Bitmap cache (≈ WPF UIElement.CacheMode = BitmapCache). The surface is repainted only after
+// window_invalidate_cache(), a theme change or a new size; a visual then moves the cached pixels.
+void window_set_cache(window_t *win, bool cached) {
+  if (!win || !win->parent) {
+    fprintf(stderr, "[surface] cache rejected win=%u: only child windows are cached\n", win ? win->id : 0);
+    fflush(stderr);
+    return;
+  }
+  surface_entry_t *e = surface_find(win);
+  if (!e && !cached) return;
+  if (!e) { window_surface_ensure(win); e = surface_find(win); }
+  if (!e || e->cached == cached) return;
+  e->cached = cached;
+  e->cache_valid = false;
+  if (!cached && !e->has_visual)
+    R_DestroyWindowTarget(&e->surface.fbo, &e->surface.tex, &e->surface.w, &e->surface.h);
+  invalidate_window(win);
+}
+
+void window_invalidate_cache(window_t *win) {
+  surface_entry_t *e = win ? surface_find(win) : NULL;
+  if (!e || !e->cached) return;
+  e->cache_valid = false;
+  invalidate_window(win);
+}
+
+bool window_is_cached(const window_t *win) {
+  surface_entry_t *e = win ? surface_find(win) : NULL;
+  return e && e->cached;
+}
+
+bool window_cache_current(const window_t *win) {
+  surface_entry_t *e = win ? surface_find(win) : NULL;
+  return e && e->cached && e->cache_valid && e->surface.tex &&
+         e->surface.w == ui_surface_px(win->frame.w) && e->surface.h == ui_surface_px(win->frame.h);
+}
+
+void window_cache_validate(window_t *win) {
+  surface_entry_t *e = win ? surface_find(win) : NULL;
+  if (e && e->cached) e->cache_valid = true;
 }

@@ -76,6 +76,15 @@ subtree into its own surface and draw `source` of that surface into `rect` with
 layout and hit-testing do not change; a visual moves pixels, not the window.
 `window_set_visual(win, NULL)` restores the identity and frees the surface.
 
+## Bitmap cache
+
+`window_set_cache(win, true)` is WPF's `CacheMode="BitmapCache"`: the child
+paints its subtree into its surface once, and later frames composite those
+pixels without calling its window procedures. With a visual on top, a cached
+window scales or fades as an image, so its text is never laid out or
+rasterized again mid-animation. Call `window_invalidate_cache(win)` when its
+content changes; a theme change or a new size repaints it too.
+
 ## AnimateWindow
 
 `animate_window(win, from, flags, curve)` is `AnimateWindow` with
@@ -100,7 +109,9 @@ box, later children paint above earlier ones and take the pointer first.
 
 ## Example: Comics
 
-- **Cover press.** `ComicCover` sinks to `--press-scale` on `UI_CURVE_PRESS`,
+- **Cover press.** `ComicCover` is cached: the artwork, hardcover spine and
+  lettered title are baked into one image, and the shelf shows that image. It
+  sinks to `--press-scale` (a visual over the cached image) on `UI_CURVE_PRESS`,
   springs back on `UI_CURVE_RELEASE`, and sends `btnClicked` when it is back
   up, so even a quick tap shows the bounce before the book opens.
 - **Opening and closing.** The reader is a `ComicStage` over the shelf in an
