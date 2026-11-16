@@ -17,6 +17,7 @@
 #include "page_host.h"
 #include "page.h"
 #include "theme.h"
+#include "animation.h"
 #include <orion/kernel/renderer.h>
 #include <orion/kernel/http.h>
 
@@ -226,6 +227,20 @@ static irect16_t isect_rect(irect16_t a, irect16_t b) {
 
 static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
+// Draws the `source` part of a redirected surface into the visual's rect. Surfaces are stored
+// bottom row first, so the vertical texture coordinates run upwards.
+static void paint_visual(const window_surface_t *surf, const window_visual_t *v, int w, int h, int x, int y) {
+  if (!surf || !surf->tex || w <= 0 || h <= 0 || !(v->opacity > 0)) return;
+  irect16_t r = R(x + (int)lroundf(v->rect.x), y + (int)lroundf(v->rect.y), 0, 0);
+  r.w = (int16_t)(x + (int)lroundf(v->rect.x + v->rect.w) - r.x);
+  r.h = (int16_t)(y + (int)lroundf(v->rect.y + v->rect.h) - r.y);
+  if (r.w <= 0 || r.h <= 0) return;
+  float u0 = v->source.x / w, u1 = (v->source.x + v->source.w) / w;
+  float v0 = 1 - v->source.y / h, v1 = 1 - (v->source.y + v->source.h) / h;
+  uint8_t alpha = (uint8_t)lroundf(fminf(1, v->opacity) * 255);
+  draw_sprite_region((int)surf->tex, r, UV_RECT(u0, v0, u1, v1), color_with_alpha(0xffffff, alpha), 0);
+}
+
 // Send message to window (synchronous). While the window handles it, icon lookups resolve in
 // its application instance's directories; instance-less windows inherit the sender's scope.
 intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -257,6 +272,10 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   window_t *previous_surface = NULL;
   bool rounded_pane = msg == evPaint && g_ui_runtime.running && win->parent &&
                       ui_radius("TabView::tab") > 0 && page_is_pane(win);
+  // A rounded pane, or a child with a compositor visual, paints its subtree into its own surface.
+  window_visual_t visual;
+  bool has_visual = msg == evPaint && g_ui_runtime.running && win->parent && window_get_visual(win, &visual);
+  bool redirected = rounded_pane || has_visual;
   // Call registered hooks
   for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
     if (msg == hook->msg) {
@@ -264,6 +283,12 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     }
   }
   if (page_handle_message(win, msg, wparam, lparam, &value)) return value;
+  if (msg == evAnimate) {
+    bool stepped = window_animation_step(win);
+    if (!is_window(win)) return stepped;
+    value = win->proc(win, msg, wparam, lparam);
+    return value || stepped;
+  }
   // Handle special messages
   switch (msg) {
     case evHScroll:
@@ -312,12 +337,12 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     case evPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
-        if (rounded_pane) previous_surface = set_draw_surface(win);
+        if (redirected) previous_surface = set_draw_surface(win);
         if (!bind_root_surface(root)) {
-          if (rounded_pane) set_draw_surface(previous_surface);
+          if (redirected) set_draw_surface(previous_surface);
           return false;
         }
-        if (rounded_pane) R_ClearWindowTarget(window_surface(win)->fbo);
+        if (redirected) R_ClearWindowTarget(window_surface(win)->fbo);
         if (lifted_now(win)) paint_lift_shadow(root, win);
         if (win->parent && (win->flags & WINDOW_TOOLBAR)) toolbar_draw_non_client(win);
         int t = titlebar_height(root);
@@ -630,7 +655,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   // After the root's own children, including when the root paints them itself.
   if (msg == evPaint && !win->parent && g_ui_runtime.running)
     paint_drag_visuals(win);
-  if (rounded_pane) {
+  if (redirected) {
     set_draw_surface(previous_surface);
     if (!bind_root_surface(root)) return false;
     set_scissor_fbo(root, paint_clip);
@@ -638,9 +663,13 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     ipoint16_t origin = {window_screen_x(win) - root->frame.x, window_screen_y(win) - root->frame.y};
     int dx, dy;
     window_lift_offset(win, &dx, &dy);
-    irect16_t r = rect_offset(R(0, 0, win->frame.w, win->frame.h), origin.x + dx, origin.y + dy);
-    render_rounded_rect(surf->tex, r, surf->w, surf->h,
-                        ui_radius("TabView::tab") * ui_surface_scale(), 1, 0xffffffff);
+    if (has_visual) {
+      paint_visual(surf, &visual, win->frame.w, win->frame.h, origin.x + dx, origin.y + dy);
+    } else {
+      irect16_t r = rect_offset(R(0, 0, win->frame.w, win->frame.h), origin.x + dx, origin.y + dy);
+      render_rounded_rect(surf->tex, r, surf->w, surf->h,
+                          ui_radius("TabView::tab") * ui_surface_scale(), 1, 0xffffffff);
+    }
   }
   return value;
 }
@@ -722,6 +751,7 @@ void repost_messages(void) {
   if (frame_began) {
     ui_begin_frame();   // make GL context current, bind platform framebuffer
   }
+  ui_animation_begin_frame();
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
     if (m->target == NULL) {
@@ -778,5 +808,6 @@ void repost_messages(void) {
   if (frame_began && complete) {
     ui_end_frame();     // present frame (swap buffers / flushBuffer)
   }
+  ui_animation_end_frame();
   if (quit_after_screenshot) ui_request_quit();
 }

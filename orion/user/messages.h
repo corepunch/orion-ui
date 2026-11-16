@@ -136,6 +136,9 @@ enum {
   evMouseZoom,
   evMove,             // frame origin changed by move_window(); dimensions are unchanged
   evMDIActivate,      // wparam=bool active; lparam=the other document
+  // Posted by request_animate(): advance animations to ui_animation_time(), then request another
+  // while still moving (≈ ORCA Object.Animate). Coalesced, so at most one per window per frame.
+  evAnimate,
   evUser = 1000
 };
 
@@ -267,6 +270,7 @@ enum {
   // edUpdate still goes to the root on commit (Enter / Tab). lparam = edit window.
   ednChange,
   btnDoubleClicked, // SpriteButton with SPRITE_BUTTON_DOUBLECLICK: lparam = source control
+  awnFinished,      // animate_window() ended: LOWORD = window id, lparam = the window
 };
 
 // Button state

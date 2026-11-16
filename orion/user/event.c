@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "user.h"
+#include "animation.h"
 #include "messages.h"
 #include "rect.h"
 #include "toolbar.h"
@@ -229,6 +230,8 @@ static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
     if (!rect_contains_point(c->frame, (ipoint16_t){x, y}))
       continue;
     if (msg == evMouseZoom && window_has_state(c, WINDOW_STATE_DISABLED)) return true;
+    // A window in an animate_window() transition takes no input (≈ IsHitTestVisible=false).
+    if (window_is_animating(c)) return true;
     // Hit-test in viewport space, then deliver in the child's content space.
     // Controls should not need to know whether an event came directly from a
     // root window or through one or more nested layout containers.

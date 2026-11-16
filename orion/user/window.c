@@ -10,6 +10,7 @@
 
 #include "user.h"
 #include "dock.h"
+#include "animation.h"
 #include "page_host.h"
 #include "messages.h"
 #include "theme.h"
@@ -654,6 +655,7 @@ void destroy_window(window_t *win) {
   clear_window_children(win);
   // Release the per-window render target before freeing the struct.
   window_surface_release(win);
+  window_animation_release(win);
   free(win->style_vars);
   free(win->placement);
   free(win->pages);

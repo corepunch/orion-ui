@@ -4,10 +4,17 @@
 #include "draw.h"
 #include <orion/kernel/renderer.h>
 #include "theme.h"
+#include "animation.h"
 
 // Compositor-owned redirection surfaces, keyed by window (≈ DWM). The
 // window struct carries no surface state; procs only paint.
-typedef struct { const window_t *win; window_surface_t surface; int attr[WCA_COUNT]; } surface_entry_t;
+typedef struct {
+  const window_t *win;
+  window_surface_t surface;
+  int attr[WCA_COUNT];
+  window_visual_t visual;
+  bool has_visual;
+} surface_entry_t;
 static surface_entry_t *g_surfaces;
 static int g_surface_count, g_surface_cap;
 
@@ -110,5 +117,38 @@ bool window_capture(const window_t *win, uint8_t **out_rgba, int *out_w, int *ou
   }
   if (!R_ReadTextureSRGBA8(surf->tex, surf->w, surf->h, rgba)) { free(rgba); return false; }
   *out_rgba = rgba; *out_w = surf->w; *out_h = surf->h;
+  return true;
+}
+
+// A child's visual (≈ IDCompositionVisual): message.c redirects the subtree of a window that has one
+// into its surface and draws that surface through the visual.
+void window_set_visual(window_t *win, const window_visual_t *visual) {
+  if (!win || (visual && (!(visual->rect.w >= 0) || !(visual->rect.h >= 0) || !(visual->source.w > 0) ||
+                          !(visual->source.h > 0) || !(visual->opacity >= 0)))) {
+    fprintf(stderr, "[surface] visual rejected win=%u rect=%g,%g,%g,%g source=%g,%g,%g,%g opacity=%g\n",
+            win ? win->id : 0, visual ? visual->rect.x : 0, visual ? visual->rect.y : 0,
+            visual ? visual->rect.w : 0, visual ? visual->rect.h : 0, visual ? visual->source.x : 0,
+            visual ? visual->source.y : 0, visual ? visual->source.w : 0, visual ? visual->source.h : 0,
+            visual ? visual->opacity : 0);
+    fflush(stderr);
+    return;
+  }
+  surface_entry_t *e = surface_find(win);
+  if (!visual) {
+    if (!e || !e->has_visual) return;
+    e->has_visual = false;
+    R_DestroyWindowTarget(&e->surface.fbo, &e->surface.tex, &e->surface.w, &e->surface.h);
+    return;
+  }
+  if (!e) { window_surface_ensure(win); e = surface_find(win); }
+  if (!e) return;
+  e->visual = *visual;
+  e->has_visual = true;
+}
+
+bool window_get_visual(const window_t *win, window_visual_t *visual) {
+  surface_entry_t *e = win ? surface_find(win) : NULL;
+  if (!e || !e->has_visual) return false;
+  if (visual) *visual = e->visual;
   return true;
 }

@@ -8,6 +8,7 @@ extern result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lp
 extern result_t win_stackview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_grid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_gridview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_overlay(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_flowview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_column(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -83,6 +84,9 @@ static const fe_component_desc_t k_commctl_classes[] = {
   CLASS_DESC("StackView", "IDC_STK", "StackView",
              120, 80, 0, 0, WINDOW_LAYOUT_CONTAINER,
              FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR, win_stack),
+  CLASS_DESC("OverlayView", "IDC_OVL", "StackView",
+             120, 80, 0, 0, WINDOW_LAYOUT_CONTAINER,
+             FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR, win_overlay),
   CLASS_DESC("GridView", "IDC_GRD", "GridView",
              120, 80, 0, 0, WINDOW_LAYOUT_CONTAINER,
              FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR, win_grid),

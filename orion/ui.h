@@ -19,6 +19,7 @@
 #include <orion/user/zip.h>
 #include <orion/user/color.h>
 #include <orion/user/database.h>
+#include <orion/user/animation.h>
 
 // Kernel subsystem (event management)
 #include <orion/kernel/kernel.h>
