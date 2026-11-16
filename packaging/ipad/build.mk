@@ -1,5 +1,9 @@
 .DEFAULT_GOAL := app
 .DELETE_ON_ERROR:
+# make V=1 prints the full commands.
+V ?= 0
+Q := $(if $(filter 1,$(V)),,@)
+MAKEFLAGS += --no-print-directory
 include tools/app_sources.mk
 BUILD_DIR ?= build/ipad
 APP ?= imageeditor
@@ -65,62 +69,78 @@ settings:
 	@cmp -s "$(APP_ROOT)/settings.tmp" "$(APP_ROOT)/settings" || cp "$(APP_ROOT)/settings.tmp" "$(APP_ROOT)/settings"
 $(BUILD_ROOT)/settings $(APP_ROOT)/settings: settings
 platform:
-	$(MAKE) -C platform SDK=$(SDK) ARCH=$(ARCH) IOS_MIN=$(IOS_MIN) OUTDIR="$(BUILD_ROOT)/platform"
+	@echo "PLATFORM"
+	$(Q)$(MAKE) $(if $(Q),-s) -C platform SDK=$(SDK) ARCH=$(ARCH) IOS_MIN=$(IOS_MIN) OUTDIR="$(BUILD_ROOT)/platform"
 $(PLATFORM_LIB): platform
 $(BUILD_ROOT)/deps/freetype/%.o: vendor/freetype/src/%.c orion/user/freetype_modules.h $(BUILD_ROOT)/settings
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -DFT2_BUILD_LIBRARY -DFT_CONFIG_MODULES_H='"orion/user/freetype_modules.h"' -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -DFT2_BUILD_LIBRARY -DFT_CONFIG_MODULES_H='"orion/user/freetype_modules.h"' -c "$<" -o "$@"
 $(BUILD_ROOT)/deps/png/%.o: vendor/libpng/%.c orion/user/image_deps_config/pnglibconf.h $(BUILD_ROOT)/settings
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -DPNG_ARM_NEON_OPT=0 -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -DPNG_ARM_NEON_OPT=0 -c "$<" -o "$@"
 $(BUILD_ROOT)/deps/jpeg/%.o: vendor/libjpeg/%.c orion/user/image_deps_config/jconfig.h $(BUILD_ROOT)/settings
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -c "$<" -o "$@"
 $(BUILD_ROOT)/deps/zlib/%.o: vendor/zlib/%.c $(BUILD_ROOT)/settings
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -c "$<" -o "$@"
 $(BUILD_ROOT)/deps/bmp/%.o: vendor/libnsbmp/src/%.c $(BUILD_ROOT)/settings
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
 $(BUILD_ROOT)/bmplib-generated/huffman-codes.h: vendor/bmplib/gen-huffman.c vendor/bmplib/gen-huffman-codes.h
 	@mkdir -p "$(@D)"
-	xcrun --sdk macosx clang -std=c11 vendor/bmplib/gen-huffman.c -o "$(@D)/gen-huffman"
-	"$(@D)/gen-huffman" "$@"
+	@echo "GEN     huffman-codes.h"
+	$(Q)xcrun --sdk macosx clang -std=c11 vendor/bmplib/gen-huffman.c -o "$(@D)/gen-huffman"
+	$(Q)"$(@D)/gen-huffman" "$@"
 $(BUILD_ROOT)/deps/bmplib/%.o: vendor/bmplib/%.c orion/user/bmplib_config/config.h $(BUILD_ROOT)/bmplib-generated/huffman-codes.h $(BUILD_ROOT)/settings
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
 $(HOST_TOOL): tools/orionc.c $(wildcard orion/user/*.h)
 	@mkdir -p "$(@D)"
-	xcrun --sdk macosx clang -std=c11 -O2 -I. -I"$(shell xcrun --sdk macosx --show-sdk-path)/usr/include/libxml2" $< -lxml2 -o "$@"
+	@echo "TOOL    orionc"
+	$(Q)xcrun --sdk macosx clang -std=c11 -O2 -I. -I"$(shell xcrun --sdk macosx --show-sdk-path)/usr/include/libxml2" $< -lxml2 -o "$@"
 $(GENERATED): $(APP_DIR)/$(APP_SOURCE).orion $(HOST_TOOL)
 	@mkdir -p "$(@D)"
-	"$(HOST_TOOL)" --input $< --output $@ --prefix $(APP_SOURCE)
+	@echo "GEN     $@"
+	$(Q)"$(HOST_TOOL)" --input $< --output $@ --prefix $(APP_SOURCE)
 define unity_core
 $(BUILD_ROOT)/$(1).o: $(2) $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.mk
 	@printf '%s\n' $(2) | sed 's/.*/\#include "&"/' > "$(BUILD_ROOT)/$(1).c"
-	$(COMPILER) $(FLAGS) -Icomponents -c "$(BUILD_ROOT)/$(1).c" -o "$$@"
+	@echo "CC      orion/$(1)"
+	$(Q)$(COMPILER) $(FLAGS) -Icomponents -c "$(BUILD_ROOT)/$(1).c" -o "$$@"
 endef
 $(eval $(call unity_core,user,$(USER_SRCS)))
 $(eval $(call unity_core,kernel,$(KERNEL_SRCS)))
 $(eval $(call unity_core,commctl,$(COMMCTL_SRCS)))
 $(BUILD_ROOT)/%.o: %.c $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.mk
 	@mkdir -p "$(@D)"
-	$(COMPILER) $(FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -c "$<" -o "$@"
 $(BUILD_ROOT)/%_apple.o: orion/kernel/%_apple.m $(wildcard orion/kernel/*.h) $(BUILD_ROOT)/settings
-	$(COMPILER) $(FLAGS) -fblocks -c "$<" -o "$@"
+	@echo "CC      $<"
+	$(Q)$(COMPILER) $(FLAGS) -fblocks -c "$<" -o "$@"
 $(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk tools/app_sources.mk
 	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' > "$(APP_ROOT)/app.c"
-	$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"
+	@echo "CC      $(APP_DIR)"
+	$(Q)$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"
 $(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB) $(DEP_OBJECTS)
-	$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" $(PLATFORM_LIB) $(DEP_OBJECTS) $(LIBS) -o "$@"
+	@echo "LD      $(APP)"
+	$(Q)$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" $(PLATFORM_LIB) $(DEP_OBJECTS) $(LIBS) -o "$@"
 app: $(APP_ROOT)/$(APP)
-	python3 tools/ipad/bundle.py --root "$(CURDIR)" --target "$(BUNDLE)" --binary "$<" --app $(APP) --bundle-id "$(BUNDLE_ID)" --sdk $(SDK) --sdk-version $(SDK_VERSION) --minimum $(IOS_MIN) --family $(FAMILY)
+	@echo "BUNDLE  $(APP).app"
+	$(Q)python3 tools/ipad/bundle.py --root "$(CURDIR)" --target "$(BUNDLE)" --binary "$<" --app $(APP) --bundle-id "$(BUNDLE_ID)" --sdk $(SDK) --sdk-version $(SDK_VERSION) --minimum $(IOS_MIN) --family $(FAMILY)
 ifeq ($(SDK),iphonesimulator)
-	codesign --force --sign - "$(BUNDLE)"
+	$(Q)codesign --force --sign - "$(BUNDLE)"
 endif
 run: app
 	@test "$(SDK)" = iphonesimulator || { echo 'Use SDK=iphonesimulator'; exit 1; }
-	python3 tools/ipad/run_simulator.py "$(BUNDLE)" --family $(FAMILY) $(if $(DEVICE),--device "$(DEVICE)")
+	$(Q)python3 tools/ipad/run_simulator.py "$(BUNDLE)" --family $(FAMILY) $(if $(DEVICE),--device "$(DEVICE)")
 deploy: app
 	@test "$(SDK)" = iphoneos -a "$(ARCH)" = arm64 || { echo 'Deploy requires SDK=iphoneos ARCH=arm64'; exit 1; }
 	@device="$(DEVICE)"; \
@@ -145,7 +165,7 @@ deploy: app
 	xcrun devicectl device process launch --device "$$device" --terminate-existing "$(BUNDLE_ID)"
 mac: app
 	@test "$(SDK)" = iphoneos -a "$(ARCH)" = arm64 || { echo 'Mac launch requires SDK=iphoneos ARCH=arm64'; exit 1; }
-	python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)")
-	python3 tools/ipad/wrap_mac.py "$(BUNDLE)" "$(abspath $(BUILD_DIR))/$(APP).app"
-	open "$(abspath $(BUILD_DIR))/$(APP).app"
+	$(Q)python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)")
+	$(Q)python3 tools/ipad/wrap_mac.py "$(BUNDLE)" "$(abspath $(BUILD_DIR))/$(APP).app"
+	$(Q)open "$(abspath $(BUILD_DIR))/$(APP).app"
 -include $(OBJECTS:.o=.d) $(DEP_OBJECTS:.o=.d) $(APP_ROOT)/app.d

@@ -750,19 +750,19 @@ help:
 APP ?= imageeditor
 .PHONY: ipad ipad-simulator ipad-run ipad-deploy ipad-mac ipad-all list-devices
 ipad:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos app
+	@$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos app
 ipad-simulator:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphonesimulator app
+	@$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphonesimulator app
 ipad-run:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphonesimulator run
+	@$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphonesimulator run
 ipad-deploy:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos deploy
+	@$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos deploy
 ipad-mac:
-	$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos mac
+	@$(MAKE) -f packaging/ipad/build.mk APP=$(APP) SDK=iphoneos mac
 ipad-all:
-	$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
-	$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
-	$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
+	@$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
+	@$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
+	@$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
 # Android debug APKs (build/android/apk/orion-<app>.apk); needs ANDROID_NDK_HOME,
 # the Android SDK, Java 17 and Gradle. See packaging/android/README.md.
 ABIS ?= arm64-v8a

@@ -6,6 +6,7 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
+import sys
 
 
 def main():
@@ -57,7 +58,10 @@ def main():
         images.append({'idiom': 'ios-marketing' if size == 1024 else args.family, 'size': f'{size}x{size}', 'scale': f'{scale}x', 'filename': filename})
     (appicons / 'Contents.json').write_text(json.dumps({'images': images, 'info': {'version': 1, 'author': 'Orion'}}, indent=2))
     partial = target.parent / 'icon-info.plist'
-    subprocess.run(['xcrun', '--sdk', args.sdk, 'actool', str(catalog), '--compile', str(target), '--output-partial-info-plist', str(partial), '--app-icon', 'AppIcon', '--target-device', args.family, '--minimum-deployment-target', args.minimum, '--platform', args.sdk, '--output-format', 'human-readable-text'], check=True)
+    actool = subprocess.run(['xcrun', '--sdk', args.sdk, 'actool', str(catalog), '--compile', str(target), '--output-partial-info-plist', str(partial), '--app-icon', 'AppIcon', '--target-device', args.family, '--minimum-deployment-target', args.minimum, '--platform', args.sdk, '--output-format', 'human-readable-text'], capture_output=True, text=True)
+    if actool.returncode:
+        sys.stderr.write(actool.stdout + actool.stderr)
+        sys.exit(actool.returncode)
     info = plistlib.loads(partial.read_bytes())
     info.update({
         'CFBundleIdentifier': args.bundle_id,
@@ -97,7 +101,6 @@ def main():
         info['NSPhotoLibraryAddUsageDescription'] = 'Save exported Jamsheet timeline videos to your photo library.'
     (target / 'Info.plist').write_bytes(plistlib.dumps(info))
     (target / 'PkgInfo').write_bytes(b'APPL????')
-    print('Packaged ' + str(target))
 
 
 if __name__ == '__main__':
