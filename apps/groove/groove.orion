@@ -49,6 +49,9 @@
         <item name="reset" label="Reset Workspace" />
         <item name="packs" label="Sample Packs..." shortcut="Ctrl+Shift+P" if="GROOVE_APP_STORE" />
       </menu>
+      <menu name="help" label="Help">
+        <item name="remove_blocks" label="How to Remove Blocks" />
+      </menu>
     </menus>
 
     <contextmenus>
@@ -71,9 +74,28 @@
         <item command="file.demo_victory" label="Demo: Victory Lights" />
         <item command="window.packs" label="Sample Packs..." if="GROOVE_APP_STORE" />
         <item command="window.reset" label="Reset Workspace" />
+        <item command="help.remove_blocks" label="How to Remove Blocks" />
         <item command="file.quit" label="Quit" if="!defined(AX_PLATFORM_IOS)" />
       </contextmenu>
     </contextmenus>
+
+    <!-- Shown the first time a block lands on the sheet, and from Help. -->
+    <tutorials>
+      <tutorial name="remove_blocks" form="main_window" title="Removing blocks">
+        <step control="arrangement" part="selected-block" if="!defined(AX_PLATFORM_IOS)"
+              text="Click a block on the sheet to select it. The selected block is outlined." />
+        <step control="arrangement" part="selected-block" if="defined(AX_PLATFORM_IOS)"
+              text="Tap a block on the sheet to select it. The selected block is outlined." />
+        <step command="edit.delete" until="edit.delete" if="!defined(AX_PLATFORM_IOS)"
+              text="Click the trash button, or press Delete, to remove the selected block from the song." />
+        <step command="edit.delete" until="edit.delete" if="defined(AX_PLATFORM_IOS)"
+              text="Tap the trash button to remove the selected block from the song." />
+        <step control="arrangement" part="block" if="!defined(AX_PLATFORM_IOS)"
+              text="You can also drag a block off the tracks and let go, or right-click it, to remove it." />
+        <step control="arrangement" part="block" if="defined(AX_PLATFORM_IOS)"
+              text="You can also hold a block, drag it off the tracks and let go to remove it." />
+      </tutorial>
+    </tutorials>
 
     <databases>
       <database name="library" class="groove_library_db">

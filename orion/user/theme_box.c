@@ -153,6 +153,7 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_RIBBON_SEPARATOR]       = {"Ribbon", "separator"},
   [THEME_PART_RIBBON_ARROW]           = {"Ribbon", "arrow"},
   [THEME_PART_RIBBON_TOGGLE]          = {"Ribbon", "toggle"},
+  [THEME_PART_TUTORIAL_SPOT]          = {"Tutorial", "spot"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────

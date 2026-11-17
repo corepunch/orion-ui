@@ -638,6 +638,51 @@ typedef struct { const char *text; uintptr_t data; } tab_item_t; // tcSetItems
 // before is an insertion slot (0..count), or -1 to append. Also supports same-pane reorder.
 bool tabview_move_page(window_t *source, int index, window_t *target, int before);
 
+// ── Tutorials (tutorial.c) ──────────────────────────────────────────────────
+// A tutorial walks the user through a task one step at a time: a speech bubble with the step's text
+// points at a control or toolbar button, and a ring (Tutorial::spot) outlines it. Declare tutorials in
+// the app's .orion under <tutorials>; orionc emits a tutorial_def_t named <prefix>_<name>_tutorial.
+//
+//   <tutorial name="remove_block" form="main_window" title="Removing blocks">
+//     <step control="arrangement" part="selected-block" text="This block is selected." />
+//     <step command="edit.delete" until="edit.delete" text="Press Remove to delete it." />
+//   </tutorial>
+//
+// A step points at `target`: a control or a toolbar command of the owner window (0 = the owner).
+// The target may narrow itself to `part` by answering evGetTutorialAnchor. The bubble's Next button
+// advances; a step with `until` also advances when the app reports that command (tutorial_command).
+// The bubble follows its target while windows move, scroll or change layout.
+typedef struct {
+  uint32_t    target; // control ID or toolbar command ID in the owner window; 0 = the owner itself
+  const char *part;   // passed to the target in evGetTutorialAnchor; NULL = the whole target
+  const char *text;   // English; translated through the string catalog
+  uint32_t    until;  // command that completes the step; 0 = only the Next button
+} tutorial_step_t;
+
+typedef struct {
+  const char            *name;  // key under which completion is remembered; orionc: "<prefix>.<name>"
+  const char            *title; // optional heading shown above every step
+  const tutorial_step_t *steps;
+  int                    step_count;
+} tutorial_def_t;
+
+typedef struct {
+  const char *part;   // in: the step's part
+  window_t   *window; // out: a descendant of the target to point at, or NULL
+  irect16_t   rect;   // in/out: the area to point at in the target's client coordinates
+} tutorial_anchor_t;
+
+bool tutorial_start(window_t *owner, const tutorial_def_t *def);      // replaces a running tutorial
+bool tutorial_start_once(window_t *owner, const tutorial_def_t *def); // unless finished or skipped before
+void tutorial_stop(void);                                             // closes it; remembered as seen
+bool tutorial_next(void);                                             // the next step; past the last, stops
+void tutorial_command(uint32_t command);   // the app ran `command`: completes a step waiting for it
+bool tutorial_is_running(const tutorial_def_t *def);                  // NULL: any tutorial
+int  tutorial_current_step(void);                                     // -1 when none is running
+bool tutorial_seen(const char *name);
+bool tutorial_set_seen(const char *name, bool seen);                 // false shows a _once tutorial again
+window_t *tutorial_bubble_window(void);                               // NULL when none is running
+
 // Console API functions
 void init_console(void);
 void conprintf(const char* format, ...);

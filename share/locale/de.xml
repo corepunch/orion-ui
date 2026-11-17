@@ -39,4 +39,8 @@
   <string source="Save changes to this document?" where="code">Änderungen an diesem Beleg speichern?</string>
   <string source="Permission denied." where="code">Zugriff verweigert.</string>
   <string source="Could not read database records." where="code">Datenbankeinträge konnten nicht gelesen werden.</string>
+  <string source="Next">Weiter</string>
+  <string source="Done">Fertig</string>
+  <string source="Skip">Überspringen</string>
+  <string source="Step %d of %d">Schritt %d von %d</string>
 </strings>

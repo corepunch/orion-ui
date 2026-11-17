@@ -225,6 +225,7 @@ documentation standards.
 - [Window System](docs/window-system.md)
 - [Controls](docs/controls.md)
 - [Dialogs & DDX](docs/dialogs.md)
+- [Tutorials](docs/tutorials.md)
 - [Messages & Events](docs/messages.md)
 - [Drawing & Rendering](docs/drawing.md)
 - [GEM Plugin System](docs/gems.md)

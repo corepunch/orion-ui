@@ -79,6 +79,8 @@ void draw_status_badge(const window_t *win, irect16_t r, const char *text, const
 void draw_status_badge_in(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars, ctrl_state_t state);
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
+// Fills r except a rounded hole (same coordinates), antialiased in one pass: a spotlight's scrim.
+void fill_rect_cutout(uint32_t color, irect16_t r, irect16_t hole, int radius);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
 void draw_rect(int tex, irect16_t r);
 // R8 textures expose their byte in alpha; palette entries use packed UI colors.

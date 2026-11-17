@@ -1459,6 +1459,48 @@ static bool activity_control_id(xmlNodePtr parent, const char *form, const char 
   return false;
 }
 
+// <tutorials><tutorial name form title><step control|command part text until if/></tutorial></tutorials>
+// becomes a tutorial_def_t <prefix>_<name>_tutorial (orion/commctl/commctl.h). control= names a control
+// of the tutorial's form; command= a toolbar command; until= the command that completes the step.
+static int emit_tutorials(FILE *f, xmlNodePtr tutorials, xmlNodePtr forms, const char *pre) {
+  int errors = 0;
+  EACH_ELEMENT(tu, tutorials) if (elem(tu, "tutorial")) {
+    char *name = attr(tu, "name"), *form_name = attr(tu, "form"), *title = attr(tu, "title");
+    char id[128], form_id[128], c_name[ORIONC_STRING_SIZE], c_title[ORIONC_STRING_SIZE];
+    ident(id, sizeof(id), nz(name, "tutorial"), false); ident(form_id, sizeof(form_id), nz(form_name, ""), false);
+    xmlNodePtr form = form_name ? activity_find_form(forms, form_name) : NULL;
+    if (!name || !*name || (form_name && !form)) {
+      fprintf(stderr, "orionc: tutorial '%s' needs a name and an existing form (form='%s')\n", nz(name, ""), nz(form_name, ""));
+      errors++;
+    }
+    OUT("static const tutorial_step_t %s_%s_tutorial_steps[] = {\n", pre, id);
+    EACH_ELEMENT(st, tu) if (elem(st, "step")) {
+      char *control = attr(st, "control"), *command = attr(st, "command"), *part = attr(st, "part");
+      char *text = attr(st, "text"), *until = attr(st, "until");
+      char target[256] = "0", until_id[256] = "0", c_part[ORIONC_STRING_SIZE] = "NULL", c_text[ORIONC_STRING_SIZE];
+      if (control && *control && !(form && activity_control_id(form, form_id, control, target, sizeof(target)))) {
+        fprintf(stderr, "orionc: tutorial '%s': no control '%s' in form '%s'\n", nz(name, ""), control, nz(form_name, ""));
+        errors++;
+      } else if (!(control && *control) && command && *command) resolve_action(target, sizeof(target), command, NULL, NULL, NULL, NULL);
+      if (until && *until) resolve_action(until_id, sizeof(until_id), until, NULL, NULL, NULL, NULL);
+      if (part && *part) cstr(c_part, sizeof(c_part), part);
+      cstr(c_text, sizeof(c_text), text);
+      emit_if(f, st, false);
+      OUT("  { .target = %s, .part = %s, .text = %s, .until = %s },\n", target, c_part, c_text, until_id);
+      emit_if(f, st, true);
+      free(control); free(command); free(part); free(text); free(until);
+    }
+    char key[256]; snprintf(key, sizeof(key), "%s.%s", pre, nz(name, ""));  // the settings directory is shared by every app
+    cstr(c_name, sizeof(c_name), key);
+    if (title && *title) cstr(c_title, sizeof(c_title), title); else snprintf(c_title, sizeof(c_title), "NULL");
+    OUT("};\nstatic const tutorial_def_t %s_%s_tutorial = { .name = %s, .title = %s, .steps = %s_%s_tutorial_steps,\n"
+        "  .step_count = (int)(sizeof(%s_%s_tutorial_steps) / sizeof(%s_%s_tutorial_steps[0])) };\n\n",
+        pre, id, c_name, c_title, pre, id, pre, id, pre, id);
+    free(name); free(form_name); free(title);
+  }
+  return errors;
+}
+
 static bool activity_form_needed(xmlNodePtr form, xmlNodePtr forms, const char *only) {
   if (!only) return true;
   char *name = attr(form, "name");
@@ -1864,6 +1906,7 @@ int main(int argc, char **argv) {
   EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
     if (!emit_form(f, form, pre, databases ? databases : database)) { fclose(f); xmlFreeDoc(doc); return 1; }
   }
+  if (!only) errors += emit_tutorials(f, child(root, "tutorials"), forms, pre);
   OUT("#endif /* %s */\n", guard);
   fclose(f); xmlFreeDoc(doc);
   return errors ? 1 : 0;

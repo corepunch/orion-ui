@@ -402,6 +402,17 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     }
 
+    case evGetTutorialAnchor: { // "selected-block": the selected clip; "block": it, else the first one shown
+      tutorial_anchor_t *anchor = lparam;
+      if (!anchor || !anchor->part) return false;
+      bool any = !strcmp(anchor->part, "block");
+      if (!any && strcmp(anchor->part, "selected-block")) return false;
+      window_t *card = g_app->selected_clip >= 0 ? child_at(win, g_app->selected_clip) : NULL;
+      for (window_t *c = win->children; any && !(card && window_is_visible(card)) && c; c = c->next) card = c;
+      if (!card || !window_is_visible(card)) return false;
+      anchor->window = card;
+      return true;
+    }
     case shSetDropAnchor:
       if (wparam != GR_DROP_ANCHOR_SAMPLE && wparam != GR_DROP_ANCHOR_POINTER) {
         fprintf(stderr, "[sh] invalid drop anchor win=%u anchor=%u\n", win->id, wparam);

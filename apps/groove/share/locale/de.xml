@@ -213,4 +213,13 @@
   <string source="Made with Jamsheet" where="code">Erstellt mit Jamsheet</string>
   <string source="%s BPM" where="code">%s BPM</string>
   <string source="Untitled" where="export_media">Unbenannt</string>
+  <string source="Help" where="menu">Hilfe</string>
+  <string source="How to Remove Blocks" where="menu">Blöcke entfernen</string>
+  <string source="Removing blocks">Blöcke entfernen</string>
+  <string source="Click a block on the sheet to select it. The selected block is outlined.">Klicke auf einen Block im Arrangement, um ihn auszuwählen. Der ausgewählte Block ist umrandet.</string>
+  <string source="Tap a block on the sheet to select it. The selected block is outlined.">Tippe auf einen Block im Arrangement, um ihn auszuwählen. Der ausgewählte Block ist umrandet.</string>
+  <string source="Click the trash button, or press Delete, to remove the selected block from the song.">Klicke auf den Papierkorb oder drücke Entf, um den ausgewählten Block aus dem Song zu entfernen.</string>
+  <string source="Tap the trash button to remove the selected block from the song.">Tippe auf den Papierkorb, um den ausgewählten Block aus dem Song zu entfernen.</string>
+  <string source="You can also drag a block off the tracks and let go, or right-click it, to remove it.">Du kannst einen Block auch aus den Spuren ziehen und loslassen oder ihn mit der rechten Maustaste anklicken, um ihn zu entfernen.</string>
+  <string source="You can also hold a block, drag it off the tracks and let go to remove it.">Du kannst einen Block auch halten, aus den Spuren ziehen und loslassen, um ihn zu entfernen.</string>
 </strings>

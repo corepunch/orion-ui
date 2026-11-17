@@ -67,6 +67,26 @@ static void test_context_menu_platform_condition(void) {
   PASS();
 }
 
+static void test_tutorial_declaration(void) {
+  TEST("orionc: tutorials resolve controls and commands; unknown controls fail");
+  const char *fixture = "<orion><menus><menu name=\"edit\" label=\"Edit\"><item name=\"delete\" label=\"Delete\"/></menu></menus>"
+    "<tutorials><tutorial name=\"remove\" form=\"main\" title=\"Removing\">"
+    "<step control=\"sheet\" part=\"selected\" text=\"Select it.\"/>"
+    "<step command=\"edit.delete\" until=\"edit.delete\" text=\"Delete it.\" if=\"!defined(AX_PLATFORM_IOS)\"/>"
+    "</tutorial></tutorials>"
+    "<forms><form name=\"main\" width=\"200\"><StackView name=\"sheet\"/></form></forms></orion>";
+  char out[16384] = {0};
+  ASSERT_EQUAL(run_orionc(fixture, "tutorial", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "{ .target = ID_MAIN_SHEET, .part = \"selected\", .text = \"Select it.\", .until = 0 },"));
+  ASSERT_TRUE(contains(out, "#if !defined(AX_PLATFORM_IOS)\n  { .target = ID_EDIT_DELETE, .part = NULL, .text = \"Delete it.\", .until = ID_EDIT_DELETE },\n#endif"));
+  ASSERT_TRUE(contains(out, "static const tutorial_def_t test_remove_tutorial = { .name = \"test.remove\", .title = \"Removing\""));
+  const char *bad = "<orion><tutorials><tutorial name=\"t\" form=\"main\"><step control=\"missing\" text=\"x\"/></tutorial></tutorials>"
+    "<forms><form name=\"main\" width=\"200\"/></forms></orion>";
+  ASSERT_NOT_EQUAL(run_orionc(bad, "tutorial_bad", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "no control 'missing'"));
+  PASS();
+}
+
 static const char *kValid = ""
   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
   "<orion version=\"1\" name=\"t\" title=\"T\">\n"
@@ -431,6 +451,7 @@ int main(void) {
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
     test_context_menu_platform_condition();
+    test_tutorial_declaration();
     test_large_control_manifest();
     test_activity_page_bindings();
     test_page_metadata();

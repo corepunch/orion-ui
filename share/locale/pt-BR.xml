@@ -38,4 +38,8 @@
   <string source="Save changes to this document?" where="code">Salvar as alterações neste documento?</string>
   <string source="Permission denied." where="code">Acesso negado.</string>
   <string source="Could not read database records." where="code">Não foi possível ler os registros do banco de dados.</string>
+  <string source="Next">Próximo</string>
+  <string source="Done">Concluído</string>
+  <string source="Skip">Pular</string>
+  <string source="Step %d of %d">Etapa %d de %d</string>
 </strings>

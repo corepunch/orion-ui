@@ -63,6 +63,8 @@ true edge (`edgeCoverage` in `sprite_rounded_rect.frag.glsl`).
 widths[4], colors[4])` draws a border whose sides (top, right, bottom, left)
 differ, mitred at the corners; the diagonal pixels mix the two colours and
 none of what lies beneath.
+`fill_rect_cutout(color, r, hole, radius)` fills `r` except a rounded `hole`
+(same coordinates) in one pass, as a spotlight's scrim around a tutorial step.
 
 A window whose painting reaches past its frame (a shadow) sets
 `win->ink_overflow` (left, top, right, bottom); the window system widens that

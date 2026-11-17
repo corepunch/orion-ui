@@ -424,6 +424,8 @@ bool app_drop(const drag_t *d) {
   app_unlock();
   if (ok) { g_app->song_dirty = true; app_select_track(d->track); }
   invalidate_window(g_app->sheet);
+  // People did not find how to take a block out again: the first block placed starts the tutorial.
+  if (ok && d->from_clip < 0 && g_ui_runtime.running) tutorial_start_once(g_app->win, &groove_remove_blocks_tutorial);
   return ok;
 }
 
@@ -492,6 +494,7 @@ void app_command(uint16_t id) {
 #ifndef AX_PLATFORM_IOS
     case ID_FILE_QUIT: if (app_confirm_replace_song(g_app->win)) ui_request_quit(); break;
 #endif
+    case ID_HELP_REMOVE_BLOCKS: tutorial_start(g_app->win, &groove_remove_blocks_tutorial); break;
     case ID_DELETE:
       if (g_app->selected_clip < 0 || g_app->selected_clip >= s->nclips) break;
       app_lock();
@@ -507,4 +510,5 @@ void app_command(uint16_t id) {
       else if (id >= ID_SOLO(0) && id < ID_SOLO(GR_TRACKS)) { app_lock(); s->solo[id - ID_SOLO(0)] = !s->solo[id - ID_SOLO(0)]; app_unlock(); g_app->song_dirty = true; tracks_sync(); }
       break;
   }
+  tutorial_command(id);
 }

@@ -285,6 +285,16 @@ Page::drop-target {
 Dock::preview          { background: color-mix(in srgb, var(--text-info) 27.45%, transparent); }
 Window::disabled-veil  { background: color-mix(in srgb, var(--control-bg) 50.2%, transparent); }
 
+/* A tutorial step: a speech bubble of --bubble-width points at what it explains, which a ring
+   --outset pixels outside it outlines; the scrim dims the window around the ring
+   (orion/commctl/tutorial.c). */
+Tutorial               { --bubble-width: 300px; }
+Tutorial::scrim        { background: #0000008c; }   /* dims all but the spot */
+Tutorial::spot {
+  --outset: 4px; border: 3px solid var(--accent); border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
 /* ── Sliders and scroll bars ─────────────────────────────────────────────── */
 
 Slider::track         { background: var(--button-inner); }

@@ -213,4 +213,13 @@
   <string source="Made with Jamsheet" where="code">Сделано в Jamsheet</string>
   <string source="%s BPM" where="code">%s уд/мин</string>
   <string source="Untitled" where="export_media">Без названия</string>
+  <string source="Help" where="menu">Справка</string>
+  <string source="How to Remove Blocks" where="menu">Как удалять блоки</string>
+  <string source="Removing blocks">Удаление блоков</string>
+  <string source="Click a block on the sheet to select it. The selected block is outlined.">Щёлкните блок на листе, чтобы выделить его. Выделенный блок обведён рамкой.</string>
+  <string source="Tap a block on the sheet to select it. The selected block is outlined.">Коснитесь блока на листе, чтобы выделить его. Выделенный блок обведён рамкой.</string>
+  <string source="Click the trash button, or press Delete, to remove the selected block from the song.">Нажмите кнопку с корзиной или клавишу Delete, чтобы удалить выделенный блок из песни.</string>
+  <string source="Tap the trash button to remove the selected block from the song.">Коснитесь кнопки с корзиной, чтобы удалить выделенный блок из песни.</string>
+  <string source="You can also drag a block off the tracks and let go, or right-click it, to remove it.">Ещё можно перетащить блок за пределы дорожек и отпустить или щёлкнуть его правой кнопкой мыши.</string>
+  <string source="You can also hold a block, drag it off the tracks and let go to remove it.">Ещё можно удержать блок, перетащить его за пределы дорожек и отпустить.</string>
 </strings>

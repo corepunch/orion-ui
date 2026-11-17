@@ -978,6 +978,36 @@ void render_rounded_rect_edged(int tex, irect16_t r, int win_w, int win_h, float
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width, 0, 0, 0, 0, 0);
 }
 
+// Fills r with color except a rounded hole, antialiased, in one pass (a spotlight's scrim).
+// hole is in the same logical coordinates as r and may reach past it.
+void fill_rect_cutout(uint32_t color, irect16_t r, irect16_t hole, int radius) {
+  sprite_program_t *p = &g_ref.rounded_rect_sprite;
+  if (!p->shader.progid || r.w <= 0 || r.h <= 0 || !(color >> 24)) return;
+  if (hole.w < 0 || hole.h < 0 || radius < 0) {
+    fprintf(stderr, "[renderer] cutout rejected hole=%d,%d,%d,%d radius=%d\n", hole.x, hole.y, hole.w, hole.h, radius);
+    fflush(stderr);
+    return;
+  }
+  float scale = MAX(1.0f, axGetScaling());
+  p->state.tex0 = 0;
+  sprite_vec2(p->state.offset, (float)r.x, (float)r.y);
+  sprite_vec2(p->state.scale, (float)r.w, (float)r.h);
+  p->state.alpha = 1;
+  sprite_vec2(p->state.uv_offset, 0.0f, 1.0f);
+  sprite_vec2(p->state.uv_scale, 1.0f, -1.0f);
+  sprite_vec2(p->state.size, r.w * scale, r.h * scale);
+  p->state.radius = MIN(radius, MIN(hole.w, hole.h) / 2) * scale;
+  sprite_vec4(p->state.params0, 0, 0, 6, 0);
+  sprite_vec4(p->state.params1, 0, 0, 0, 0);
+  sprite_vec4(p->state.edge, (hole.x - r.x) * scale, (hole.y - r.y) * scale, hole.w * scale, hole.h * scale);
+  sprite_vec4(p->state.tint, (color & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, ((color >> 16) & 255) / 255.0f, (color >> 24) / 255.0f);
+  R_BlendPremultiplied();
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  if (gs_apply(&p->shader, &p->state)) R_MeshDraw(&g_ref.mesh);
+  glDisable(GL_BLEND);
+  glEnable(GL_DEPTH_TEST);
+}
+
 // A CSS box-shadow: blur is the blur radius, a Gaussian of standard deviation
 // blur / 2; blur 0 is the offset silhouette with a crisp edge.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color) {

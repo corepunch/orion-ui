@@ -98,6 +98,12 @@ float bubbleSDF(vec2 p) {
 
 vec4 frag() {
   vec4 outColor;
+  if (params0.z > 5.5) {   // a scrim with a rounded hole: edge holds the hole (x, y, w, h) inside the quad
+    vec2 p = vec2(tex.x, 1.0 - tex.y) * size;
+    float d = roundedBoxSDF(p - (edge.xy + edge.zw * 0.5), edge.zw * 0.5, radius);
+    float a = tint.a * alpha * col.a * (1.0 - edgeCoverage(d));
+    return vec4(tint.rgb * a, a);
+  }
   if (params0.z > 4.5) {   // a mitred border: edge holds the widths top, right, bottom, left
     vec2 p = vec2(tex.x, 1.0 - tex.y) * size;
     int side = int(params0.w + 0.5);

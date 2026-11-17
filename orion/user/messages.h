@@ -139,6 +139,10 @@ enum {
   // Posted by request_animate(): advance animations to ui_animation_time(), then request another
   // while still moving (≈ ORCA Object.Animate). Coalesced, so at most one per window per frame.
   evAnimate,
+  // Sent by a running tutorial to the window a step points at (tutorial_anchor_t *lparam, wparam = step
+  // index). Return true after narrowing anchor->rect (client coordinates) or setting anchor->window
+  // to the descendant that is the step's anchor->part, e.g. the selected item.
+  evGetTutorialAnchor,
   evUser = 1000
 };
 
