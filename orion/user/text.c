@@ -451,7 +451,7 @@ static int strnwidth_impl(ui_font_t font, const char *text, int len) {
     if (codepoint == '\n') continue;
     w += (codepoint == ' ' ? sw : codepoint_advance64(font, codepoint)) + st->spacing64;
   }
-  return (w + 32) >> 6;
+  return (w + 63) >> 6;   // rounded up, as text_wrap_layout_font measures: text this wide never wraps
 }
 
 // ── New explicit-font metric API ──────────────────────────────────────────────
