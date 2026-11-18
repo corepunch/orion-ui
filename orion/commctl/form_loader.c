@@ -228,7 +228,7 @@ static const enum_token_t kRowIconColors[] = {
 static const struct { const char *name; flags_t value; } kFlags[] = {
   {"notitle", WINDOW_NOTITLE}, {"nofill", WINDOW_NOFILL}, {"vscroll", WINDOW_VSCROLL},
   {"flexspace", WINDOW_FLEXSPACE}, {"toolbar", WINDOW_TOOLBAR}, {"titletoolbar", WINDOW_TITLETOOLBAR},
-  {"statusbar", WINDOW_STATUSBAR}, {"notitlebar", WINDOW_NOTITLE}, {"default", 0},
+  {"statusbar", WINDOW_STATUSBAR}, {"notitlebar", WINDOW_NOTITLE},
   {"WINDOW_NOTITLE", WINDOW_NOTITLE}, {"WINDOW_TRANSPARENT", WINDOW_TRANSPARENT},
   {"WINDOW_VSCROLL", WINDOW_VSCROLL}, {"WINDOW_HSCROLL", WINDOW_HSCROLL},
   {"WINDOW_NORESIZE", WINDOW_NORESIZE}, {"WINDOW_NOFILL", WINDOW_NOFILL},

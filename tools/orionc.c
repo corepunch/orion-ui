@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1242,7 +1243,7 @@ static const kv_t kWindowFlags[] = {
   {"notitle", "WINDOW_NOTITLE"}, {"nofill", "WINDOW_NOFILL"},
   {"vscroll", "WINDOW_VSCROLL"}, {"flexspace", "WINDOW_FLEXSPACE"},
   {"toolbar", "WINDOW_TOOLBAR"}, {"titletoolbar", "WINDOW_TITLETOOLBAR"}, {"statusbar", "WINDOW_STATUSBAR"},
-  {"notitlebar", "WINDOW_NOTITLE"}, {"default", "0"},
+  {"notitlebar", "WINDOW_NOTITLE"},
 };
 
 static const char *control_size_flag(xmlNodePtr n) {
@@ -1271,7 +1272,10 @@ static void resolve_flags(char *out, size_t cap, const char *raw) {
         found = true; break;
       }
     }
-    if (!found) {
+    if (!found) {   // anything else passes through as a C macro or a number
+      bool macro = isupper((unsigned char)tok[0]) || isdigit((unsigned char)tok[0]);
+      for (const char *c = tok; macro && *c; c++) macro = isupper((unsigned char)*c) || isdigit((unsigned char)*c) || *c == '_';
+      if (!macro) { fprintf(stderr, "orionc: unknown flag '%s' in flags=\"%s\"\n", tok, raw); exit(1); }
       if (out[0]) strcat(out, " | ");
       strcat(out, tok);
     }

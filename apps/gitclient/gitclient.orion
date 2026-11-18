@@ -547,7 +547,7 @@
                         <MultiEdit name="commit_description" placeholder="Description" height="64" flags="vscroll" />
                         <StackView name="commit_actions" orientation="horizontal" spacing="4">
                             <Button name="stash_inline" text="Stash" />
-                            <Button name="commit_now" text="Commit" flags="default,flexspace" />
+                            <Button name="commit_now" text="Commit" flags="flexspace" />
                         </StackView>
                     </StackView>
                 </TabView>
@@ -650,7 +650,7 @@
             <StackView orientation="horizontal" spacing="6">
                 <CheckBox name="amend" text="Amend last commit" />
                 <Space />
-                <Button name="ok" text="Commit" flags="default" />
+                <Button name="ok" text="Commit" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -668,7 +668,7 @@
             <CheckBox name="checkout" text="Checkout after creation" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
-                <Button name="ok" text="Create" flags="default" />
+                <Button name="ok" text="Create" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -683,7 +683,7 @@
             </GridView>
             <StackView orientation="horizontal" spacing="6">
                 <Space />
-                <Button name="ok" text="Rename" flags="default" />
+                <Button name="ok" text="Rename" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -705,7 +705,7 @@
             <Label name="status" text="" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
-                <Button name="ok" text="Clone" flags="default" />
+                <Button name="ok" text="Clone" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -727,7 +727,7 @@
                 <Button name="update" text="Update" />
                 <Button name="remove" text="Remove" />
                 <Space />
-                <Button name="close" text="Close" flags="default" />
+                <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
             </StackView>
         </form>
         <form name="search_dialog" title="Search" width="320" auto_layout="1" spacing="6" padding="8">
@@ -735,7 +735,7 @@
             <TextEdit name="query" flags="flexspace" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
-                <Button name="ok" text="Search" flags="default" />
+                <Button name="ok" text="Search" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -743,14 +743,14 @@
             <Label text="Conflicted files:" />
             <ComboBox name="file_list" flags="flexspace" />
             <StackView orientation="horizontal" spacing="6">
-                <Button name="ours" text="Accept Ours" flags="default" />
+                <Button name="ours" text="Accept Ours" />
                 <Button name="theirs" text="Accept Theirs" />
                 <Button name="both" text="Accept Both" />
             </StackView>
             <StackView orientation="horizontal" spacing="6">
                 <Space />
                 <Button name="abort" text="Abort Merge" />
-                <Button name="close" text="Close" />
+                <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
             </StackView>
         </form>
         <form name="create_tag_dialog" title="Create Tag" width="320" auto_layout="1" spacing="6" padding="8">
@@ -766,7 +766,7 @@
             </GridView>
             <StackView orientation="horizontal" spacing="6">
                 <Space />
-                <Button name="ok" text="Create" flags="default" />
+                <Button name="ok" text="Create" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -785,7 +785,7 @@
             <CheckBox name="force" text="Force" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
-                <Button name="ok" text="OK" flags="default" />
+                <Button name="ok" text="OK" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -799,7 +799,7 @@
             </StackView>
             <StackView orientation="horizontal" spacing="4">
                 <Space />
-                <Button name="open" text="Open" flags="default" />
+                <Button name="open" text="Open" flags="BUTTON_DEFAULT" />
                 <Button name="close" text="Close" />
             </StackView>
         </form>
@@ -816,7 +816,7 @@
             <Label name="status" text="The folder will be created and initialized with branch main." />
             <StackView orientation="horizontal" spacing="4">
                 <Space />
-                <Button name="ok" text="Create" flags="default" />
+                <Button name="ok" text="Create" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -835,7 +835,7 @@
             <Label name="status" text="Stored in this repository unless global is selected." />
             <StackView orientation="horizontal" spacing="4">
                 <Space />
-                <Button name="ok" text="Save" flags="default" />
+                <Button name="ok" text="Save" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -853,7 +853,7 @@
             <StackView orientation="horizontal" spacing="4">
                 <Button name="new_branch" text="New Branch..." />
                 <Space />
-                <Button name="ok" text="Switch" flags="default" />
+                <Button name="ok" text="Switch" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
@@ -862,7 +862,7 @@
             <ComboBox name="list" flags="flexspace" />
             <StackView orientation="horizontal" spacing="4">
                 <Space />
-                <Button name="ok" text="Switch" flags="default" />
+                <Button name="ok" text="Switch" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>
