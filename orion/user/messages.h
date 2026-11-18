@@ -599,7 +599,8 @@ enum {
   tgClear,                   // destroys every tile and clears the selection
   tgnSelChange,              // tile grid -> root (evCommand): LOWORD = tile index, lparam = grid
   tgnActivate,               // tile grid -> root (evCommand): Enter or double-click on a tile
-  bbSetTailOffset,           // SpeechBubble: wparam = bottom tail position in local pixels (0 = centered)
+  bbSetTailOffset,           // SpeechBubble: wparam = tail x position in local pixels (0 = centered)
+  bbSetTailSide,             // SpeechBubble: wparam = TOOLTIP_TAIL_TOP or TOOLTIP_TAIL_BOTTOM
 };
 // Segmented control messages (NSSegmentedControl / auto-radio group analogue).
 // Segment labels are separated by '|' in the window title or sgSetSegments.
