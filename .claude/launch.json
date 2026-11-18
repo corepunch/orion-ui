@@ -4,8 +4,25 @@
     {
       "name": "docs-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-I", "/private/tmp/claude-501/-Users-igor--claude-spares-spare-TLm8XB/559dabda-1f05-491d-88de-a8577271b608/scratchpad/range_server.py", "4173", "docs"],
+      "runtimeArgs": [
+        "-I",
+        "/private/tmp/claude-501/-Users-igor--claude-spares-spare-TLm8XB/559dabda-1f05-491d-88de-a8577271b608/scratchpad/range_server.py",
+        "4173",
+        "docs"
+      ],
       "port": 4173
+    },
+    {
+      "name": "gitclient-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4180",
+        "-d",
+        "docs/gitclient/site"
+      ],
+      "port": 4180
     }
   ]
 }
