@@ -25,9 +25,10 @@ at `/orion-ui/gitclient/site/`.
    `screenshot PATH`); see `tools/orion_rc_mcp.py`.
 
 The Agents screenshots ran real Git Client agent batches, but `claude` and
-`codex` on `PATH` were stand-in scripts that print sample progress and edit the
-worktree, so the tasks finish in seconds without accounts. The terminal output
-says "demo" for that reason. The snapshot commits, diffs and worktrees are
+`codex` on `PATH` were [tools/demo_agent.sh](tools/demo_agent.sh), linked
+under both names: it prints sample progress and makes each task's edit, so the
+rate-limiter and OAuth tasks finish in seconds without accounts and the metrics
+task keeps working. The terminal output says "demo" for that reason. The snapshot commits, diffs and worktrees are
 Git Client's own. The repository path in the Start Three Agents dialog was
 blanked out in `window-dialog.webp`.
 

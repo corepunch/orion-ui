@@ -148,10 +148,10 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
       <div class="tags"><span>History</span><span><kbd>⌘</kbd> <kbd>2</kbd></span><span>Dockable</span></div>
       <img class="mshot" src="shots/crop-history.webp" alt="History" loading="lazy">
     </article>
-    <article class="step" data-img="3" data-r="390,690,1268,480">
+    <article class="step" data-img="3" data-r="366,728,1312,426">
       <div class="clock">09:31</div>
       <h2>Three tasks off the backlog. At once.</h2>
-      <p>On the Agents page she writes one task per row and picks Codex or Claude Code for each. Every task starts from the current commit.</p>
+      <p>On the Agents page she describes one task per row and picks Codex or Claude Code for each. Every task starts from the current commit, in its own worktree.</p>
       <div class="tags"><span>Agents</span><span><kbd>⌘</kbd> <kbd>4</kbd></span></div>
       <img class="mshot" src="shots/crop-dialog.webp" alt="Start Three Agents" loading="lazy">
     </article>
@@ -162,16 +162,17 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
       <div class="tags"><span>agent-1</span><span>agent-2</span><span>agent-3</span></div>
       <img class="mshot" src="shots/crop-terminal.webp" alt="Agent terminal" loading="lazy">
     </article>
-    <article class="step" data-img="5" data-r="100,450,780,190">
+    <article class="step" data-img="5" data-r="92,318,776,456">
       <div class="clock">09:41</div>
-      <h2>Ready for review.</h2>
-      <p>A successful run with changes is saved as a local snapshot commit on its task branch — something you can diff, run and keep.</p>
-      <img class="mshot" src="shots/crop-tasks.webp" alt="Tasks ready for review" loading="lazy">
+      <h2>The tasks sort themselves.</h2>
+      <p>The list reads like an inbox. Finished and failed runs wait under <b>Needs your attention</b>, the metrics task is still <b>In progress</b>, and a count beside the button sums it up. A run with changes is saved as a snapshot commit on its task branch.</p>
+      <div class="tags"><span>2 to review</span><span>1 in progress</span></div>
+      <img class="mshot" src="shots/crop-tasks.webp" alt="Tasks grouped by what needs attention" loading="lazy">
     </article>
-    <article class="step" data-img="5" data-r="900,320,1140,1170">
+    <article class="step" data-img="5" data-r="876,318,1168,1180">
       <div class="clock">09:44</div>
       <h2>Review the diff. Run the revision.</h2>
-      <p>The diff is against the original base. <b>Run Reviewed Revision</b> opens a detached worktree at the snapshot and starts the default target from its own launch.xml.</p>
+      <p>The review names the task, its state, its agent and the two revisions it compares. The diff is against the original base. <b>Run Reviewed Revision</b> opens a detached worktree at the snapshot and starts the default target from its own launch.xml.</p>
       <div class="tags"><span>Snapshot</span><span>launch.xml</span></div>
       <img class="mshot" src="shots/crop-review.webp" alt="Review diff" loading="lazy">
     </article>
