@@ -128,6 +128,15 @@
         <Label name="heading" text="Expand your sound library" font="title" />
         <Label name="intro" text="The starter bank is free. Buy a pack or unlock the full library." color="text-secondary" />
         <GridView name="products" spacing="4">
+          <Column name="icons" width="24">
+            <ImageView name="icon_full"   icon="phosphor-sparkle"      height="24" v-align="center" flags="WINDOW_NOFILL" />
+            <ImageView name="icon_drums"  icon="phosphor-waveform"     height="24" v-align="center" flags="WINDOW_NOFILL" />
+            <ImageView name="icon_bass"   icon="phosphor-music-note"   height="24" v-align="center" flags="WINDOW_NOFILL" />
+            <ImageView name="icon_guitar" icon="phosphor-guitar"       height="24" v-align="center" flags="WINDOW_NOFILL" />
+            <ImageView name="icon_synths" icon="phosphor-piano-keys"   height="24" v-align="center" flags="WINDOW_NOFILL" />
+            <ImageView name="icon_vocals" icon="phosphor-microphone"   height="24" v-align="center" flags="WINDOW_NOFILL" />
+            <ImageView name="icon_fx"     icon="phosphor-vinyl-record" height="24" v-align="center" flags="WINDOW_NOFILL" />
+          </Column>
           <Column name="packs">
             <Label name="lbl_full" text="Unlock Full Version (all six packs)" v-align="center" font="heading" />
             <Label name="lbl_drums" text="Drums &amp; Fills" v-align="center" />
