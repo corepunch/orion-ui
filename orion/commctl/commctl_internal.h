@@ -76,6 +76,7 @@ typedef struct {
   int  resize_hot_col;   // column whose edge has hover (-1 = none)
   int  press_row;        // RVS_EX_ONECLICK: the row the button went down on (-1 = none)
   const window_t *owner; // the control's window: its classes and #id style it (ui_selector)
+  char placeholder[256];  // shown in the body while there are no rows (edSetPlaceholder)
 } reportview_data_t;
 
 #define REPORTVIEW_RESIZE_HOT_ZONE 4

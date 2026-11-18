@@ -992,6 +992,10 @@ void test_agents_review_and_launch(void) {
   ASSERT_NOT_NULL(list);
   ASSERT_NOT_NULL(diff);
   ASSERT_NOT_NULL(run);
+  window_t *summary = get_window_item(page, ID_AGENTS_PAGE_SUMMARY), *badge = get_window_item(page, ID_AGENTS_PAGE_STATE);
+  ASSERT_NOT_NULL(summary);
+  ASSERT_NOT_NULL(badge);
+  ASSERT_STR_EQUAL(summary->title, "0 in progress, 3 to review, 0 done");
   const gc_agent_task_t *first = gc_agents_tasks(), *task = first;
   const char *expected[] = {"alpha", "beta", "gamma"};
   const char *before = NULL;
@@ -1003,6 +1007,8 @@ void test_agents_review_and_launch(void) {
     before = task->checkout;
     send_message(list, RVM_SETSELECTION, i, NULL);
     send_message(host, evCommand, MAKEDWORD(list->id, RVN_SELCHANGE), list);
+    ASSERT_STR_EQUAL(badge->title, "Ready for review");
+    ASSERT_TRUE(window_has_state(badge, WINDOW_STATE_VISIBLE));
     gc_diff_state_t *st = diff->userdata;
     bool found = false;
     for (int j = 0; j < st->line_count; j++) found |= strstr(st->lines[j], expected[i]) != NULL;

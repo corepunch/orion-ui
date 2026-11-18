@@ -536,6 +536,9 @@ reported on stderr.
   `reportview_item_t.section`: it takes no row index, so selection, keyboard
   navigation and `tvGetSelectedRecord` still count records only. A click on a
   caption selects nothing.
+- `placeholder="..."` is the text an empty list shows in its body, in
+  secondary text, wrapped (`edSetPlaceholder`, as `EM_SETCUEBANNER` cues an
+  empty field). Say why the list is empty and what fills it.
 - `fit-rows="true"` makes the list measure to all its rows and captions
   (`RVS_EX_FITROWS`), for lists in balloons, popovers and cards that size to
   their content. Such a list takes no leftover height, and when a refresh

@@ -22,6 +22,7 @@ typedef struct {
   int     current_hunk;
   int     current_hunk_staged;
   char    hunk_path[512];
+  char    placeholder[160];   // shown while there is no diff; edSetPlaceholder
 } gc_diff_state_t;
 
 result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

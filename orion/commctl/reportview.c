@@ -344,6 +344,12 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     irect16_t total_rect = {draw_x + WIN_PADDING, body_bottom, MAX(0, span_w - WIN_PADDING - pad), footer_h};
     draw_text_clipped(ui_selector(win, "TableView::row"), shown, &total_rect, hdr_fg, data->columns[col].align);
   }
+  // An empty list says why it is empty, the way EM_SETCUEBANNER cues an empty field.
+  if (!data->count && data->placeholder[0]) {
+    irect16_t body = rect_inset(R(0, header_h, eff_w, MAX(0, body_bottom - header_h)), WIN_PADDING * 3);
+    set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
+    draw_text_wrapped_font(ui_selector(win, "TableView::placeholder"), data->placeholder, &body, get_sys_color(brTextSecondary));
+  }
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   if (frame_radius >= 0) {
     set_clip_rounded_rect(win, cr, 0);
@@ -410,6 +416,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evPaint:
       report_paint(win, data);
       return false;
+    case edSetPlaceholder:
+      if (!data) return false;
+      snprintf(data->placeholder, sizeof(data->placeholder), "%s", lparam ? (const char *)lparam : "");
+      rv_invalidate(win, data);
+      return true;
     case evMouseMove: {
       if (!data) return false;
       irect16_t cr = get_client_rect(win);

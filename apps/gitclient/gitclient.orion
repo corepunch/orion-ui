@@ -372,6 +372,7 @@
                 <field name="provider" type="string" length="32"/>
                 <field name="status" type="string" length="96"/>
                 <field name="tone" type="string" length="16"/>
+                <field name="section" type="string" length="64"/>
             </table>
         </database>
         <database name="github_db" class="github_database_proc">
@@ -460,59 +461,72 @@
         </form>
         <form name="agents_page" title="Agents" icon="gc-nav-agents" checked-icon="gc-nav-agents-fill" tooltip="Agent tasks and revision review (Ctrl+4)" focus="tasks" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <requires library="gitclient_components" />
-            <SplitView name="agent_split" split-ratio="0.41" flags="flexspace">
+            <SplitView name="agent_split" split-ratio="0.4" flags="flexspace">
                 <TabView name="task_tabs" hide-single-tab="true" flags="flexspace">
-                    <StackView name="task_panel" text="Tasks" padding="8" spacing="6" flags="flexspace">
-                        <Label text="Agent Tasks" font="title" />
-                        <Button command="agents.start_batch" text="Start Three Agents..." flags="default" />
-                        <TableView name="tasks" source="agent_queue.agent_tasks" flags="notitle,nofill,vscroll,flexspace">
+                    <StackView name="task_panel" text="Tasks" spacing="0" padding="0" flags="flexspace">
+                        <StackView name="task_bar" orientation="horizontal" spacing="6" padding="14 8 14 8">
+                            <Button command="agents.start_batch" icon="gc-nav-agents" text="Start Three Agents..." flags="BUTTON_DEFAULT" />
+                            <Space />
+                            <Label name="summary" text="" color="text-secondary" v-align="center" />
+                        </StackView>
+                        <TableView name="tasks" source="agent_queue.agent_tasks" cell-style="stacked" column-titles="false" group-field="section"
+                                   placeholder="No agent tasks yet. Start three agents to work on the same revision in parallel, each in its own worktree."
+                                   flags="notitle,nofill,vscroll,flexspace">
                             <RowIcon field="tone" value="ready" icon="gc-check-circle" color="success" />
                             <RowIcon field="tone" value="failed" icon="gc-x-circle" color="error" />
                             <RowIcon field="tone" value="running" icon="gc-play" color="info" />
+                            <RowIcon field="tone" value="waiting" icon="gc-hourglass" color="secondary" />
+                            <RowIcon icon="gc-minus-circle" color="secondary" />
                             <Column field="task" title="Task" width="0" min-width="80" />
-                            <Column field="provider" title="Agent" width="74" />
-                            <Column field="status" title="State" width="128" style="badge" />
+                            <Column field="provider" title="Agent" />
+                            <Column field="status" title="State" width="132" style="badge" />
                         </TableView>
-                        <StackView orientation="horizontal" spacing="6">
-                            <Button command="agents.output" text="Agent Output" />
-                            <Button command="agents.stop" text="Stop Agent" />
-                        </StackView>
                     </StackView>
                 </TabView>
                 <TabView name="review_tabs" hide-single-tab="true" flags="flexspace">
-                    <StackView name="review_panel" text="Review" padding="8" spacing="6" flags="flexspace">
-                        <Label text="Review" font="title" />
-                        <Label name="revision" text="Select a task to see its revision." />
-                        <Label name="detail" text="" />
-                        <Button command="agents.run_reviewed" text="Run Reviewed Revision" tooltip="Run the default application target from this revision's launch.xml" />
-                        <DiffView name="review_diff" text="Diff" flags="notitle,nofill,vscroll,flexspace" />
+                    <StackView name="review_panel" text="Review" spacing="0" padding="0" flags="flexspace">
+                        <StackView name="review_head" spacing="2" padding="14 10 14 4">
+                            <StackView name="review_title_row" orientation="horizontal" spacing="8">
+                                <Label name="revision" text="No task selected" font="title" flags="flexspace" />
+                                <Badge name="state" text="" icon="gc-check-circle" color="secondary" v-align="center" />
+                            </StackView>
+                            <Label name="source" text="Select a task to review the revision its agent saved." color="text-secondary" />
+                            <Label name="detail" text="" flags="LABEL_COLLAPSE_EMPTY" />
+                        </StackView>
+                        <StackView name="review_bar" orientation="horizontal" spacing="6" padding="14 8 14 8">
+                            <Button command="agents.run_reviewed" icon="gc-play" text="Run Reviewed Revision" tooltip="Run the default application target from this revision's launch.xml" />
+                            <Button command="agents.output" icon="gc-terminal-window" text="Agent Output" tooltip="Show the agent's terminal" />
+                            <Button command="agents.stop" icon="gc-stop-circle" text="Stop Agent" tooltip="Stop the running agent" />
+                        </StackView>
+                        <DiffView name="review_diff" text="Diff" placeholder="Select a task to see the changes its agent made." flags="notitle,nofill,vscroll,flexspace" />
                     </StackView>
                 </TabView>
             </SplitView>
         </form>
-        <form name="agent_batch_dialog" title="Start Three Agents" width="620" height="370" auto_layout="1" padding="12" spacing="8">
-            <Label name="repository" text="" />
-            <Label text="Each task starts from the current committed revision in its own worktree." />
+        <form name="agent_batch_dialog" title="Start Three Agents" width="640" auto_layout="1" padding="12" spacing="8">
+            <Label text="Each agent works on its own task in its own worktree, starting from the current committed revision." />
+            <Label name="repository" text="" color="text-secondary" />
             <GridView name="tasks" spacing="8">
                 <Column name="labels" width="auto">
-                    <Label text="Task 1" />
-                    <Label text="Task 2" />
-                    <Label text="Task 3" />
+                    <Label text="Task 1:" />
+                    <Label text="Task 2:" />
+                    <Label text="Task 3:" />
                 </Column>
                 <Column name="prompts">
-                    <MultiEdit name="prompt_one" height="58" flags="vscroll" />
-                    <MultiEdit name="prompt_two" height="58" flags="vscroll" />
-                    <MultiEdit name="prompt_three" height="58" flags="vscroll" />
+                    <MultiEdit name="prompt_one" height="64" placeholder="Describe what the first agent should do" flags="vscroll" />
+                    <MultiEdit name="prompt_two" height="64" placeholder="Describe what the second agent should do" flags="vscroll" />
+                    <MultiEdit name="prompt_three" height="64" placeholder="Describe what the third agent should do" flags="vscroll" />
                 </Column>
-                <Column name="providers" width="125">
-                    <ComboBox name="provider_one" />
-                    <ComboBox name="provider_two" />
-                    <ComboBox name="provider_three" />
+                <Column name="providers" width="120">
+                    <ComboBox name="provider_one" v-align="start" />
+                    <ComboBox name="provider_two" v-align="start" />
+                    <ComboBox name="provider_three" v-align="start" />
                 </Column>
             </GridView>
+            <Separator name="sep" />
             <StackView orientation="horizontal" spacing="8">
                 <Space />
-                <Button name="start" text="Start Three Agents" flags="default" />
+                <Button name="start" text="Start Three Agents" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
             </StackView>
         </form>

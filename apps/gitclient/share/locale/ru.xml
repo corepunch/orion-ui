@@ -5,19 +5,26 @@
   <string source="Agent Output" where="menu,agents_page">Вывод агента</string>
   <string source="Stop Agent" where="menu,agents_page">Остановить агента</string>
   <string source="Run Reviewed Revision" where="menu,agents_page">Запустить версию из ревью</string>
-  <string source="Agent Tasks" where="agents_page">Задачи агентов</string>
   <string source="Agent tasks and revision review (Ctrl+4)" where="agents_page">Задачи агентов и просмотр изменений (Ctrl+4)</string>
   <string source="Tasks" where="agents_page">Задачи</string>
   <string source="Task" where="agents_page">Задача</string>
   <string source="Agent" where="agents_page">Агент</string>
   <string source="Review" where="agents_page">Ревью</string>
-  <string source="Select a task to see its revision." where="agents_page">Выберите задачу, чтобы посмотреть её изменения.</string>
   <string source="Run the default application target from this revision's launch.xml" where="agents_page">Запустить приложение по умолчанию из launch.xml этой версии</string>
+  <string source="No agent tasks yet. Start three agents to work on the same revision in parallel, each in its own worktree." where="agents_page">Задач агентов пока нет. Запустите трёх агентов, чтобы они параллельно работали над одной версией, каждый в своём рабочем дереве.</string>
+  <string source="No task selected" where="agents_page">Задача не выбрана</string>
+  <string source="Select a task to review the revision its agent saved." where="agents_page">Выберите задачу, чтобы проверить версию, сохранённую агентом.</string>
+  <string source="Show the agent's terminal" where="agents_page">Показать терминал агента</string>
+  <string source="Stop the running agent" where="agents_page">Остановить работающего агента</string>
+  <string source="Select a task to see the changes its agent made." where="agents_page">Выберите задачу, чтобы увидеть изменения, внесённые агентом.</string>
+  <string source="Each agent works on its own task in its own worktree, starting from the current committed revision." where="agent_batch_dialog">Каждый агент работает над своей задачей в отдельном рабочем дереве, начиная с текущего коммита.</string>
+  <string source="Describe what the first agent should do" where="agent_batch_dialog">Опишите, что должен сделать первый агент</string>
+  <string source="Describe what the second agent should do" where="agent_batch_dialog">Опишите, что должен сделать второй агент</string>
+  <string source="Describe what the third agent should do" where="agent_batch_dialog">Опишите, что должен сделать третий агент</string>
   <string source="Start Three Agents" where="agent_batch_dialog">Запустить трёх агентов</string>
-  <string source="Each task starts from the current committed revision in its own worktree." where="agent_batch_dialog">Каждая задача начнётся с текущего коммита в отдельном рабочем дереве.</string>
-  <string source="Task 1" where="agent_batch_dialog">Задача 1</string>
-  <string source="Task 2" where="agent_batch_dialog">Задача 2</string>
-  <string source="Task 3" where="agent_batch_dialog">Задача 3</string>
+  <string source="Task 1:" where="agent_batch_dialog">Задача 1:</string>
+  <string source="Task 2:" where="agent_batch_dialog">Задача 2:</string>
+  <string source="Task 3:" where="agent_batch_dialog">Задача 3:</string>
   <string source="Creating worktree" where="code">Создаётся рабочее дерево</string>
   <string source="Working" where="code">В работе</string>
   <string source="Stopping" where="code">Остановка</string>
@@ -27,11 +34,9 @@
   <string source="Ready for review" where="code">Готово к ревью</string>
   <string source="No changes" where="code">Нет изменений</string>
   <string source="Failed" where="code">Ошибка</string>
-  <string source="Compare %.12s to %.12s" where="code">Сравнение %.12s с %.12s</string>
   <string source="Preparing the checkout at this revision..." where="code">Подготавливается рабочее дерево этой версии...</string>
   <string source="Could not read the revision diff." where="code">Не удалось прочитать изменения этой версии.</string>
   <string source="This diff exceeds the viewer limit. The preview is truncated." where="code">Список изменений слишком велик и показан не полностью.</string>
-  <string source="%s from %.12s" where="code">%s от %.12s</string>
   <string source="Enter a task of up to 2047 bytes in each prompt." where="code">Введите задачу в каждое поле. Размер текста до 2047 байт.</string>
   <string source="Could not start the batch. Check that the repository has a commit and the worktree directory is writable." where="code">Не удалось запустить задачи. Проверьте, что в репозитории есть коммит и каталог рабочих деревьев доступен для записи.</string>
   <string source="Open a repository first." where="code">Сначала откройте репозиторий.</string>
@@ -50,4 +55,13 @@
   <string source="Could not start the agent process." where="code">Не удалось запустить процесс агента.</string>
   <string source="Could not start revision capture." where="code">Не удалось начать сохранение версии.</string>
   <string source="The agent exited with an error. See Agent Output." where="code">Агент завершился с ошибкой. Откройте вывод агента.</string>
+  <string source="%s on %s: %.12s compared to %.12s" where="code">%s в %s: %.12s в сравнении с %.12s</string>
+  <string source="%s on %s, from %.12s" where="code">%s в %s, от %.12s</string>
+  <string source="Needs your attention" where="code">Требуют вашего внимания</string>
+  <string source="In progress" where="code">В работе</string>
+  <string source="Done" where="code">Завершены</string>
+  <string source="%d in progress, %d to review, %d done" where="code">В работе: %d, на ревью: %d, завершено: %d</string>
+  <string source="This task saved no revision to review." where="code">Эта задача не сохранила версию для ревью.</string>
+  <string source="The diff appears here when the task is ready for review." where="code">Изменения появятся здесь, когда задача будет готова к ревью.</string>
+  <string source="No local changes" where="code">Нет локальных изменений</string>
 </strings>

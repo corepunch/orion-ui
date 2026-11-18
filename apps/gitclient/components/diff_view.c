@@ -46,6 +46,13 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case edSetPlaceholder: {
+      gc_diff_state_t *st = (gc_diff_state_t *)win->userdata;
+      if (!st) return false;
+      snprintf(st->placeholder, sizeof(st->placeholder), "%s", lparam ? (const char *)lparam : "");
+      invalidate_window(win);
+      return true;
+    }
     case evArrange: {
       layout_arrange_t const *a = (layout_arrange_t const *)lparam;
       if (a) {
@@ -220,7 +227,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
 
       if (!st || !st->lines || st->line_count <= 0) {
         if (st) {
-          const char *text = "No local changes";
+          const char *text = st->placeholder[0] ? st->placeholder : ui_tr("No local changes");
           int n = text_cells_from_ansi_palette(text, cells, vis_cols, ink, 0, palette);
           int col = MAX(0, (vis_cols - n) / 2);
           draw_text_cells("DiffView", cells, n, cr.x + col * text_cell_width("DiffView"), cr.y + (vis_rows / 2) * ch);
