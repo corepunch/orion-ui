@@ -55,6 +55,14 @@ static int button_icon_width(window_t *win) {
   return x && x->icon[0] && win->title[0] ? BUTTON_TEXT_ICON + BUTTON_ICON_GAP : 0;
 }
 
+static int button_square_size(window_t *win) {
+  return ui_px(ui_selector(win, "Button"), "--button-square-size");
+}
+
+static int button_min_height(window_t *win) {
+  return ui_px(ui_selector(win, "Button"), "--button-min-height");
+}
+
 static int command_link_height(const window_t *win) {
   return MAX(text_char_height(ui_selector(win, "Button")), ui_px(ui_selector(win, "CommandLink"), "--bullet-size")) + ui_px(ui_selector(win, "CommandLink"), "padding-top") * 2;
 }
@@ -111,6 +119,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       }
       win->frame.w = MAX(win->frame.w, text_strwidth(ui_selector(win, "Button"), win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
       control_apply_predefined_height(win, "button");
+      win->frame.h = MAX(win->frame.h, button_min_height(win));
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
@@ -118,16 +127,18 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         m->desired_w = ui_px(ui_selector(win, "CommandLink"), "--bullet-size") + ui_px(ui_selector(win, "CommandLink"), "gap") + text_strwidth(ui_selector(win, "Button"), win->title);
         if (m->avail_w > 0) m->desired_w = MIN(m->desired_w, m->avail_w);   // long text ellipsizes
         m->desired_h = command_link_height(win);
+      } else if (m && button_square_size(win) > 0) {
+        m->desired_w = m->desired_h = button_square_size(win);
       } else if (m) {
         m->desired_w = MAX(win->frame.w, text_strwidth(ui_selector(win, "Button"), win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2 +
                                          button_icon_width(win));
-        m->desired_h = control_predefined_height(win->flags);
+        m->desired_h = MAX(control_predefined_height(win->flags), button_min_height(win));
       }
       return true;
     }
     case evArrange: {
       layout_arrange_t *a = (layout_arrange_t *)lparam;
-      if (win->flags & BUTTON_COMMANDLINK) return false;   // a row takes the whole arranged rect
+      if ((win->flags & BUTTON_COMMANDLINK) || button_square_size(win) > 0 || button_min_height(win) > 0) return false;
       if (a) {
         control_arrange_predefined_height(win, a);
       }

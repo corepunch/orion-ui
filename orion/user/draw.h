@@ -24,8 +24,10 @@ typedef enum { TOOLTIP_TAIL_TOP, TOOLTIP_TAIL_BOTTOM, TOOLTIP_TAIL_LEFT, TOOLTIP
 irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
 // The speech variant uses speechbubble geometry and shadow margins.
 irect16_t speech_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
+irect16_t speech_bubble_body_rect_in(const window_t *win, irect16_t r, tooltip_tail_side_t side);
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
 void draw_speech_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
+void draw_speech_bubble_in(const window_t *win, irect16_t r, int tail_offset, tooltip_tail_side_t side);
 // BUTTON_COMMANDLINK face: theme bullet, ellipsized text in `ink`, underline on hover, focus rectangle.
 // Like Office 97 balloon labels, there is no button bevel; `r` is the whole clickable row.
 void draw_command_link(irect16_t r, const char *text, ctrl_state_t state, uint32_t ink);

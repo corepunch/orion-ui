@@ -377,22 +377,23 @@ uint8_t *load_image_memory(const void *data, size_t size, int *out_w, int *out_h
   return NULL;
 }
 
-uint8_t *inflate_raw(const void *data, size_t size, size_t *out_size) {
+uint8_t *inflate_raw(const void *data, size_t size, size_t capacity_limit, size_t *out_size) {
   if (out_size) *out_size = 0;
-  if (!data || !out_size || size > UINT_MAX) {
+  if (!data || !out_size || !capacity_limit || size > UINT_MAX) {
     fprintf(stderr, "[image] inflate rejected data=%p size=%zu out_size=%p\n", data, size, (void *)out_size);
     fflush(stderr); return NULL;
   }
   z_stream stream = {0};
   stream.next_in = (Bytef *)data; stream.avail_in = (uInt)size;
   if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) return NULL;
-  size_t capacity = 4096, used = 0;
+  capacity_limit = MIN(capacity_limit, UINT_MAX);
+  size_t capacity = MIN(4096, capacity_limit), used = 0;
   uint8_t *result = malloc(capacity);
   int status = Z_OK;
   while (result && status == Z_OK) {
     if (used == capacity) {
-      if (capacity > SIZE_MAX / 2 || capacity > UINT_MAX / 2) { status = Z_MEM_ERROR; break; }
-      capacity *= 2;
+      if (capacity == capacity_limit) { status = Z_BUF_ERROR; break; }
+      capacity += MIN(capacity, capacity_limit - capacity);
       uint8_t *grown = realloc(result, capacity);
       if (!grown) { status = Z_MEM_ERROR; break; }
       result = grown;

@@ -83,6 +83,7 @@ Tooltip {
 }
 SpeechBubble {
   border-radius: 5px; padding: 8px 12px; --tail-width: 10px; --tail-length: 16px;
+  background: var(--info-background); border-color: var(--info-text);
   --shadow-size: 2px; box-shadow: 1px 1px 1px #00000040;
 }
 CommandLink         { --bullet-size: 6px; gap: 8px; padding-top: 2px; }
@@ -132,6 +133,8 @@ Badge::icon  { width: 12px; margin-right: 4px; fill: var(--tone, var(--text-seco
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 
 Button {
+  --button-square-size: 0px;
+  --button-min-height: 0px;
   background: var(--control-bg);
   border: 1px solid #767676;
   border-radius: var(--button-radius);

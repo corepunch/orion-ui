@@ -42,7 +42,8 @@ result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return !*path || bitmap != NULL;
     }
     case evPaint:
-      fill_rect(get_sys_color(state ? state->background : brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
+      if (!(win->flags & WINDOW_NOFILL))
+        fill_rect(get_sys_color(state ? state->background : brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
       if (state && state->icon[0]) {
         int size = MIN(48, MIN(win->frame.w, win->frame.h));
         irect16_t r = rect_center(get_client_rect(win), size, size);

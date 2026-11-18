@@ -59,12 +59,12 @@ result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       int margin = speechbubble_tail_margin(win);
       int offset = win->value ? (int)win->value : win->frame.w / 2;
       offset = MAX(margin, MIN(offset, win->frame.w - margin));
-      draw_speech_bubble(get_client_rect(win), offset, side ? *side : TOOLTIP_TAIL_BOTTOM);
+      draw_speech_bubble_in(win, get_client_rect(win), offset, side ? *side : TOOLTIP_TAIL_BOTTOM);
       return false; // The window system paints the ordinary child controls.
     }
     case evHitTest: {
       ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
-      if (lparam && !rect_contains_point(speech_bubble_body_rect(get_client_rect(win), side ? *side : TOOLTIP_TAIL_BOTTOM), point)) {
+      if (lparam && !rect_contains_point(speech_bubble_body_rect_in(win, get_client_rect(win), side ? *side : TOOLTIP_TAIL_BOTTOM), point)) {
         *(window_t **)lparam = NULL;
         return true;
       }

@@ -743,6 +743,12 @@ static bool middle_pan_begin(ui_event_t *msg) {
 
 // Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
+  if (msg->message == kEventOpenFile) {
+    if (msg->lParam) ui_open_file(msg->lParam);
+    axDisposeMessage(msg);
+    return;
+  }
+
   // Sentinel events are wakeup-only — clear the pending flag and skip.
   // get_message() already filters sentinels (returning 0); this guard handles
   // sentinels that arrive via the repost_messages() drain loop.
@@ -769,6 +775,11 @@ void dispatch_message(ui_event_t *msg) {
   int px, py; // platform logical coordinates
 
   switch (msg->message) {
+
+    case kEventSetFocus:
+      if (g_ui_runtime.focused)
+        send_message(window_owner_root(g_ui_runtime.focused), evActivate, WA_ACTIVE, NULL);
+      break;
 
     case kEventDragDrop: {
       const char *path = (const char *)msg->lParam;

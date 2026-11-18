@@ -240,6 +240,10 @@ starts at the bottom. Send `bbSetTailSide` with `TOOLTIP_TAIL_TOP` to place it a
 the top, and `bbSetTailOffset` to point at an anchor. `theme_t.speechbubble` owns its corner
 radius, tail width/length and shadow independently of ordinary tooltips. Its informational surface uses `brInfoBackground` and `brInfoText`: pale
 yellow in light palettes and a muted warm surface in dark palettes.
+An instance stylesheet can set `background`, `border-color` and geometry on
+`SpeechBubble` or one of its classes. The control uses
+`draw_speech_bubble_in()` and `speech_bubble_body_rect_in()` so its paint and
+hit testing both use that window's style.
 `draw_speech_bubble()` draws the fill, one-pixel outline and tail from one signed
 distance silhouette. The default tail is 10 pixels wide and 16 pixels long, with
 one upright edge and one diagonal edge, mirrored toward the anchor. These

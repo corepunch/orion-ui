@@ -338,9 +338,9 @@ void fill_border_sides(irect16_t r, const int widths[4], const uint32_t colors[4
   render_border_sides(r, size, w, colors);
 }
 
-static irect16_t bubble_body_rect(irect16_t r, tooltip_tail_side_t side, bool speech) {
-  r = rect_inset(r, speech ? ui_px("SpeechBubble", "--shadow-size") : ui_px("Tooltip", "--shadow-size"));
-  int length = speech ? ui_px("SpeechBubble", "--tail-length") : ui_px("Tooltip", "--tail-size");
+static irect16_t bubble_body_rect(irect16_t r, tooltip_tail_side_t side, const char *selector, bool speech) {
+  r = rect_inset(r, ui_px(selector, "--shadow-size"));
+  int length = ui_px(selector, speech ? "--tail-length" : "--tail-size");
   switch (side) {
     case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, length);
     case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, length);
@@ -353,39 +353,45 @@ static irect16_t bubble_body_rect(irect16_t r, tooltip_tail_side_t side, bool sp
 }
 
 irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
-  return bubble_body_rect(r, side, false);
+  return bubble_body_rect(r, side, "Tooltip", false);
 }
 
 irect16_t speech_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
-  return bubble_body_rect(r, side, true);
+  return speech_bubble_body_rect_in(NULL, r, side);
 }
 
-static void draw_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side, bool speech) {
-  int pad = speech ? ui_px("SpeechBubble", "--shadow-size") : ui_px("Tooltip", "--shadow-size");
-  int radius = speech ? ui_radius("SpeechBubble") : ui_radius("Tooltip");
-  int length = speech ? ui_px("SpeechBubble", "--tail-length") : ui_px("Tooltip", "--tail-size");
+irect16_t speech_bubble_body_rect_in(const window_t *win, irect16_t r, tooltip_tail_side_t side) {
+  return bubble_body_rect(r, side, ui_selector(win, "SpeechBubble"), true);
+}
+
+static void draw_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side, const char *selector, bool speech) {
+  int pad = ui_px(selector, "--shadow-size");
+  int radius = ui_radius(selector);
+  int length = ui_px(selector, speech ? "--tail-length" : "--tail-size");
   float scale = ui_surface_scale();
   isize16_t size = { (int)((r.w - 2 * pad) * scale), (int)((r.h - 2 * pad) * scale) };
   if (size.w <= 0 || size.h <= 0) return;
-  irect16_t body = bubble_body_rect(r, side, speech);
+  irect16_t body = bubble_body_rect(r, side, selector, speech);
   if (body.w <= 0 || body.h <= 0) return;
-  draw_rect_shadow(body, radius,
-                   speech ? ui_shadow("SpeechBubble", "box-shadow").blur : ui_shadow("Tooltip", "box-shadow").blur,
-                   speech ? ui_shadow("SpeechBubble", "box-shadow").offset : ui_shadow("Tooltip", "box-shadow").offset,
-                   speech ? ui_shadow("SpeechBubble", "box-shadow").color : ui_shadow("Tooltip", "box-shadow").color);
+  ui_shadow_t shadow = ui_shadow(selector, "box-shadow");
+  draw_rect_shadow(body, radius, shadow.blur, shadow.offset, shadow.color);
   render_bubble(r, size, radius * scale, length * scale,
                 (tail_offset - pad) * scale, pad * scale, side,
-                get_sys_color(speech ? brInfoBackground : brTooltipBackground),
-                speech ? get_sys_color(brInfoText) : 0, speech ? scale : 0,
-                speech ? ui_px("SpeechBubble", "--tail-width") * scale : 0);
+                speech ? ui_color(selector, "background") : get_sys_color(brTooltipBackground),
+                speech ? ui_color(selector, "border-color") : 0, speech ? scale : 0,
+                speech ? ui_px(selector, "--tail-width") * scale : 0);
 }
 
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) {
-  draw_bubble(r, tail_offset, side, false);
+  draw_bubble(r, tail_offset, side, "Tooltip", false);
 }
 
 void draw_speech_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) {
-  draw_bubble(r, tail_offset, side, true);
+  draw_speech_bubble_in(NULL, r, tail_offset, side);
+}
+
+void draw_speech_bubble_in(const window_t *win, irect16_t r, int tail_offset, tooltip_tail_side_t side) {
+  draw_bubble(r, tail_offset, side, ui_selector(win, "SpeechBubble"), true);
 }
 
 void draw_command_link(irect16_t r, const char *text, ctrl_state_t state, uint32_t ink) {

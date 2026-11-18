@@ -18,5 +18,6 @@ const char *zip_entry_name(const zip_t *zip, int index);    // full stored path
 int    zip_find(const zip_t *zip, const char *name);
 // Inflated bytes of an entry, NUL-terminated for convenience; release with free().
 uint8_t *zip_extract(const zip_t *zip, int index, size_t *out_size);
+uint8_t *zip_extract_limited(const zip_t *zip, int index, size_t max_size, size_t *out_size);
 
 #endif

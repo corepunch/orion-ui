@@ -21,7 +21,7 @@ uint8_t *load_image(const char *path, int *out_w, int *out_h);
 uint8_t *load_image_memory(const void *data, size_t size, int *out_w, int *out_h);
 
 // Inflates a raw deflate stream (no zlib header). Release with free(); NULL on failure.
-uint8_t *inflate_raw(const void *data, size_t size, size_t *out_size);
+uint8_t *inflate_raw(const void *data, size_t size, size_t capacity_limit, size_t *out_size);
 
 // Release a pixel buffer returned by load_image().
 void image_free(uint8_t *pixels);
