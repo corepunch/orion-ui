@@ -10,7 +10,7 @@ import plistlib
 import subprocess
 import xml.etree.ElementTree as ET
 
-from common import ROOT, theme_sheets, unity_sources, write
+from common import ROOT, unity_sources, write
 
 
 def encode(value):
@@ -247,12 +247,10 @@ def generate(args):
             shellScript='set -eu\n/usr/bin/python3 "$ORION_ROOT/tools/xcode/build.py" forms\n',
             inputPaths=['$(ORION_ROOT)/tools/xcode/build.py', '$(ORION_ROOT)/tools/xcode/common.py',
                         '$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
-                        '$(ORION_ROOT)/apps/groove/share/icon.png', '$(ORION_ROOT)/tools/embed_text.py'] +
-                        ['$(ORION_ROOT)/' + sheet.relative_to(ROOT).as_posix() for sheet in theme_sheets(ROOT)],
+                        '$(ORION_ROOT)/apps/groove/share/icon.png'],
             outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
                          '$(DERIVED_FILE_DIR)/Assets.xcassets', '$(DERIVED_FILE_DIR)/liborion_freetype.a',
                          '$(DERIVED_FILE_DIR)/liborion_image_deps.a'] +
-                        ['$(DERIVED_FILE_DIR)/include/orion/themes/' + sheet.stem + '_css.h' for sheet in theme_sheets(ROOT)] +
                         ['$(DERIVED_FILE_DIR)/' + filename for filename in target_sources if filename in units],
             runOnlyForDeploymentPostprocessing=0,
             alwaysOutOfDate=1)

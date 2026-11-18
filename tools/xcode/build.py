@@ -41,13 +41,6 @@ def app_icon(root, output):
 def forms(root, output):
     for name, sources in unity_sources(root, 'groove').items():
         write(output / name, ''.join(f'#include "{p.relative_to(root).as_posix()}"\n' for p in sources))
-    embed = root / 'tools/embed_text.py'
-    for sheet in theme_sheets(root):
-        name = sheet.stem.replace('-', '_')
-        header = output / 'include/orion/themes' / (sheet.stem + '_css.h')
-        if not header.exists() or max(embed.stat().st_mtime, sheet.stat().st_mtime) > header.stat().st_mtime:
-            contents = subprocess.check_output([sys.executable, str(embed), str(sheet), f'k_{name}_css'], text=True)
-            write(header, contents)
     freetype = root / 'vendor/freetype'
     components = ('base/ftbase', 'base/ftinit', 'base/ftsystem', 'base/ftglyph', 'base/ftbitmap',
                   'base/ftdebug', 'base/ftmm', 'gzip/ftgzip', 'autofit/autofit', 'truetype/truetype',
@@ -135,6 +128,11 @@ def resources(root, output):
         if target.exists():
             shutil.rmtree(target)
         shutil.copytree(source, target)
+    # theme_css.c reads the sheets from share/orion/themes at runtime; without them nothing is styled.
+    themes = destination / 'share/orion/themes'
+    themes.mkdir()
+    for sheet in theme_sheets(root):
+        shutil.copy2(sheet, themes / sheet.name)
     for localization in (root / 'apps/groove/share/locale').glob('*.lproj'):
         shutil.copytree(localization, destination / localization.name, dirs_exist_ok=True)
     if ipad:
