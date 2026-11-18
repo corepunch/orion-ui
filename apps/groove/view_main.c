@@ -41,6 +41,7 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         }
         dock_window(app->tracks, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, GR_SHEET_HEADER_W, GR_SHEET_HEADER_W);
         dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
+        dock_set_maximum(app->sheet, 0, GR_SHEET_MAX_H);
         dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM) | DOCK_EDGE(DOCK_RIGHT), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
         app->timer = axSetTimer(win, 33, NULL, true);
         return true;
@@ -54,6 +55,7 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM) | DOCK_EDGE(DOCK_RIGHT), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
       if (app->tracks) dock_window(app->tracks, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, GR_SHEET_HEADER_W, GR_SHEET_HEADER_W);
       dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
+      dock_set_maximum(app->sheet, 0, GR_SHEET_MAX_H);
       app->timer = axSetTimer(win, 33, NULL, true);
       return true;
     }

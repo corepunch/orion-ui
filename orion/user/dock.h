@@ -21,6 +21,7 @@ typedef struct dock_state_s {
   dock_align_t horizontal, vertical;
   uint32_t allowed, flags;
   int extent, minimum, order;
+  isize16_t maximum;   // fill pane: largest useful client size, 0 = unlimited
   bool collapsed;
   irect16_t floating, splitter;
 } dock_state_t;
@@ -33,6 +34,9 @@ typedef struct dock_host_s {
 
 bool dock_window(window_t *win, dock_side_t side, uint32_t allowed, uint32_t flags, int extent, int minimum);
 bool dock_set_side(window_t *win, dock_side_t side);
+// A fill pane's largest useful client size; 0 leaves that axis unlimited. Space beyond it
+// goes to the resizable pane docked nearest the fill pane on that axis.
+bool dock_set_maximum(window_t *win, int width, int height);
 bool dock_float(window_t *win, irect16_t frame);
 bool dock_float_aligned(window_t *win, dock_align_t horizontal, dock_align_t vertical);
 bool dock_resize_float(window_t *win, int width, int height);

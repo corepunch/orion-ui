@@ -9,7 +9,7 @@ static struct {
   window_t *win;
   ipoint16_t anchor;
   irect16_t original;
-  int extent;
+  int extent, shown;   // the pane's registered extent, and the size it had when the splitter was grabbed
   dock_side_t target;
   bool resize, floating_resize, moved, collapsed;
 } dock_drag;
@@ -80,6 +80,15 @@ bool dock_set_side(window_t *win, dock_side_t side) {
   d->side = d->last_side = side;
   d->horizontal = d->vertical = DOCK_ALIGN_NONE;
   dock_orient(win);
+  dock_refresh(win->parent);
+  return true;
+}
+
+bool dock_set_maximum(window_t *win, int width, int height) {
+  if (!win || !win->dock || win->dock->side != DOCK_FILL || width < 0 || height < 0 || width > INT16_MAX || height > INT16_MAX)
+    return dock_error(win, "maximum needs a fill pane and a size of 0..32767", width < 0 || width > INT16_MAX ? width : height);
+  if (win->dock->maximum.w == width && win->dock->maximum.h == height) return true;
+  win->dock->maximum = (isize16_t){(int16_t)width, (int16_t)height};
   dock_refresh(win->parent);
   return true;
 }
@@ -188,15 +197,10 @@ static void dock_place_float(window_t *win, irect16_t content) {
   dock_place(win, r);
 }
 
-irect16_t dock_layout(window_t *host, irect16_t area) {
-  if (!host) { dock_error(NULL, "missing host", 0); return area; }
-  if (!host->dock_host && !(host->dock_host = calloc(1, sizeof(*host->dock_host)))) {
-    dock_error(host, "host allocation failed", 0);
-    return area;
-  }
-  if (host->dock_host->busy) return host->dock_host->content;
-  host->dock_host->busy = true;
-  area.w = MAX(0, area.w); area.h = MAX(0, area.h);
+// Splits the edge panes off `area` and returns what is left for the fill panes. Axis 0 is
+// top/bottom, 1 left/right: grow[axis] is the expanded resizable pane nearest the fill panes,
+// found by the measuring pass (place == false) and widened by extra[axis] when placing.
+static irect16_t dock_arrange(window_t *host, irect16_t area, window_t *grow[2], const int extra[2], bool place) {
   int64_t order = -1;
   for (;;) {
     window_t *pane = NULL;
@@ -205,7 +209,7 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
     if (!pane) break;
     dock_state_t *d = pane->dock;
     order = dock_order(pane);
-    d->splitter = R(0, 0, 0, 0);
+    if (place) d->splitter = R(0, 0, 0, 0);
     if (!window_has_state(pane, WINDOW_STATE_VISIBLE) || d->side == DOCK_FILL || d->side == DOCK_FLOAT ||
         ((d->flags & DOCK_TOOLBAR) && toolbar_dock_hint(pane) == TOOLBAR_DOCK_MENU)) continue;
     irect16_t old = pane->frame;
@@ -215,7 +219,9 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
     for (window_t *c = host->children; c; c = c->next)
       if (c->dock && c->dock->side == DOCK_FILL && window_has_state(c, WINDOW_STATE_VISIBLE)) reserve = MAX(reserve, c->dock->minimum);
     reserve = MIN(reserve, MAX(0, available - gap - titlebar_height(pane)));
-    int size = MIN(dock_measure(pane, area), MAX(0, available - gap - reserve));
+    int axis = dock_vertical(d->side);
+    if (!place && (d->flags & DOCK_RESIZABLE) && !d->collapsed) grow[axis] = pane;
+    int size = MIN(dock_measure(pane, area) + (place && pane == grow[axis] ? extra[axis] : 0), MAX(0, available - gap - reserve));
     pane->frame = old;
     irect16_t band = area, splitter = area;
     switch (d->side) {
@@ -234,11 +240,46 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
         default: break;
       }
     }
+    if (!place) continue;
     d->splitter = splitter;
     if (dock_drag.win == pane && dock_drag.moved && !dock_drag.resize && !dock_drag.floating_resize)
       band = dock_undock_frame(pane, band);
     dock_place(pane, band);
   }
+  return area;
+}
+
+// What no visible fill pane can use of `rest`, given each one's largest client size.
+static void dock_fill_surplus(window_t *host, irect16_t rest, window_t *grow[2], int extra[2]) {
+  int spare[2] = {rest.h, rest.w};
+  bool fill = false;
+  for (window_t *c = host->children; c; c = c->next) {
+    if (!c->dock || c->dock->side != DOCK_FILL || !window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
+    irect16_t old = c->frame;
+    c->frame = rest;
+    irect16_t client = get_client_rect(c);
+    c->frame = old;
+    isize16_t limit = c->dock->maximum;
+    spare[0] = limit.h ? MIN(spare[0], MAX(0, client.h - limit.h)) : 0;
+    spare[1] = limit.w ? MIN(spare[1], MAX(0, client.w - limit.w)) : 0;
+    fill = true;
+  }
+  for (int axis = 0; axis < 2; axis++) extra[axis] = fill && grow[axis] ? spare[axis] : 0;
+}
+
+irect16_t dock_layout(window_t *host, irect16_t area) {
+  if (!host) { dock_error(NULL, "missing host", 0); return area; }
+  if (!host->dock_host && !(host->dock_host = calloc(1, sizeof(*host->dock_host)))) {
+    dock_error(host, "host allocation failed", 0);
+    return area;
+  }
+  if (host->dock_host->busy) return host->dock_host->content;
+  host->dock_host->busy = true;
+  area.w = MAX(0, area.w); area.h = MAX(0, area.h);
+  window_t *grow[2] = {NULL, NULL};
+  int extra[2] = {0, 0};
+  dock_fill_surplus(host, dock_arrange(host, area, grow, extra, false), grow, extra);
+  area = dock_arrange(host, area, grow, extra, true);
   host->dock_host->content = area;
   for (window_t *c = host->children; c; c = c->next)
     if (c->dock && window_has_state(c, WINDOW_STATE_VISIBLE)) {
@@ -321,7 +362,7 @@ bool dock_handle_event(ui_event_t *event) {
       if (dock_drag.moved) win->dock->collapsed = false;
       int delta = dock_vertical(win->dock->side) ? dx : dy;
       if (win->dock->side == DOCK_BOTTOM || win->dock->side == DOCK_RIGHT) delta = -delta;
-      win->dock->extent = MAX(win->dock->minimum, dock_drag.extent + delta);
+      win->dock->extent = MAX(win->dock->minimum, dock_drag.shown + delta);
       dock_refresh(win->parent);
     } else if (dock_drag.moved) {
       dock_drag.target = dock_target(win, screen);
@@ -372,6 +413,7 @@ bool dock_handle_event(ui_event_t *event) {
     for (window_t *c = host->children; c; c = c->next) {
       if (!c->dock || !window_has_state(c, WINDOW_STATE_VISIBLE) || !rect_contains_point(c->dock->splitter, point)) continue;
       dock_drag.win = c; dock_drag.resize = true; dock_drag.extent = c->dock->extent; dock_drag.anchor = screen;
+      dock_drag.shown = c->dock->collapsed ? c->dock->extent : dock_vertical(c->dock->side) ? c->frame.w : c->frame.h;
       dock_drag.collapsed = c->dock->collapsed;
       return true;
     }

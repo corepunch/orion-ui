@@ -226,6 +226,42 @@ static void test_dock_drag_and_resize(void) {
   PASS();
 }
 
+static void test_dock_fill_maximum(void) {
+  TEST("a fill pane's largest client size hands the surplus to the resizable pane beside it");
+  test_env_init();
+  window_t *host = dock_test_host(), *pane = dock_test_pane(host, DOCK_BOTTOM, 240);
+  window_t *doc = create_window("Document", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), host, dock_test_proc, 0, NULL);
+  ASSERT_TRUE(dock_window(doc, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0));
+  irect16_t full = get_client_rect(host);
+  ASSERT_FALSE(dock_set_maximum(pane, 0, 200));
+  ASSERT_FALSE(dock_set_maximum(doc, 0, -1));
+  ASSERT_EQUAL(pane->frame.h, 240);
+  ASSERT_TRUE(dock_set_maximum(doc, 0, 200));
+  ASSERT_EQUAL(get_client_rect(doc).h, 200);
+  ASSERT_EQUAL(pane->frame.h, full.h - DOCK_SPLITTER - doc->frame.h);
+  ASSERT_EQUAL(pane->dock->extent, 240);
+  int grown = pane->frame.h;
+  irect16_t split = pane->dock->splitter;
+  int x = window_screen_x(host) + split.x + 20, y = window_screen_y(host) + titlebar_height(host) + split.y + 2;
+  dock_mouse(kEventLeftButtonDown, x, y);
+  dock_mouse(kEventLeftButtonDragged, x, y - 30);
+  ASSERT_EQUAL(pane->frame.h, grown + 30);
+  dock_mouse(kEventPointerCancel, x, y - 30);
+  ASSERT_EQUAL(pane->frame.h, grown);
+  ASSERT_EQUAL(pane->dock->extent, 240);
+  dock_mouse(kEventLeftButtonDown, x, y);
+  dock_mouse(kEventLeftButtonUp, x, y + 60);
+  ASSERT_EQUAL(pane->frame.h, grown);
+  ASSERT_TRUE(dock_set_maximum(doc, 0, full.h));
+  ASSERT_EQUAL(pane->frame.h, grown - 60);
+  ASSERT_TRUE(dock_set_maximum(doc, 0, 0));
+  ASSERT_TRUE(dock_collapse(pane, true));
+  ASSERT_TRUE(dock_set_maximum(doc, 0, 200));
+  ASSERT_EQUAL(pane->frame.h, titlebar_height(pane));
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_dock_collapse_and_limits(void) {
   TEST("collapse keeps caption, restores size, and rejects disallowed transitions without mutation");
   test_env_init();
@@ -529,6 +565,7 @@ int main(void) {
   test_dock_drag_and_resize();
   test_dock_overlay_splitter();
   test_dock_collapse_and_limits();
+  test_dock_fill_maximum();
   test_dock_menu();
   test_menu_only_chrome();
   test_dock_floating_resize_and_close();

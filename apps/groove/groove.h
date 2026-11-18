@@ -32,6 +32,7 @@
 #define GR_RULER_H      22
 #define GR_MIN_ROW      26
 #define GR_MAX_ROW      64
+#define GR_SHEET_MAX_H  (GR_RULER_H + GR_TRACKS * GR_MAX_ROW) // ruler plus every lane at full height; the library takes the rest
 #define GR_BARS         128
 #define GR_MAX_BLOCKS   1024
 #define GR_MAX_CLIPS    256

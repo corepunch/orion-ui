@@ -42,6 +42,12 @@ dock_window(document, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
 extent, and minimum extent. Extents and frames use logical pixels. Fill-window
 minimums reserve document space when a resizable pane consumes an edge.
 
+A fill window whose content stops growing declares its largest useful client size
+with `dock_set_maximum(document, width, height)`; 0 leaves an axis unlimited. Space
+beyond that size goes to the resizable pane docked nearest the fill window on that
+axis, so a tall workspace enlarges the pane instead of leaving the document empty.
+The pane's splitter still enlarges it further; it cannot shrink it below that share.
+
 | Flag | Behavior |
 |---|---|
 | `DOCK_RESIZABLE` | Edge splitter, caption collapse, floating resize corner |
