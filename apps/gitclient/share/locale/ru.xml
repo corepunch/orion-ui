@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
+  <string source="Agents" where="menu,agents_page">Агенты</string>
+  <string source="Start Three Agents..." where="menu,agents_page">Запустить трёх агентов...</string>
+  <string source="Agent Output" where="menu,agents_page">Вывод агента</string>
+  <string source="Stop Agent" where="menu,agents_page">Остановить агента</string>
+  <string source="Run Reviewed Revision" where="menu,agents_page">Запустить версию из ревью</string>
+  <string source="Agent Tasks" where="agents_page">Задачи агентов</string>
+  <string source="Agent tasks and revision review (Ctrl+4)" where="agents_page">Задачи агентов и просмотр изменений (Ctrl+4)</string>
+  <string source="Tasks" where="agents_page">Задачи</string>
+  <string source="Task" where="agents_page">Задача</string>
+  <string source="Agent" where="agents_page">Агент</string>
+  <string source="Review" where="agents_page">Ревью</string>
+  <string source="Select a task to see its revision." where="agents_page">Выберите задачу, чтобы посмотреть её изменения.</string>
+  <string source="Run the default application target from this revision's launch.xml" where="agents_page">Запустить приложение по умолчанию из launch.xml этой версии</string>
+  <string source="Start Three Agents" where="agent_batch_dialog">Запустить трёх агентов</string>
+  <string source="Each task starts from the current committed revision in its own worktree." where="agent_batch_dialog">Каждая задача начнётся с текущего коммита в отдельном рабочем дереве.</string>
+  <string source="Task 1" where="agent_batch_dialog">Задача 1</string>
+  <string source="Task 2" where="agent_batch_dialog">Задача 2</string>
+  <string source="Task 3" where="agent_batch_dialog">Задача 3</string>
+  <string source="Creating worktree" where="code">Создаётся рабочее дерево</string>
+  <string source="Working" where="code">В работе</string>
+  <string source="Stopping" where="code">Остановка</string>
+  <string source="Stopped" where="code">Остановлен</string>
+  <string source="Saving revision" where="code">Сохраняется версия</string>
+  <string source="Preparing launch" where="code">Подготовка запуска</string>
+  <string source="Ready for review" where="code">Готово к ревью</string>
+  <string source="No changes" where="code">Нет изменений</string>
+  <string source="Failed" where="code">Ошибка</string>
+  <string source="Compare %.12s to %.12s" where="code">Сравнение %.12s с %.12s</string>
+  <string source="Preparing the checkout at this revision..." where="code">Подготавливается рабочее дерево этой версии...</string>
+  <string source="Could not read the revision diff." where="code">Не удалось прочитать изменения этой версии.</string>
+  <string source="This diff exceeds the viewer limit. The preview is truncated." where="code">Список изменений слишком велик и показан не полностью.</string>
+  <string source="%s from %.12s" where="code">%s от %.12s</string>
+  <string source="Enter a task of up to 2047 bytes in each prompt." where="code">Введите задачу в каждое поле. Размер текста до 2047 байт.</string>
+  <string source="Could not start the batch. Check that the repository has a commit and the worktree directory is writable." where="code">Не удалось запустить задачи. Проверьте, что в репозитории есть коммит и каталог рабочих деревьев доступен для записи.</string>
+  <string source="Open a repository first." where="code">Сначала откройте репозиторий.</string>
+  <string source="Agent runs require a platform with terminal support." where="code">Для запуска агентов нужна платформа с поддержкой терминала.</string>
+  <string source="This action is unavailable for the selected task." where="code">Это действие недоступно для выбранной задачи.</string>
+  <string source="Could not create the agent worktree." where="code">Не удалось создать рабочее дерево агента.</string>
+  <string source="The agent left its task branch or changed its base." where="code">Агент сменил ветку задачи или изменил её базовый коммит.</string>
+  <string source="Could not save the agent revision." where="code">Не удалось сохранить версию агента.</string>
+  <string source="Could not create a checkout for the reviewed revision." where="code">Не удалось создать рабочее дерево версии из ревью.</string>
+  <string source="The launch checkout is no longer at the reviewed revision." where="code">Рабочее дерево запуска больше не соответствует версии из ревью.</string>
+  <string source="The launch checkout has local changes or could not be read." where="code">Рабочее дерево запуска содержит локальные изменения или недоступно.</string>
+  <string source="The reviewed revision has no usable application target in launch.xml." where="code">В launch.xml этой версии нет пригодной команды запуска приложения.</string>
+  <string source="Could not check out the submodules at the reviewed revision." where="code">Не удалось подготовить подмодули версии из ревью.</string>
+  <string source="Could not start worktree preparation." where="code">Не удалось начать подготовку рабочего дерева.</string>
+  <string source="Could not start the application target." where="code">Не удалось запустить приложение.</string>
+  <string source="Could not start the agent process." where="code">Не удалось запустить процесс агента.</string>
+  <string source="Could not start revision capture." where="code">Не удалось начать сохранение версии.</string>
+  <string source="The agent exited with an error. See Agent Output." where="code">Агент завершился с ошибкой. Откройте вывод агента.</string>
+</strings>

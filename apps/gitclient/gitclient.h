@@ -184,7 +184,7 @@ enum {
 #define gc_database_schema gitclient_database_schema
 #define gc_database_api gitclient_database_api
 
-enum { GC_TAB_OVERVIEW, GC_TAB_CHANGES, GC_TAB_HISTORY, GC_TAB_GITHUB };
+enum { GC_TAB_OVERVIEW, GC_TAB_CHANGES, GC_TAB_HISTORY, GC_TAB_GITHUB, GC_TAB_AGENTS };
 typedef enum { GIT_OP_FETCH, GIT_OP_PULL, GIT_OP_PUSH, GIT_OP_CLONE, GIT_OP_GENERIC } git_op_t;
 typedef struct { git_op_t op; bool success; char output[4096]; } git_async_result_t;
 
@@ -217,6 +217,9 @@ typedef struct {
   gc_run_t runs[GC_MAX_RUNS];
   int run_count;
   database_t *workspace_db;
+  struct gc_agents_s *agents;
+  window_t *agents_page_win;
+  database_t *agent_queue_db;
   bool attention_only;
   window_t *changes_page_win;
   window_t *history_page_win;
@@ -398,9 +401,12 @@ bool gc_overview_handle_command(uint32_t wparam, void *lparam);
 bool gc_run_start(const char *checkout, const char *target, const char *command);
 bool gc_run_stop(const char *checkout, const char *target);
 bool gc_run_is_running(const char *checkout, const char *target);
+bool gc_run_result(const char *checkout, const char *target, int *exit_code);
+bool gc_run_reveal(const char *checkout, const char *target);
 void gc_run_show_terminal(bool show);
 void gc_run_sync_targets(void);
 bool gc_run_handle_command(uint32_t wparam, void *lparam);
+void gc_diff_set_text(window_t *win);
 result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_recent_load(void);
 void gc_recent_save(void);

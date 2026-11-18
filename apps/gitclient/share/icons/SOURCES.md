@@ -11,6 +11,7 @@ Source: [Phosphor core](https://github.com/phosphor-icons/core), revision
 | gc-nav-overview.svg / gc-nav-overview-fill.svg | squares-four |
 | gc-nav-history.svg / gc-nav-history-fill.svg | clock-counter-clockwise |
 | gc-nav-github.svg / gc-nav-github-fill.svg | github-logo |
+| gc-nav-agents.svg / gc-nav-agents-fill.svg | sparkle |
 
 Upstream paths: `assets/regular/<name>.svg` and `assets/fill/<name>-fill.svg`.
 The MIT license is included as `PHOSPHOR-LICENSE`.

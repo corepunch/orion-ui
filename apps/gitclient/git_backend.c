@@ -99,15 +99,10 @@ static void gc_build_cmd(const char *path, const char *args[],
             "%%PATH%%\" "
       "&& cd \"%s\" && git",
       path);
-#else
-  int n = snprintf(buf, (size_t)buf_sz, "cd \"%s\" && git", path);
-#endif
   for (int i = 1; args[i] && n < buf_sz - 2; i++) {
     n += snprintf(buf + n, (size_t)(buf_sz - n), " \"");
     for (const char *p = args[i]; *p && n < buf_sz - 3; p++) {
-#ifdef _WIN32
       if (*p == '%' && n < buf_sz - pct_escape_reserve) buf[n++] = '%'; // cmd.exe requires %% to pass a literal %
-#endif
       if (*p == '\"') buf[n++] = '\\';
       buf[n++] = *p;
     }
@@ -115,12 +110,31 @@ static void gc_build_cmd(const char *path, const char *args[],
   }
   // Redirect stderr to stdout so callers capture error text too.
   snprintf(buf + n, (size_t)(buf_sz - n), " 2>&1");
+#else
+  // Paths and pathspecs can contain shell metacharacters. Each is one
+  // literal argument, and a command which does not fit must never run.
+  const size_t cap = (size_t)buf_sz;
+  snprintf(buf, cap, "cd");
+  if (!gc_shell_append_arg(buf, cap, path)) goto too_long;
+  size_t used = strlen(buf);
+  if (used + sizeof(" && git") > cap) goto too_long;
+  strcat(buf, " && git");
+  for (int i = 1; args[i]; i++)
+    if (!gc_shell_append_arg(buf, cap, args[i])) goto too_long;
+  if (strlen(buf) + sizeof(" 2>&1") > cap) goto too_long;
+  strcat(buf, " 2>&1");
+  return;
+too_long:
+  fprintf(stderr, "[gitclient] git command exceeds %zu bytes\n", cap);
+  fflush(stderr);
+  buf[0] = '\0';
+#endif
 }
 
 // Run cmd via popen(), read all output into buf (up to buf_sz-1 bytes).
 // Returns the exit code (0 = success).
 static int gc_popen_read(const char *cmd, char *buf, int buf_sz) {
-  if (!cmd || !buf || buf_sz <= 0) return -1;
+  if (!cmd || !cmd[0] || !buf || buf_sz <= 0) return -1;
 
   FILE *fp = popen(cmd, "r");
   if (!fp) { buf[0] = '\0'; return -1; }
@@ -145,7 +159,7 @@ static int gc_popen_read(const char *cmd, char *buf, int buf_sz) {
 }
 
 static int gc_popen_read_bytes(const char *cmd, char *buf, int buf_sz, int *size_out) {
-  if (!cmd || !buf || buf_sz <= 0) return -1;
+  if (!cmd || !cmd[0] || !buf || buf_sz <= 0) return -1;
   FILE *fp = popen(cmd, "r");
   if (!fp) { buf[0] = 0; return -1; }
   int total = 0;

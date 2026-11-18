@@ -2,6 +2,7 @@
 
 #include "gitclient.h"
 #include "gc_actions.h"
+#include "gc_agents.h"
 #include "pages/changes/page_changes.h"
 #include "pages/history/page_history.h"
 #include "pages/github/page_github.h"
@@ -11,11 +12,11 @@
 // Open / refresh
 // ============================================================
 
-static const uint16_t k_gc_view_commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
+static const uint16_t k_gc_view_commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB, ID_VIEW_AGENTS};
 
 void gc_set_view_mode(int tab) {
   gc_state_t *gc = g_gc; if (!gc || !gc->main_win) return;
-  if (tab < GC_TAB_OVERVIEW || tab > GC_TAB_GITHUB) {
+  if (tab < GC_TAB_OVERVIEW || tab > GC_TAB_AGENTS) {
     fprintf(stderr, "[gitclient] view rejected win=%u view=%d\n", gc->main_win->id, tab);
     fflush(stderr);
     return;
@@ -54,6 +55,11 @@ static void gc_view_activated(int tab) {
       gc->files_win = NULL;
       gc->diff_win  = NULL;
       page_github_refresh();
+      break;
+    case GC_TAB_AGENTS:
+      gc->files_win = NULL;
+      gc->diff_win  = NULL;
+      gc_agents_refresh();
       break;
     default: break;
   }
@@ -154,6 +160,7 @@ void gc_open_checkout(const char *checkout, bool known) {
   }
   git_repo_close(gc->repo);
   gc->repo = next;
+  gc_agents_refresh();
   gc->repo_generation++;
   gc->sync_valid = false;
   snprintf(gc->repo_path, sizeof(gc->repo_path), "%s", checkout);
@@ -379,11 +386,14 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       gc->main_win = win;
 
       gc->activity_win = get_window_item(win, ID_MAIN_WINDOW_ACTIVITY);
+      gc->agent_queue_db = gc_agents_db_create();
+      if (!gc->agent_queue_db) return false;
       static const page_handler_t pages[] = {
         {"overview_page", gc_page_overview_proc},
         {"changes_page",  page_changes_proc},
         {"history_page",  page_history_proc},
         {"github_page",   page_github_proc},
+        {"agents_page",   gc_agents_page_proc},
       };
       send_message(win, evStatusBar, 0, "No repository");
       if (!page_host_init(win, &gc_main_window_form, pages, ARRAY_LEN(pages))) return false;
@@ -392,9 +402,18 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
     }
 
     case evDestroy:
+      gc_agents_shutdown();
       git_repo_close(gc->repo);
       gc->repo = NULL;
+      if (gc->agent_queue_db) {
+        unregister_database("agent_queue");
+        destroy_database(gc->agent_queue_db);
+        gc->agent_queue_db = NULL;
+      }
       return false;
+
+    case evTimer:
+      return gc_agents_poll(wparam);
 
     case evPageChanged:
       for (int i = 0; i < ARRAY_LEN(k_gc_view_commands); i++)
@@ -415,6 +434,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       }
 
       if (gc_overview_handle_command(wparam, lparam)) return true;
+      if (gc_agents_page_command(wparam, lparam)) return true;
 
       if (code == kMenuBarNotificationItemClick || code == kAcceleratorNotification) {
         (void)gc_execute_action(LOWORD(wparam));

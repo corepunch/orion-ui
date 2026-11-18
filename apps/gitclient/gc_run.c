@@ -114,6 +114,29 @@ static void select_tab(gc_run_t *r) {
     if ((window_t *)send_message(pane, tcGetPage, i, NULL) == r->tab) { send_message(pane, tcSetSelection, i, NULL); return; }
 }
 
+bool gc_run_result(const char *checkout, const char *target, int *exit_code) {
+  if (!g_gc) return false;
+  runs_prune();
+  gc_run_t *r = run_find(checkout, target);
+  if (!r) return false;
+  if (exit_code) {
+    int code = (int)send_message(r->term, termGetExitCode, 0, NULL);
+    *exit_code = send_message(r->term, termIsRunning, 0, NULL) ? -1 : code < 0 ? 1 : code;
+  }
+  return true;
+}
+
+bool gc_run_reveal(const char *checkout, const char *target) {
+  if (!g_gc) return false;
+  runs_prune();
+  gc_run_t *r = run_find(checkout, target);
+  if (!r) return false;
+  if (g_gc->tab != GC_TAB_OVERVIEW) gc_set_view_mode(GC_TAB_OVERVIEW);
+  gc_run_show_terminal(true);
+  select_tab(r);
+  return true;
+}
+
 static result_t run_tab_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)wparam; (void)lparam;
   return msg == evCreate || msg == evDestroy;

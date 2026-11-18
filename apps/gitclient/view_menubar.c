@@ -1,6 +1,7 @@
 // Menu bar and command dispatch — uses generated menus from gitclient.orion.
 
 #include "gitclient.h"
+#include "gc_agents.h"
 #include "gc_actions.h"
 #include <orion/gem.h>
 
@@ -115,6 +116,10 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_VIEW_CHANGES: gc_set_view_mode(GC_TAB_CHANGES); break;
     case ID_VIEW_HISTORY: gc_set_view_mode(GC_TAB_HISTORY); break;
     case ID_VIEW_GITHUB:  gc_set_view_mode(GC_TAB_GITHUB);  break;
+    case ID_VIEW_AGENTS:  gc_set_view_mode(GC_TAB_AGENTS);  break;
+    case ID_AGENTS_START_BATCH: case ID_AGENTS_OUTPUT: case ID_AGENTS_STOP: case ID_AGENTS_RUN_REVIEWED:
+      gc_agents_action(id);
+      break;
     case ID_VIEW_ALL_COMMITS:
       gc_set_view_mode(GC_TAB_HISTORY);
       if (!gc_reload_history_log("--all"))

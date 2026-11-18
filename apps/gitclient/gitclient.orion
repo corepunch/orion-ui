@@ -32,6 +32,7 @@
             <item name="changes" label="Changes" shortcut="Ctrl+1" />
             <item name="history" label="History" shortcut="Ctrl+2" />
             <item name="github" label="GitHub" shortcut="Ctrl+3" />
+            <item name="agents" label="Agents" shortcut="Ctrl+4" />
             <Separator />
             <item name="all_commits" label="All Commits" />
             <item name="reflog" label="Reflog" />
@@ -46,6 +47,13 @@
             <item name="split_right" label="Split View Right" shortcut="Ctrl+Shift+E" />
             <item name="split_up" label="Split View Above" />
             <item name="split_down" label="Split View Below" shortcut="Ctrl+Shift+O" />
+        </menu>
+
+        <menu name="agents" label="Agents">
+            <item name="start_batch" label="Start Three Agents..." />
+            <item name="output" label="Agent Output" />
+            <item name="stop" label="Stop Agent" />
+            <item name="run_reviewed" label="Run Reviewed Revision" />
         </menu>
 
         <menu name="branch" label="Branch">
@@ -193,6 +201,13 @@
                 <Button command="view.changes" icon="gc-nav-changes" text="Changes" size="large" />
                 <Button command="view.history" icon="gc-nav-history" text="History" size="large" />
                 <Button command="view.github" icon="gc-nav-github" text="GitHub" size="large" />
+                <Button command="view.agents" icon="gc-nav-agents" text="Agents" size="large" />
+            </Group>
+            <Group label="Agent Tasks">
+                <Button command="agents.start_batch" icon="gc-nav-agents" text="Start Three Agents..." />
+                <Button command="agents.output" icon="gc-terminal-window" text="Agent Output" />
+                <Button command="agents.stop" icon="gc-stop-circle" text="Stop Agent" />
+                <Button command="agents.run_reviewed" icon="gc-play" text="Run Reviewed Revision" />
             </Group>
             <Group label="History">
                 <Button command="view.all_commits" icon="list" text="All Commits" />
@@ -350,6 +365,15 @@
                 <field name="running" type="bool"/>
             </table>
         </database>
+        <database name="agent_queue" class="db_schema_xml">
+            <table name="agent_tasks" transient="true">
+                <field name="id" type="integer" key="YES"/>
+                <field name="task" type="string" length="256"/>
+                <field name="provider" type="string" length="32"/>
+                <field name="status" type="string" length="96"/>
+                <field name="tone" type="string" length="16"/>
+            </table>
+        </database>
         <database name="github_db" class="github_database_proc">
             <table name="issues">
                 <field name="id" type="integer" key="YES"/>
@@ -382,6 +406,7 @@
                 <Page form="changes_page" command="view.changes" />
                 <Page form="history_page" command="view.history" />
                 <Page form="github_page" command="view.github" />
+                <Page form="agents_page" command="view.agents" />
             </ActivityBar>
         </form>
         <form name="terminal_tab" title="Terminal" width="640" height="240" flags="notitle,nofill" spacing="0" padding="0">
@@ -432,6 +457,64 @@
                     <TabView name="terminal_tabs" hide-single-tab="true" flags="flexspace" />
                 </SplitView>
             </SplitView>
+        </form>
+        <form name="agents_page" title="Agents" icon="gc-nav-agents" checked-icon="gc-nav-agents-fill" tooltip="Agent tasks and revision review (Ctrl+4)" focus="tasks" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+            <requires library="gitclient_components" />
+            <SplitView name="agent_split" split-ratio="0.41" flags="flexspace">
+                <TabView name="task_tabs" hide-single-tab="true" flags="flexspace">
+                    <StackView name="task_panel" text="Tasks" padding="8" spacing="6" flags="flexspace">
+                        <Label text="Agent Tasks" font="title" />
+                        <Button command="agents.start_batch" text="Start Three Agents..." flags="default" />
+                        <TableView name="tasks" source="agent_queue.agent_tasks" flags="notitle,nofill,vscroll,flexspace">
+                            <RowIcon field="tone" value="ready" icon="gc-check-circle" color="success" />
+                            <RowIcon field="tone" value="failed" icon="gc-x-circle" color="error" />
+                            <RowIcon field="tone" value="running" icon="gc-play" color="info" />
+                            <Column field="task" title="Task" width="0" min-width="80" />
+                            <Column field="provider" title="Agent" width="74" />
+                            <Column field="status" title="State" width="128" style="badge" />
+                        </TableView>
+                        <StackView orientation="horizontal" spacing="6">
+                            <Button command="agents.output" text="Agent Output" />
+                            <Button command="agents.stop" text="Stop Agent" />
+                        </StackView>
+                    </StackView>
+                </TabView>
+                <TabView name="review_tabs" hide-single-tab="true" flags="flexspace">
+                    <StackView name="review_panel" text="Review" padding="8" spacing="6" flags="flexspace">
+                        <Label text="Review" font="title" />
+                        <Label name="revision" text="Select a task to see its revision." />
+                        <Label name="detail" text="" />
+                        <Button command="agents.run_reviewed" text="Run Reviewed Revision" tooltip="Run the default application target from this revision's launch.xml" />
+                        <DiffView name="review_diff" text="Diff" flags="notitle,nofill,vscroll,flexspace" />
+                    </StackView>
+                </TabView>
+            </SplitView>
+        </form>
+        <form name="agent_batch_dialog" title="Start Three Agents" width="620" height="370" auto_layout="1" padding="12" spacing="8">
+            <Label name="repository" text="" />
+            <Label text="Each task starts from the current committed revision in its own worktree." />
+            <GridView name="tasks" spacing="8">
+                <Column name="labels" width="auto">
+                    <Label text="Task 1" />
+                    <Label text="Task 2" />
+                    <Label text="Task 3" />
+                </Column>
+                <Column name="prompts">
+                    <MultiEdit name="prompt_one" height="58" flags="vscroll" />
+                    <MultiEdit name="prompt_two" height="58" flags="vscroll" />
+                    <MultiEdit name="prompt_three" height="58" flags="vscroll" />
+                </Column>
+                <Column name="providers" width="125">
+                    <ComboBox name="provider_one" />
+                    <ComboBox name="provider_two" />
+                    <ComboBox name="provider_three" />
+                </Column>
+            </GridView>
+            <StackView orientation="horizontal" spacing="8">
+                <Space />
+                <Button name="start" text="Start Three Agents" flags="default" />
+                <Button name="cancel" text="Cancel" />
+            </StackView>
         </form>
         <form name="changes_page" title="Changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" tooltip="Working tree (Ctrl+1)" focus="changes_files" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <PaneToolbar replace="true">

@@ -72,6 +72,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
                      ui_get_exe_dir());
     if (n > 0 && (size_t)n < sizeof(icons_path))
       svg_add_icons_dir(hinstance, icons_path);
+    n = snprintf(icons_path, sizeof(icons_path), "%s/../share/gitclient/locale", ui_get_exe_dir());
+    if (n > 0 && (size_t)n < sizeof(icons_path)) ui_add_string_catalog_dir(icons_path);
   }
 
   // Register database classes and create databases.

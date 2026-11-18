@@ -148,6 +148,15 @@ static void put_quoted(sink_t *s, const char *v) {
   puts_(s, "'");
 }
 
+bool gc_shell_append_arg(char *out, size_t n, const char *arg) {
+  size_t len = strlen(out);
+  if (len >= n) return false;
+  sink_t s = {out + len, n - len, true};
+  puts_(&s, " ");
+  put_quoted(&s, arg);
+  return s.ok;
+}
+
 static const char *param_value(const gc_launch_target_t *t, const char *const *values, const char *name, size_t len) {
   for (int i = 0; i < t->param_count; i++)
     if (strlen(t->params[i].name) == len && !strncmp(t->params[i].name, name, len))

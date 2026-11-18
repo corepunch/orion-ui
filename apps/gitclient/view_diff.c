@@ -31,8 +31,8 @@ void gc_diff_refresh(void) {
   st->unified_mode = gc->unified_diff;
 
   if (!gc->repo || !gc->history_db) {
-    free(st->lines); st->lines = NULL; st->line_count = 0; st->hunk_count = 0;
-    invalidate_window(win);
+    st->diff_buf[0] = '\0';
+    gc_diff_set_text(win);
     return;
   }
 
@@ -60,10 +60,6 @@ void gc_diff_refresh(void) {
       strcmp(gc->last_diff_path, path ? path : "") == 0)
     return;
 
-  free(st->lines);
-  st->lines      = NULL;
-  st->line_count = 0;
-  st->scroll_y   = 0;
   st->hunk_path[0] = '\0';
 
   gc->diff_cache_valid    = true;
@@ -113,19 +109,30 @@ void gc_diff_refresh(void) {
     }
   }
 
-  if (!st->diff_buf[0]) {
+  gc_diff_set_text(win);
+}
 
-    invalidate_window(win);
-    return;
-  }
+// Parse a unified patch already loaded into the view's buffer.
+void gc_diff_set_text(window_t *win) {
+  gc_diff_state_t *st = win ? win->userdata : NULL;
+  if (!st) return;
+  free(st->lines);
+  st->lines = NULL;
+  st->line_count = st->scroll_y = st->hunk_count = 0;
+  st->current_hunk = -1;
 
   int count = 0;
   for (char *p = st->diff_buf; *p; p++)
     if (*p == '\n') count++;
   if (st->diff_buf[0]) count++;
 
-  st->lines = (char **)malloc((size_t)count * sizeof(char *));
-  if (!st->lines) { invalidate_window(win); return; }
+  st->lines = count ? malloc((size_t)count * sizeof(*st->lines)) : NULL;
+  if (count && !st->lines) {
+    fprintf(stderr, "[gitclient] diff allocation failed win=%u lines=%d\n", win->id, count);
+    fflush(stderr);
+    invalidate_window(win);
+    return;
+  }
 
   char *p = st->diff_buf;
   while (*p) {

@@ -49,6 +49,8 @@ int  gc_launch_parse(const char *xml_path, gc_launch_t *out);
 // The shell command for a target: "cd dir && build && ENV=… run". values[i]
 // overrides params[i] (NULL or a NULL entry keeps the param's default).
 bool gc_launch_command(const gc_launch_target_t *t, const char *const *values, char *out, size_t n);
+// Append a literal argument to a POSIX shell command. Returns false on overflow.
+bool gc_shell_append_arg(char *out, size_t n, const char *arg);
 const char *gc_launch_kind_name(gc_target_kind_t kind);
 // Targets for a checkout without launch.xml, from the build files at its root:
 // Makefile (make, make test/check), Package.swift, Cargo.toml, go.mod,

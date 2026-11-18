@@ -81,6 +81,28 @@ build/bin/gitclient /tmp/ws/work/api-gateway
 ![Overview](../../docs/screenshots/gitclient_overview.jpg)
 ![Focus](../../docs/screenshots/gitclient_focused.jpg)
 
+## Agent tasks
+
+Open **Agents** (Ctrl+4), then **Start Three Agents**. Enter one task per row
+and choose Codex or Claude Code. The selected CLIs use their normal account
+configuration and must be on the Git Client process's `PATH`. The batch takes
+the open checkout's current commit as its base. Each task gets a separate
+branch, worktree and terminal. **Agent Output** opens that terminal in
+Overview, and **Stop Agent** stops only the selected task.
+
+A successful run with changes saves a local snapshot commit on the task
+branch. Selecting the task opens its diff against the original base.
+**Run Reviewed Revision** opens a separate detached worktree at the snapshot
+commit and runs the default application target from its committed
+[`launch.xml`](#launch-targets-launchxml), including the build step when
+specified. The launch worktree initializes the revision's submodules when
+needed. Both the diff and the launch stay tied to the snapshot commit.
+
+The queue lasts for the current Git Client session. Git retains the branches
+and worktrees under `gitclient-worktrees` in the application settings directory,
+and Overview can open them. Agent launch requires the built-in PTY, so it is
+available on macOS and Linux.
+
 ## Launch targets (launch.xml)
 
 A `launch.xml` at a repository's root says how to start that checkout. It is committed with the

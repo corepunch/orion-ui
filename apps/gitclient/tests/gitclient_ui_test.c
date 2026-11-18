@@ -18,12 +18,16 @@
 #include "gitclient_test_helpers.h"
 #include "apps/gitclient/gitclient.h"
 #include "apps/gitclient/gc_actions.h"
+#include "apps/gitclient/gc_agents.h"
 #include "apps/gitclient/components/diff_view.h"
 #include "apps/terminal/components/terminal_view.h"
 #include <orion/user/toolbar.h>
 
 #include <stdio.h>
 #include <string.h>
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 // ── Application state stub ────────────────────────────────────────────────────
 
@@ -590,7 +594,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 60);
+    ASSERT_EQUAL(gitclient_action_meta_count, 65);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -878,6 +882,183 @@ void test_overview_runs_targets_in_terminal(void) {
   PASS();
 }
 
+#ifndef _WIN32
+static void agent_test_pump(void) {
+#ifdef __APPLE__
+  // macOS platform timers are scheduled on the native run loop.
+  CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, false);
+#else
+  axWaitMessage(10);
+#endif
+  ui_event_t event;
+  while (axPeekMessage(&event)) dispatch_message(&event);
+  repost_messages();
+}
+
+static bool agent_test_wait(gc_agent_phase_t phase) {
+  for (int i = 0; i < 1200; i++) {
+    int matching = 0;
+    for (const gc_agent_task_t *task = gc_agents_tasks(); task; task = task->next)
+      matching += task->phase == phase;
+    if (matching == GC_AGENT_BATCH_SIZE) return true;
+    agent_test_pump();
+  }
+  return false;
+}
+#endif
+
+void test_agents_review_and_launch(void) {
+  TEST("agents: three PTYs, isolated worktrees, per-task diffs and launch from the pinned review");
+#ifdef _WIN32
+  SKIP("TerminalView has no PTY on Windows");
+#else
+  static const char runner[] =
+    "#!/bin/sh\n"
+    "for arg do prompt=$arg; done\n"
+    "case \"$prompt\" in\n"
+    "  Alpha*) [ \"${0##*/}:$1:$2:$3:$4:$5\" = 'codex:-a:never:exec:-s:workspace-write' ] || exit 2; text=alpha ;;\n"
+    "  Beta*) [ \"${0##*/}:$1:$2:$3\" = 'claude:--print:--permission-mode:acceptEdits' ] || exit 2; text=beta ;;\n"
+    "  Gamma*) text=gamma ;;\n"
+    "  *) exit 2 ;;\n"
+    "esac\n"
+    "printf '%s\\n' \"$text\" > app.txt\n"
+    "if [ \"$text\" = 'alpha' ]; then printf 'new file\\n' > extra.txt; fi\n"
+    "if [ \"$text\" = 'beta' ]; then git add app.txt && git commit -qm beta || exit 2; fi\n"
+    "while [ ! -f \"$GC_AGENT_TEST_RELEASE\" ]; do sleep 0.05; done\n";
+
+  char root[256], path[700], codex[700], claude[700], release[700], env[8192];
+  ASSERT_TRUE(gct_make_temp_dir(root, sizeof(root), "orion_agents"));
+  ASSERT_TRUE(gct_git(root, "init -b main"));
+  ASSERT_TRUE(gct_git(root, "config user.email fixture@example.test"));
+  ASSERT_TRUE(gct_git(root, "config user.name Fixture"));
+  snprintf(path, sizeof(path), "%s/app.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "base\n"));
+  snprintf(path, sizeof(path), "%s/.gitignore", root);
+  ASSERT_TRUE(gct_write_file(path, "compiled.tmp\n"));
+  snprintf(path, sizeof(path), "%s/launch.xml", root);
+  ASSERT_TRUE(gct_write_file(path, "<launch><target name=\"Demo\" default=\"true\" build=\"cp app.txt compiled.tmp\" "
+                                  "run=\"cat compiled.tmp &gt; ../launched.txt; git rev-parse HEAD &gt; ../revision.txt\" /></launch>\n"));
+  ASSERT_TRUE(gct_git(root, "add . && git commit -qm base"));
+  snprintf(codex, sizeof(codex), "%s/codex", root);
+  snprintf(claude, sizeof(claude), "%s/claude", root);
+  ASSERT_TRUE(gct_write_file(codex, runner) && chmod(codex, 0700) == 0);
+  ASSERT_TRUE(gct_write_file(claude, runner) && chmod(claude, 0700) == 0);
+  const char *previous_path = getenv("PATH");
+  char *saved_path = previous_path ? strdup(previous_path) : NULL;
+  snprintf(env, sizeof(env), "%s:%s", root, saved_path ? saved_path : "/usr/bin:/bin");
+  setenv("PATH", env, 1);
+  snprintf(release, sizeof(release), "%s/release", root);
+  setenv("GC_AGENT_TEST_RELEASE", release, 1);
+
+  test_env_init();
+  ASSERT_TRUE(test_graphics_init(960, 640));
+  gc_state_t saved = g_test_state;
+  database_t *saved_db = ui_get_database();
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.history_db = make_db();
+  g_test_state.changes_db = make_changes_db();
+  DB_CLASS(github_database_proc);
+  g_test_state.github_db = create_database("gc-test-github", "github_database_proc", NULL);
+  ui_set_database(g_test_state.history_db);
+  register_database("db", g_test_state.history_db);
+  register_database("github_db", g_test_state.github_db);
+  g_test_state.workspace_db = gc_workspace_db_create();
+  g_test_state.sync_loads = true;
+  char plugin[1024];
+  snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  snprintf(plugin, sizeof(plugin), "%s/../lib/terminal_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  window_t *host = create_window_from_form(&gitclient_main_window_form, 0, 0, NULL, gc_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(host);
+  g_test_state.repo = git_repo_open(root);
+  ASSERT_NOT_NULL(g_test_state.repo);
+  gc_set_view_mode(GC_TAB_AGENTS);
+  gc_agent_request_t requests[] = {
+    {GC_AGENT_CODEX, "Alpha's change costs $5."},
+    {GC_AGENT_CLAUDE, "Beta commits its change."},
+    {GC_AGENT_CODEX, "Gamma edits the same file."}
+  };
+  ASSERT_TRUE(gc_agents_start(root, root, requests));
+  ASSERT_TRUE(agent_test_wait(GC_AGENT_RUNNING));
+  ASSERT_EQUAL(g_test_state.run_count, GC_AGENT_BATCH_SIZE);
+  ASSERT_TRUE(gct_write_file(release, "ready\n"));
+  ASSERT_TRUE(agent_test_wait(GC_AGENT_READY));
+
+  window_t *page = g_test_state.agents_page_win;
+  window_t *list = get_window_item(page, ID_AGENTS_PAGE_TASKS);
+  window_t *diff = get_window_item(page, ID_AGENTS_PAGE_REVIEW_DIFF);
+  window_t *run = get_window_item(page, ID_AGENTS_RUN_REVIEWED);
+  ASSERT_NOT_NULL(list);
+  ASSERT_NOT_NULL(diff);
+  ASSERT_NOT_NULL(run);
+  const gc_agent_task_t *first = gc_agents_tasks(), *task = first;
+  const char *expected[] = {"alpha", "beta", "gamma"};
+  const char *before = NULL;
+  for (int i = 0; i < GC_AGENT_BATCH_SIZE; i++, task = task->next) {
+    ASSERT_NOT_NULL(task);
+    ASSERT_STR_EQUAL(task->base, first->base);
+    ASSERT_TRUE(strcmp(task->base, task->revision) != 0);
+    ASSERT_TRUE(!before || strcmp(before, task->checkout) != 0);
+    before = task->checkout;
+    send_message(list, RVM_SETSELECTION, i, NULL);
+    send_message(host, evCommand, MAKEDWORD(list->id, RVN_SELCHANGE), list);
+    gc_diff_state_t *st = diff->userdata;
+    bool found = false;
+    for (int j = 0; j < st->line_count; j++) found |= strstr(st->lines[j], expected[i]) != NULL;
+    ASSERT_TRUE(found);
+  }
+  ASSERT_NULL(task);
+
+  snprintf(path, sizeof(path), "%s/app.txt", first->checkout);
+  ASSERT_TRUE(gct_write_file(path, "edited after review\n"));
+  snprintf(path, sizeof(path), "%s/launch.xml", first->checkout);
+  ASSERT_TRUE(gct_write_file(path, "<launch><target name=\"Wrong\" run=\"exit 4\"/></launch>"));
+  send_message(list, RVM_SETSELECTION, 0, NULL);
+  send_message(host, evCommand, MAKEDWORD(list->id, RVN_SELCHANGE), list);
+  ASSERT_FALSE(window_has_state(run, WINDOW_STATE_DISABLED));
+  send_message(host, evCommand, MAKEDWORD(ID_AGENTS_RUN_REVIEWED, btnClicked), run);
+
+  snprintf(path, sizeof(path), "%s/../revision.txt", first->preview);
+  for (int i = 0; i < 1200 && (!axPathExists(path) || gc_run_is_running(first->preview, "Demo")); i++) agent_test_pump();
+  FILE *file = fopen(path, "r");
+  ASSERT_NOT_NULL(file);
+  char actual[80];
+  ASSERT_NOT_NULL(fgets(actual, sizeof(actual), file));
+  fclose(file);
+  actual[strcspn(actual, "\r\n")] = 0;
+  ASSERT_STR_EQUAL(actual, first->revision);
+  snprintf(path, sizeof(path), "%s/../launched.txt", first->preview);
+  file = fopen(path, "r");
+  ASSERT_NOT_NULL(file);
+  ASSERT_NOT_NULL(fgets(actual, sizeof(actual), file));
+  fclose(file);
+  ASSERT_STR_EQUAL(actual, "alpha\n");
+  snprintf(path, sizeof(path), "%s/app.txt", root);
+  file = fopen(path, "r");
+  ASSERT_NOT_NULL(file);
+  ASSERT_NOT_NULL(fgets(actual, sizeof(actual), file));
+  fclose(file);
+  ASSERT_STR_EQUAL(actual, "base\n");
+
+  destroy_window(host);
+  fe_unload_component_plugins();
+  ui_set_database(saved_db);
+  destroy_database(g_test_state.history_db);
+  destroy_database(g_test_state.changes_db);
+  destroy_database(g_test_state.github_db);
+  destroy_database(g_test_state.workspace_db);
+  test_graphics_shutdown();
+  test_env_shutdown();
+  g_test_state = saved;
+  if (saved_path) setenv("PATH", saved_path, 1); else unsetenv("PATH");
+  free(saved_path);
+  unsetenv("GC_AGENT_TEST_RELEASE");
+  gct_remove_dir(root);
+#endif
+  PASS();
+}
+
 void test_activitybar_navigation(void) {
   TEST("activity bar: clicks and View commands select one page, preserve state and resize beside the rail");
   test_env_init();
@@ -904,19 +1085,20 @@ void test_activitybar_navigation(void) {
   ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
   ASSERT_EQUAL(tb->btn_size, 0);
   ASSERT_EQUAL(toolbar_effective_bsz(bar), ui_px("Toolbar::button", "height"));
-  ASSERT_EQUAL(tb->item_count, 4);
+  ASSERT_EQUAL(tb->item_count, 5);
   ASSERT_STR_EQUAL(tb->items[0].checked_icon, "gc-nav-overview-fill");
   ASSERT_STR_EQUAL(tb->items[1].checked_icon, "gc-nav-changes-fill");
   ASSERT_STR_EQUAL(tb->items[2].checked_icon, "gc-nav-history-fill");
   ASSERT_STR_EQUAL(tb->items[3].checked_icon, "gc-nav-github-fill");
+  ASSERT_STR_EQUAL(tb->items[4].checked_icon, "gc-nav-agents-fill");
   ASSERT_EQUAL(bar->frame.w, toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar));
   ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
   window_t *summary = get_window_item(host, ID_CHANGES_PAGE_COMMIT_SUMMARY);
   send_message(summary, edSetText, 0, "Keep this draft");
   set_focus(summary);
   window_t *pages[] = {g_test_state.overview_page_win, g_test_state.changes_page_win,
-                      g_test_state.history_page_win, g_test_state.github_page_win};
-  const uint16_t commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
+                      g_test_state.history_page_win, g_test_state.github_page_win, g_test_state.agents_page_win};
+  const uint16_t commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB, ID_VIEW_AGENTS};
   for (int view = 0; view < ARRAY_LEN(pages); view++) {
     irect16_t item;
     ASSERT_TRUE(send_message(bar, tbGetItemRect, commands[view], &item));
@@ -1306,6 +1488,7 @@ int main(void) {
     test_overview_table_filters_and_removes();
     test_overview_runs_targets_in_terminal();
     test_activitybar_navigation();
+    test_agents_review_and_launch();
     test_history_latest_commit_diff();
     test_gitclient_pane_layout();
     test_push_badge_tracks_unpushed_commits();
