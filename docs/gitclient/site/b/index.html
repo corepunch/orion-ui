@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Client — a calm desk for many repositories</title>
+<meta name="description" content="A native git client for workspaces of many repositories, with parallel Codex and Claude Code tasks reviewed as real commits.">
+<link rel="icon" href="../shots/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f3ec; --paper2:#efeadf; --ink:#1b1a17; --ink2:#4a4740; --muted:#827d71; --rule:#ddd6c6;
+  --indigo:#4b3fd6; --indigo-soft:#e6e3fb; --sage:#dfe9dc; --peach:#f6e2d3; --sky:#dde7f5; --butter:#f4ecc9;
+  --serif:"Instrument Serif",Georgia,serif; --sans:"Inter Tight",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font:17px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;z-index:100;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:inherit}
+img{display:block;max-width:100%}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.i{display:inline-block;width:1em;height:1em;background:currentColor;-webkit-mask:var(--u) center/contain no-repeat;mask:var(--u) center/contain no-repeat;vertical-align:-.15em}
+
+header.top{border-bottom:1px solid var(--rule)}
+header.top .wrap{display:flex;align-items:center;height:68px;gap:28px;font-size:15px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;text-decoration:none}
+.brand img{width:30px;border-radius:8px}
+header.top nav{display:flex;gap:26px;margin-left:auto;color:var(--ink2)}
+header.top nav a{text-decoration:none}
+header.top nav a:hover{color:var(--indigo)}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:13px 22px;border-radius:99px;font-weight:500;text-decoration:none;font-size:15px;transition:.2s}
+.btn.dark{background:var(--ink);color:var(--paper)}
+.btn.dark:hover{background:var(--indigo)}
+.btn.line{border:1px solid var(--ink)}
+.btn.line:hover{background:var(--ink);color:var(--paper)}
+
+.hero{padding:88px 0 0}
+.kicker{font:500 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+h1{font:400 clamp(56px,9vw,128px)/.92 var(--serif);letter-spacing:-.02em;margin:22px 0 28px;max-width:1000px}
+h1 i{color:var(--indigo)}
+.hero-row{display:flex;gap:48px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.hero-row p{max-width:520px;font-size:20px;color:var(--ink2)}
+.hero-row .act{display:flex;gap:12px;flex-wrap:wrap}
+.desk{margin-top:72px;position:relative;padding:56px 56px 0;border-radius:28px 28px 0 0;background:linear-gradient(160deg,#cfc8f7,#efd8c6 60%,#f3e7c4);overflow:hidden}
+.desk::after{content:"";position:absolute;inset:auto 0 0;height:1px;background:var(--rule)}
+.win{border-radius:12px 12px 0 0;overflow:hidden;box-shadow:0 2px 0 rgba(0,0,0,.04),0 30px 80px -20px rgba(40,30,90,.45);border:1px solid rgba(0,0,0,.08);background:#fff}
+.win .chrome{height:30px;display:flex;align-items:center;gap:7px;padding:0 12px;background:#ece9f4;border-bottom:1px solid rgba(0,0,0,.06)}
+.win .chrome i{width:10px;height:10px;border-radius:50%;background:#ff5f57}.win .chrome i+i{background:#febc2e}.win .chrome i+i+i{background:#28c840}
+.note{position:absolute;background:var(--paper);border:1px solid var(--rule);border-radius:14px;padding:12px 16px;font-size:14px;box-shadow:0 12px 30px -12px rgba(0,0,0,.25);max-width:230px}
+.note b{display:block;font-weight:600;margin-bottom:2px}
+.note::before{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:var(--indigo);box-shadow:0 0 0 5px var(--indigo-soft)}
+.n1{right:5%;top:44%}.n1::before{left:-22px;top:18px}
+.n2{right:9%;top:64%}.n2::before{left:-22px;top:18px}
+
+.marquee{border-bottom:1px solid var(--rule);overflow:hidden;white-space:nowrap;padding:18px 0;font:400 28px var(--serif);color:var(--ink2)}
+.marquee div{display:inline-block;animation:m 40s linear infinite}
+.marquee span{margin:0 28px}.marquee span::after{content:"✳";margin-left:56px;color:var(--indigo);font-size:20px;vertical-align:4px}
+@keyframes m{to{transform:translateX(-50%)}}
+
+section{padding:120px 0;border-bottom:1px solid var(--rule)}
+.chapter{display:grid;grid-template-columns:200px 1fr;gap:40px}
+.chapter .num{font:400 120px/0.8 var(--serif);color:var(--rule)}
+.chapter .num small{display:block;font:500 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:22px}
+h2{font:400 clamp(40px,5.6vw,72px)/1 var(--serif);letter-spacing:-.015em;max-width:820px}
+h2 i{color:var(--indigo)}
+.intro{font-size:20px;color:var(--ink2);max-width:640px;margin-top:22px}
+
+.row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-top:72px}
+.row.rev .media{order:-1}
+.panel{border-radius:22px;padding:36px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.panel img{border-radius:10px;box-shadow:0 20px 50px -18px rgba(40,30,60,.45);border:1px solid rgba(0,0,0,.08)}
+.panel.sage{background:var(--sage)}.panel.peach{background:var(--peach)}.panel.sky{background:var(--sky)}.panel.butter{background:var(--butter)}.panel.ind{background:var(--indigo-soft)}
+.copy h3{font:400 38px/1.05 var(--serif);margin-bottom:14px}
+.copy p{color:var(--ink2)}
+.copy ul{list-style:none;margin-top:22px;display:grid;gap:12px}
+.copy li{display:flex;gap:12px;align-items:flex-start;font-size:16px}
+.copy li .i{color:var(--indigo);font-size:20px;flex:none;margin-top:2px}
+kbd{font:500 12px var(--mono);padding:3px 7px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:6px;background:#fff;color:var(--ink)}
+
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:64px;border-top:1px solid var(--ink)}
+.flow div{padding:26px 22px 0 0}
+.flow b{font:400 46px/1 var(--serif);color:var(--indigo)}
+.flow h4{font-size:17px;font-weight:600;margin:12px 0 6px}
+.flow p{font-size:15px;color:var(--ink2)}
+
+.quote{font:400 clamp(34px,4.6vw,58px)/1.08 var(--serif);text-align:center;max-width:960px;margin:0 auto}
+.quote i{color:var(--indigo)}
+.quote-by{text-align:center;margin-top:26px;font:13px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:64px}
+.duo figure figcaption{font:400 22px var(--serif);margin-top:16px}
+.duo figure figcaption small{display:block;font:15px var(--sans);color:var(--ink2);margin-top:4px}
+
+.end{text-align:center;padding:140px 0}
+.end h2{margin:0 auto}
+.end .act{display:flex;gap:12px;justify-content:center;margin-top:38px;flex-wrap:wrap}
+.end code{display:inline-block;margin-top:26px;font:14px var(--mono);background:#fff;border:1px solid var(--rule);border-radius:10px;padding:10px 16px}
+footer{padding:36px 0;font-size:14px;color:var(--muted)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
+
+.fade{opacity:0;transform:translateY(18px);transition:1s cubic-bezier(.2,.7,.2,1)}
+.fade.in{opacity:1;transform:none}
+@media (max-width:900px){
+  header.top nav{display:none}
+  .chapter{grid-template-columns:1fr;gap:10px}.chapter .num{font-size:72px}
+  .row,.duo{grid-template-columns:1fr}.row.rev .media{order:0}
+  .flow{grid-template-columns:1fr 1fr}
+  .desk{padding:24px 16px 0}.note{display:none}
+  section{padding:80px 0}
+}
+@media (prefers-reduced-motion:reduce){.marquee div{animation:none}.fade{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#"><img src="../shots/icon.png" alt="">Git Client</a>
+  <nav><a href="#one">Overview</a><a href="#two">Agents</a><a href="#three">Everyday git</a><a href="https://github.com/corepunch/orion-ui">Source</a></nav>
+  <a class="btn dark" href="https://github.com/corepunch/orion-ui/releases" style="padding:10px 18px">Download</a>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <div class="kicker">A native git client · macOS &amp; Linux</div>
+  <h1>A calm desk for <i>many</i> repositories.</h1>
+  <div class="hero-row">
+    <p>See the state of every checkout at a glance, run each branch the way it wants to be run, and let three AI agents work side by side — each in its own worktree.</p>
+    <div class="act"><a class="btn dark" href="https://github.com/corepunch/orion-ui/releases">Download Git Client</a><a class="btn line" href="#two">Meet the agents</a></div>
+  </div>
+  <div class="desk fade">
+    <div class="win"><div class="chrome"><i></i><i></i><i></i></div>
+      <img src="../shots/window-overview-light.webp" width="2048" height="1536" alt="Git Client Overview in light appearance: all checkouts of eight repositories">
+    </div>
+    <div class="note n1"><b>One verdict per row</b>Conflict, uncommitted, to sync or up to date.</div>
+    <div class="note n2"><b>Launch targets</b>Read from each checkout's launch.xml.</div>
+  </div>
+</div></div>
+
+<div class="marquee"><div>
+  <span>Overview of every worktree</span><span>Parallel Codex &amp; Claude Code</span><span>Snapshot commits</span><span>launch.xml targets</span><span>Dockable panes</span><span>GitHub issues &amp; PRs</span>
+  <span>Overview of every worktree</span><span>Parallel Codex &amp; Claude Code</span><span>Snapshot commits</span><span>launch.xml targets</span><span>Dockable panes</span><span>GitHub issues &amp; PRs</span>
+</div></div>
+
+<section id="one"><div class="wrap">
+  <div class="chapter">
+    <div class="num fade">01<small>Overview</small></div>
+    <div>
+      <h2 class="fade">Every morning starts with <i>what you left behind.</i></h2>
+      <p class="intro fade">Open a workspace and Git Client reads all of it in the background — branches, ahead and behind, staged and new files — then tells you in words.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="copy fade">
+      <h3>Grouped by project, sorted by worry.</h3>
+      <p>The main checkout comes first, then each linked worktree wherever git put it. Switch to <em>Needs attention</em> and the clean ones step aside.</p>
+      <ul>
+        <li><span class="i" style="--u:url(../icons/gc-x-circle.svg);color:#c44"></span>A red cross for a merge in flight</li>
+        <li><span class="i" style="--u:url(../icons/gc-warning-circle.svg);color:#c08a1e"></span>Amber for work you haven't committed</li>
+        <li><span class="i" style="--u:url(../icons/gc-arrows-down-up.svg)"></span>Blue arrows when there's something to push or pull</li>
+        <li><span class="i" style="--u:url(../icons/gc-check-circle.svg);color:#3c8a4c"></span>A green check when you're in sync</li>
+      </ul>
+    </div>
+    <div class="media panel sage fade"><img src="../shots/crop-worktrees-light.webp" alt="Worktree table in light appearance"></div>
+  </div>
+  <div class="row rev">
+    <div class="copy fade">
+      <h3>Each branch knows how it runs.</h3>
+      <p>A <code>launch.xml</code> is committed with the code, so a level added on a branch appears only in that worktree. Press Run and the target starts in a real terminal, colours and progress bars intact.</p>
+      <ul>
+        <li><span class="i" style="--u:url(../icons/gc-play.svg)"></span>Parameters with choices, env, build-before-run</li>
+        <li><span class="i" style="--u:url(../icons/gc-hammer.svg)"></span>Guessed from Makefile, Cargo, Go, Swift, CMake or npm</li>
+        <li><span class="i" style="--u:url(../icons/gc-terminal-window.svg)"></span>One terminal tab per target; failures open it for you</li>
+      </ul>
+    </div>
+    <div class="media panel peach fade"><img src="../shots/crop-launch.webp" alt="Launch targets list"></div>
+  </div>
+</div></section>
+
+<section id="two" style="background:var(--paper2)"><div class="wrap">
+  <div class="chapter">
+    <div class="num fade">02<small>Agents</small></div>
+    <div>
+      <h2 class="fade">Three agents. Three worktrees. <i>One review.</i></h2>
+      <p class="intro fade">Hand out three tasks at once to Codex or Claude Code. Nobody steps on anybody's files, and what comes back is a commit you can read and run.</p>
+    </div>
+  </div>
+  <div class="flow fade">
+    <div><b>i.</b><h4>Write the tasks</h4><p>One prompt and one agent per row. The base is your current commit.</p></div>
+    <div><b>ii.</b><h4>They work apart</h4><p>A branch, worktree and terminal each. Stop one without touching the others.</p></div>
+    <div><b>iii.</b><h4>Snapshot</h4><p>A finished run is saved as a local commit on its task branch.</p></div>
+    <div><b>iv.</b><h4>Review &amp; run</h4><p>Read the diff against the base, then run that exact revision in its own worktree.</p></div>
+  </div>
+  <div class="row">
+    <div class="media panel ind fade"><img src="../shots/crop-dialog.webp" alt="Start Three Agents dialog"></div>
+    <div class="media panel sky fade"><img src="../shots/crop-tasks.webp" alt="Agent tasks ready for review"></div>
+  </div>
+  <div class="row rev">
+    <div class="copy fade">
+      <h3>Review the commit, not the chat.</h3>
+      <p>Select a task and the Review pane shows its diff against the original base. <strong>Run Reviewed Revision</strong> opens a detached worktree at the snapshot and starts the default target from its own launch.xml — submodules and build step included.</p>
+      <p style="margin-top:14px">Shortcut: <kbd>⌘</kbd> <kbd>4</kbd></p>
+    </div>
+    <div class="media panel butter fade"><img src="../shots/crop-review.webp" alt="Review diff of an agent snapshot"></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <p class="quote fade">“The menu tree is the <i>complete map</i> of what you can do. Toolbars, context menus and shortcuts all point back to it.”</p>
+  <p class="quote-by">How Git Client is built</p>
+</div></section>
+
+<section id="three"><div class="wrap">
+  <div class="chapter">
+    <div class="num fade">03<small>Everyday git</small></div>
+    <div>
+      <h2 class="fade">The classic views, <i>arranged your way.</i></h2>
+      <p class="intro fade">Changes, History and GitHub, each with its own docking layout. Drag a tab onto another pane, or near an edge to split it.</p>
+    </div>
+  </div>
+  <div class="duo">
+    <figure class="fade"><div class="win"><div class="chrome"><i></i><i></i><i></i></div><img src="../shots/window-changes-light.webp" alt="Changes page" loading="lazy"></div>
+      <figcaption>Changes<small>Tick to stage, read the diff, and the button says exactly what Commit will do.</small></figcaption></figure>
+    <figure class="fade"><div class="win"><div class="chrome"><i></i><i></i><i></i></div><img src="../shots/window-history-light.webp" alt="History page" loading="lazy"></div>
+      <figcaption>History<small>A branch desk with Prune, Delete Merged, all commits and the reflog.</small></figcaption></figure>
+  </div>
+</div></section>
+
+<div class="end"><div class="wrap">
+  <img src="../shots/icon.png" alt="" style="width:96px;margin:0 auto 28px;border-radius:22px">
+  <h2>Clear your desk.</h2>
+  <div class="act"><a class="btn dark" href="https://github.com/corepunch/orion-ui/releases">Download</a><a class="btn line" href="https://github.com/corepunch/orion-ui/tree/main/apps/gitclient">Source on GitHub</a></div>
+  <code>orion install gitclient</code>
+</div></div>
+<footer><div class="wrap"><span>Git Client — built with Orion UI</span><span>Icons by Phosphor</span></div></footer>
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.fade').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

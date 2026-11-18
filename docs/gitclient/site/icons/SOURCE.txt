@@ -1,0 +1,1 @@
+Copied from apps/gitclient/share/icons (Phosphor regular and fill weights; see that folder's SOURCES.md for the upstream revision). License: PHOSPHOR-LICENSE.
