@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- One paintable watercolor panel for each pair of story pages. -->
+<comic version="2" mode="fog-watercolor" id="boat-in-the-fog">
+  <cover />
+  <!-- Page 1 -->
+  <page>
+    <panel shot="boast">
+      <text lang="en">I could spot our boat with my eyes closed!</text>
+      <text lang="ru">Я нашу лодку с закрытыми глазами узнаю!</text>
+    </panel>
+    <panel shot="dock" paint="true" bubble-edge="top">
+      <text lang="en">Then open them. Tie her up first.</text>
+      <text lang="ru">Тогда открой их. Сперва привяжи лодку.</text>
+    </panel>
+  </page>
+  <!-- Page 2 -->
+  <page>
+    <panel shot="lesson">
+      <text lang="en">Knots first. Watch my hands.</text>
+      <text lang="ru">Сначала узлы. Смотри на мои руки.</text>
+    </panel>
+    <panel shot="moorings-1">
+      <text lang="en">Pull it snug. Now give it a tug to make sure.</text>
+      <text lang="ru">Затяни покрепче. А теперь дёрни, проверь.</text>
+    </panel>
+  </page>
+  <!-- Page 3 -->
+  <page>
+    <panel shot="knots" paint="true">
+      <text lang="en">I can tie knots with my eyes closed, too.</text>
+      <text lang="ru">Узлы я тоже умею вязать с закрытыми глазами.</text>
+    </panel>
+    <panel shot="moorings-3">
+      <text lang="en">Keep that little loop. You can practice with it later.</text>
+      <text lang="ru">Оставь себе эту петельку. Потом потренируешься.</text>
+    </panel>
+  </page>
+  <!-- Page 4 -->
+  <page>
+    <panel shot="moorings-4">
+      <text lang="en">Fog at the breakwater! Come and get a light.</text>
+      <text lang="ru">У волнолома туман! Идите сюда за фонарём.</text>
+    </panel>
+    <panel shot="moorings-6">
+      <text lang="en">I gave it a little tug. It'll hold.</text>
+      <text lang="ru">Я чуть-чуть дёрнул. Не отвяжется.</text>
+    </panel>
+  </page>
+  <!-- Page 5 -->
+  <page>
+    <panel shot="hut">
+      <text lang="en">Wait here. I've got one more lantern inside.</text>
+      <text lang="ru">Подождите здесь. Внутри есть ещё один фонарь.</text>
+    </panel>
+    <panel shot="lantern-walk-1">
+      <text lang="en">The sea was right there a minute ago.</text>
+      <text lang="ru">Минуту назад отсюда было видно море.</text>
+    </panel>
+  </page>
+  <!-- Page 6 -->
+  <page>
+    <panel shot="lantern-walk-2" paint="true">
+      <text lang="en">Take this one. The glass keeps the flame out of the wind.</text>
+      <text lang="ru">Возьмите этот. Стекло защитит огонёк от ветра.</text>
+    </panel>
+    <panel shot="lantern-walk-3">
+      <text lang="en">One step at a time. These stones get slippery.</text>
+      <text lang="ru">Шагай осторожно. Камни скользкие.</text>
+    </panel>
+  </page>
+  <!-- Page 7 -->
+  <page>
+    <panel shot="point" paint="true">
+      <text lang="en">There's our boat! I'd know it anywhere.</text>
+      <text lang="ru">Вон наша! Я её где угодно узнаю.</text>
+    </panel>
+    <panel shot="lantern" bubble-x="60">
+      <text lang="en">In this fog? Shine the lantern on it first.</text>
+      <text lang="ru">В таком тумане? Сначала посвети фонарём.</text>
+    </panel>
+  </page>
+  <!-- Page 8 -->
+  <page>
+    <panel shot="harbor" bubble-edge="top">
+      <text lang="en">In the fog every boat looks the same. Which one is ours?</text>
+      <text lang="ru">В тумане все лодки одинаковые. Какая наша?</text>
+    </panel>
+  </page>
+  <!-- Page 9 -->
+  <page>
+    <panel shot="lantern-walk-4" />
+    <panel shot="lantern-walk-5" paint="true">
+      <text lang="en">This one's got a shell on the rope. Ours hasn't.</text>
+      <text lang="ru">На верёвке ракушка. На нашей такой нет.</text>
+    </panel>
+  </page>
+  <!-- Page 10 -->
+  <page>
+    <panel shot="lantern-walk-6">
+      <text lang="en">The ring's right, but there's no chip in the paint.</text>
+      <text lang="ru">Кольцо как у нашей, а краска целая.</text>
+    </panel>
+    <panel shot="search-1">
+      <text lang="en">Easy, lad. Keep both feet on the boards.</text>
+      <text lang="ru">Осторожно, внучок. Обе ноги на настиле.</text>
+    </panel>
+  </page>
+  <!-- Page 11 -->
+  <page>
+    <panel shot="search-2" paint="true">
+      <text lang="en">That's the harbor bell. Wait. I hear something else.</text>
+      <text lang="ru">Это портовый колокол. Погоди. Я ещё что-то слышу.</text>
+    </panel>
+    <panel shot="search-3" bubble-edge="top" bubble-x="25">
+      <text lang="en">Clonk. Clonk.</text>
+      <text lang="ru">Тук. Тук.</text>
+    </panel>
+  </page>
+  <!-- Page 12 -->
+  <page>
+    <panel shot="search-4">
+      <text lang="en">Oh. I don't think I pulled it tight enough.</text>
+      <text lang="ru">Ой. Кажется, я плохо затянул узел.</text>
+    </panel>
+  </page>
+  <!-- Page 13 -->
+  <page>
+    <panel shot="search-5" paint="true">
+      <text lang="en">Tie the line to the hook. I'll hold the other end.</text>
+      <text lang="ru">Привяжи верёвку к багру. Я подержу другой конец.</text>
+    </panel>
+    <panel shot="search-6">
+      <text lang="en">There! It's bumping against the float.</text>
+      <text lang="ru">Вон она! Стучит о понтон.</text>
+    </panel>
+  </page>
+  <!-- Page 14 -->
+  <page>
+    <panel shot="return-1">
+      <text lang="en">That chip looks like a little shell. That's her!</text>
+      <text lang="ru">Скол похож на ракушку. Вот она, наша!</text>
+    </panel>
+    <panel shot="return-2">
+      <text lang="en">Got the ring! Grandpa, take up the slack.</text>
+      <text lang="ru">Кольцо поймал! Дедушка, подтяни верёвку.</text>
+    </panel>
+  </page>
+  <!-- Page 15 -->
+  <page>
+    <panel shot="return-4">
+      <text lang="en">She's tied fast now. In you go.</text>
+      <text lang="ru">Теперь крепко держится. Залезай.</text>
+    </panel>
+    <panel shot="sail">
+      <text lang="en">I'll hold the light. You two row.</text>
+      <text lang="ru">Я подержу фонарь. А вы гребите.</text>
+    </panel>
+  </page>
+  <!-- Page 16 -->
+  <page>
+    <panel shot="return-5" bubble-edge="top">
+      <text lang="en">Together now. Dip, pull. Dip, pull.</text>
+      <text lang="ru">А теперь вместе. Опустили, потянули. Опустили, потянули.</text>
+    </panel>
+    <panel shot="rowing" paint="true">
+      <text lang="en">I can row with my eyes closed, too!</text>
+      <text lang="ru">Грести с закрытыми глазами я тоже умею!</text>
+    </panel>
+  </page>
+  <!-- Page 17 -->
+  <page>
+    <panel shot="home-1">
+      <text lang="en">There are the steps. We're home.</text>
+      <text lang="ru">Вот и ступеньки. Мы дома.</text>
+    </panel>
+    <panel shot="home-2" paint="true" bubble-x="25">
+      <text lang="en">Remember this? Show me what you'd do with it now.</text>
+      <text lang="ru">Помнишь? Покажи, что теперь с ней будешь делать.</text>
+    </panel>
+  </page>
+  <!-- Page 18 -->
+  <page>
+    <panel shot="home-3">
+      <text lang="en">Pull it snug. Give it a tug. One more, just to be sure.</text>
+      <text lang="ru">Затянуть. Дёрнуть. И ещё разок, для верности.</text>
+    </panel>
+    <panel shot="home-4" bubble-edge="top">
+      <text lang="en">Kettle's on. Leave the wet coats by the door.</text>
+      <text lang="ru">Чайник на плите. Мокрые куртки оставьте у двери.</text>
+    </panel>
+  </page>
+  <!-- Page 19 -->
+  <page>
+    <panel shot="home-5" paint="true">
+      <text lang="en">I'll draw the chip so I don't forget where to look.</text>
+      <text lang="ru">Нарисую скол, чтобы запомнить, где искать.</text>
+    </panel>
+  </page>
+  <!-- Page 20 -->
+  <page>
+    <panel shot="home-6" />
+  </page>
+</comic>

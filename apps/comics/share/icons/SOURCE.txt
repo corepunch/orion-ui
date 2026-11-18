@@ -1,0 +1,9 @@
+Phosphor Icons (MIT)
+Upstream revision: 2b75f3ad12b420c9504ef05df8d2564a28f8500e
+Asset: assets/fill/book-open-fill.svg
+https://github.com/phosphor-icons/core/blob/2b75f3ad12b420c9504ef05df8d2564a28f8500e/assets/fill/book-open-fill.svg
+
+Regular assets: books.svg, caret-left.svg, caret-right.svg, check.svg, folder-open.svg, lightbulb.svg.
+Fill asset: lightbulb-fill.svg.
+
+The iPad home screen icon is the watercolor sailor selected from row 3, column 4 of the Comics ImageGen concept sheet.

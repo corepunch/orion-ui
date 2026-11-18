@@ -15,9 +15,10 @@
     <target name="Ledger shared company" build="make share build/bin/ledger" run="build/bin/ledger --remote" />
     <target name="Scener" build="make scener" run="build/bin/scener" />
     <target name="Image Editor" build="make build/bin/imageeditor" run="build/bin/imageeditor" />
+    <target name="Comics" build="make build/bin/comics" run="build/bin/comics" />
     <target name="Form Editor" build="make build/bin/formeditor" run="build/bin/formeditor" />
     <target name="iPad Simulator" run="make ipad-run APP=${app}">
-        <param name="app" choices="imageeditor groove penciltest" />
+        <param name="app" choices="imageeditor groove penciltest comics" />
     </target>
     <target name="Android APK" kind="build" run="make android APP=${app}">
         <param name="app" choices="imageeditor penciltest groove winamp" />

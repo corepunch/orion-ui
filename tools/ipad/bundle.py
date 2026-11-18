@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('root', 'target', 'binary'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--app', choices=('imageeditor', 'penciltest', 'groove', 'winamp', 'ledger'), required=True)
+    parser.add_argument('--app', choices=('imageeditor', 'penciltest', 'groove', 'winamp', 'ledger', 'comics'), required=True)
     parser.add_argument('--bundle-id', required=True)
     parser.add_argument('--sdk', choices=('iphoneos', 'iphonesimulator'), required=True)
     parser.add_argument('--sdk-version', required=True)
@@ -67,7 +67,7 @@ def main():
         'CFBundleIdentifier': args.bundle_id,
         'CFBundleExecutable': args.app,
         'CFBundleName': args.app,
-        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Jamsheet', 'winamp': 'Winamp', 'ledger': 'Ledger'}[args.app],
+        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Jamsheet', 'winamp': 'Winamp', 'ledger': 'Ledger', 'comics': 'Comics'}[args.app],
         'CFBundleDevelopmentRegion': 'en',
         'CFBundleInfoDictionaryVersion': '6.0',
         'CFBundlePackageType': 'APPL',
@@ -89,12 +89,28 @@ def main():
                                             ['UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight'],
         'UIApplicationSceneManifest': {'UIApplicationSupportsMultipleScenes': False, 'UISceneConfigurations': {'UIWindowSceneSessionRoleApplication': [{'UISceneConfigurationName': 'Orion', 'UISceneDelegateClassName': 'AXSceneDelegate'}]}},
     })
+    if args.app in ('groove', 'comics'):
+        locales = target / 'share' / source / 'locale'
+        info['CFBundleLocalizations'] = ['en'] + sorted(p.stem for p in locales.glob('*.xml') if p.stem != 'en')
     if args.app == 'groove':
         for localization in (target / 'share/groove/locale').glob('*.lproj'):
             shutil.copytree(localization, target / localization.name)
         info['ITSAppUsesNonExemptEncryption'] = False
-        info['CFBundleLocalizations'] = ['en'] + sorted(p.stem for p in (target / 'share/groove/locale').glob('*.xml') if p.stem != 'en')
-    if phone:
+    if args.app == 'comics':
+        cbz_type = 'com.orion.cbz'
+        info['UTImportedTypeDeclarations'] = [{
+            'UTTypeIdentifier': cbz_type,
+            'UTTypeDescription': 'Comic Book ZIP Archive',
+            'UTTypeConformsTo': ['public.data', 'public.archive'],
+            'UTTypeTagSpecification': {'public.filename-extension': ['cbz'], 'public.mime-type': ['application/vnd.comicbook+zip']},
+        }]
+        info['CFBundleDocumentTypes'] = [{
+            'CFBundleTypeName': 'Comic Book ZIP Archive',
+            'CFBundleTypeRole': 'Viewer',
+            'LSHandlerRank': 'Alternate',
+            'LSItemContentTypes': [cbz_type],
+        }]
+    if phone or args.app == 'comics':
         info.update({'UIStatusBarHidden': True, 'UIViewControllerBasedStatusBarAppearance': False})
     if args.app == 'groove':
         info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Jamsheet songs.'

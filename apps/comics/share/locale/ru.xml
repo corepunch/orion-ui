@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
+  <string source="Comics">Комиксы</string>
+  <string source="This page could not be opened." where="code">Не удалось открыть эту страницу.</string>
+  <string source="The Boat in the Fog" where="code">Лодка в тумане</string>
+  <context name="library">
+    <string source="Open CBZ">Открыть CBZ</string>
+    <string source="Comic Book ZIP Archives" where="code">Архивы комиксов CBZ</string>
+    <string source="This comic archive could not be opened." where="code">Не удалось открыть архив комикса.</string>
+    <string source="The comic could not be added to the bookshelf." where="code">Не удалось добавить комикс на книжную полку.</string>
+    <string source="Bookshelf">Книжная полка</string>
+    <string source="Back">Назад</string>
+    <string source="Coral">Коралловый</string>
+    <string source="Gold">Золотой</string>
+    <string source="Leaf green">Зелёный</string>
+    <string source="Teal">Бирюзовый</string>
+    <string source="Sky blue">Голубой</string>
+    <string source="Plum">Сливовый</string>
+    <string source="Brown">Коричневый</string>
+    <string source="Next">Дальше</string>
+    <string source="Finish" where="code">Закончить</string>
+  </context>
+</strings>

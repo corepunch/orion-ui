@@ -725,8 +725,8 @@ help:
 	@echo "gems      - Build all .gem shared libraries"
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"
-	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Jamsheet iPad bundles"
-	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp (winamp is an iPhone app; ipad-deploy auto-selects one connected device)"
+	@echo "ipad-all  - Build Image Editor, Pencil Test, Jamsheet and Comics for iPad"
+	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp|ledger|comics (winamp is an iPhone app)"
 	@echo "android / android-all - Debug APKs in build/android/apk; APP=imageeditor|penciltest|groove|winamp, ABIS=\"arm64-v8a x86_64\""
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
 	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"
@@ -763,6 +763,7 @@ ipad-all:
 	@$(MAKE) -f packaging/ipad/build.mk APP=imageeditor SDK=iphoneos app
 	@$(MAKE) -f packaging/ipad/build.mk APP=penciltest SDK=iphoneos app
 	@$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
+	@$(MAKE) -f packaging/ipad/build.mk APP=comics SDK=iphoneos app
 # Android debug APKs (build/android/apk/orion-<app>.apk); needs ANDROID_NDK_HOME,
 # the Android SDK, Java 17 and Gradle. See packaging/android/README.md.
 ABIS ?= arm64-v8a

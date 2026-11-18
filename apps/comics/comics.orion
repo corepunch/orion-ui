@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion version="1" name="comics" title="Comics" root="apps/comics" stylesheet="comics.css">
+  <plugins><plugin name="comics_components" /></plugins>
+  <forms>
+    <form name="library" title="Comics" width="1080" height="810" flags="WINDOW_NOTITLE | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE">
+      <OverlayView name="screens" flags="WINDOW_FLEXSPACE">
+        <StackView name="shelf" class="bookshelf" flags="WINDOW_FLEXSPACE">
+          <ComicShelfHeader padding="8 2">
+            <Column>
+              <Button name="open" text="Open CBZ" tooltip="Open CBZ" class="shelf-open" h-align="left" v-align="center" />
+            </Column>
+            <Column width="auto">
+              <Label name="heading" text="Comics" font="display" class="shelf-title" v-align="center" />
+            </Column>
+            <Column />
+          </ComicShelfHeader>
+          <ComicShelves name="books" flags="WINDOW_FLEXSPACE" spacing="22" padding="22 0" />
+        </StackView>
+        <ComicStage name="reader" flags="WINDOW_FLEXSPACE | WINDOW_HIDDEN">
+          <StackView name="spread" orientation="horizontal" spacing="4" />
+          <StackView name="incoming" orientation="horizontal" spacing="4" flags="WINDOW_HIDDEN" />
+          <Button name="library" icon="phosphor-books" tooltip="Bookshelf" class="reader-control" />
+          <Button name="back" icon="phosphor-caret-left" tooltip="Back" class="reader-control" />
+          <StackView name="palette" orientation="horizontal" spacing="8" flags="WINDOW_NOFILL">
+            <Button name="coral" tooltip="Coral" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+            <Button name="gold" tooltip="Gold" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+            <Button name="leaf" tooltip="Leaf green" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+            <Button name="teal" tooltip="Teal" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+            <Button name="sky" tooltip="Sky blue" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+            <Button name="plum" tooltip="Plum" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+            <Button name="brown" tooltip="Brown" class="reader-control comic-swatch" flags="BUTTON_PUSHLIKE | BUTTON_AUTORADIO" />
+          </StackView>
+          <StackView name="forward" orientation="horizontal" spacing="8" flags="WINDOW_NOFILL">
+            <Button name="next" icon="phosphor-caret-right" tooltip="Next" class="reader-control" />
+          </StackView>
+        </ComicStage>
+      </OverlayView>
+    </form>
+    <form name="book_card" width="128" height="180" padding="0 20 0 0" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP">
+      <ComicCover name="cover" width="116" height="160" h-align="center" />
+    </form>
+    <form name="leaf" width="460" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_FLEXSPACE" spacing="4">
+      <ComicPanel name="top_panel" flags="WINDOW_FLEXSPACE">
+        <SpeechBubble name="top_speech" class="comic" flags="WINDOW_NOTABSTOP | WINDOW_NOACTIVATE | WINDOW_NOFILL">
+          <Label name="top_line" font="title" class="comic-ink" />
+        </SpeechBubble>
+      </ComicPanel>
+      <StackView name="bottom_row" orientation="horizontal" spacing="4" flags="WINDOW_FLEXSPACE">
+        <ComicPanel name="left_panel" flags="WINDOW_FLEXSPACE" v-align="stretch">
+          <SpeechBubble name="left_speech" class="comic" flags="WINDOW_NOTABSTOP | WINDOW_NOACTIVATE | WINDOW_NOFILL">
+            <Label name="left_line" font="title" class="comic-ink" />
+          </SpeechBubble>
+        </ComicPanel>
+        <ComicPanel name="right_panel" flags="WINDOW_FLEXSPACE" v-align="stretch">
+          <SpeechBubble name="right_speech" class="comic" flags="WINDOW_NOTABSTOP | WINDOW_NOACTIVATE | WINDOW_NOFILL">
+            <Label name="right_line" font="title" class="comic-ink" />
+          </SpeechBubble>
+        </ComicPanel>
+      </StackView>
+    </form>
+  </forms>
+</orion>

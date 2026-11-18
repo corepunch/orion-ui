@@ -9,6 +9,14 @@
 For UI design and review, use the [`orion-ui-design`](.agents/skills/orion-ui-design/SKILL.md) skill (adapted from Apple HIG principles for Orion's retro style).
 The app shell, status badges, buttons, tables and tokens every app shares are
 defined in [docs/design-language.md](docs/design-language.md).
+
+## Comic art and coloring
+
+Use watercolor for comic illustrations and for the color readers apply.
+Render each fill as a wash over paper grain, with visible ink outlines and
+subtle variation in pigment density. When colored artwork reappears later in
+the story, preserve the reader's colors and the appearance of the wash.
+
 ## Launch targets
 
 `launch.xml` at the repository root lists the ways to start this checkout; Git

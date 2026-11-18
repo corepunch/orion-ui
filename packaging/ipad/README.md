@@ -8,6 +8,8 @@ iOS dependencies are required. The default deployment target is iPadOS 16.
 make ipad-all                         # all three device bundles
 make ipad APP=imageeditor         # one device bundle
 make ipad APP=groove              # Jamsheet device bundle
+make ipad APP=comics              # Standalone Comics device bundle
+make ipad-run APP=comics          # Build and launch Comics in Simulator
 make ipad-run APP=groove          # build, install, launch Jamsheet in Simulator
 make ipad-simulator APP=penciltest
 make ipad-run APP=penciltest       # build, install, launch in Simulator

@@ -14,8 +14,8 @@ BUNDLE_ID ?= com.orion.$(APP)
 TEAM ?=
 PROFILE ?=
 DEVICE ?=
-ifeq ($(filter $(APP),imageeditor penciltest groove winamp ledger),)
-$(error APP must be imageeditor, penciltest, groove, winamp or ledger)
+ifeq ($(filter $(APP),imageeditor penciltest groove winamp ledger comics),)
+$(error APP must be imageeditor, penciltest, groove, winamp, ledger or comics)
 endif
 # Winamp is an iPhone app; the others target iPad.
 FAMILY := $(if $(filter winamp,$(APP)),iphone,ipad)
@@ -105,7 +105,7 @@ $(HOST_TOOL): tools/orionc.c $(wildcard orion/user/*.h)
 	@mkdir -p "$(@D)"
 	@echo "TOOL    orionc"
 	$(Q)xcrun --sdk macosx clang -std=c11 -O2 -I. -I"$(shell xcrun --sdk macosx --show-sdk-path)/usr/include/libxml2" $< -lxml2 -o "$@"
-$(GENERATED): $(APP_DIR)/$(APP_SOURCE).orion $(HOST_TOOL)
+$(GENERATED): $(APP_DIR)/$(APP_SOURCE).orion $(wildcard $(APP_DIR)/$(APP_SOURCE).css) $(HOST_TOOL)
 	@mkdir -p "$(@D)"
 	@echo "GEN     $@"
 	$(Q)"$(HOST_TOOL)" --input $< --output $@ --prefix $(APP_SOURCE)
