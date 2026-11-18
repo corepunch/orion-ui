@@ -1,23 +1,19 @@
 ---
 layout: default
-title: Git Client site drafts
+title: Git Client website
 nav_exclude: true
 ---
 
-# Git Client website — four directions
+# Git Client website
 
-Open [index.html](index.html) to compare them. All four use the same
-screenshots in `shots/` and the app's own Phosphor icons in `icons/`.
+[index.html](index.html) is the Git Client landing page: a scrollytelling page
+that follows a platform engineer's morning. One app window stays pinned while
+the text scrolls, and the view zooms to the part of the window each step
+describes. Below 960 px the pinned window gives way to an inline crop per step.
 
-| Variant | Direction |
-|---|---|
-| [a/](a/) Midnight | Dark product launch: tilted hero window, auto-playing agent steps, bento grid of crops |
-| [b/](b/) Paper | Light editorial: serif headlines, numbered chapters, crops on colour panels |
-| [c/](c/) Terminal | Monospace, brutalist: tabbed full window, agent pipeline, comparison table |
-| [d/](d/) Story | Scrollytelling: one pinned window; the view zooms to each feature as you read |
-
-The pages are static HTML. Jekyll copies them unchanged; GitHub Pages serves them
-under `/orion-ui/gitclient/site/`.
+The page is static HTML; it uses the screenshots in `shots/`.
+Jekyll copies it unchanged; GitHub Pages serves it
+at `/orion-ui/gitclient/site/`.
 
 ## Reproducing the screenshots
 
