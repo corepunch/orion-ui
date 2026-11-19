@@ -201,28 +201,87 @@ bool gc_reload_history_log(const char *ref) {
   return true;
 }
 
-bool gc_merge_branch(const char *name) {
+// Runs one step of a merge or rebase. On failure err holds git's own explanation (its last lines).
+static bool gc_git_step(const char *args[], bool noedit, char *err, size_t err_n) {
   gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo || !name || !name[0]) return false;
-  char buf[4096] = {0};
-  const char *args[] = { "git", "merge", name, NULL };
-  if (!git_run_sync(gc->repo, args, buf, sizeof(buf))) {
-    GC_LOG("gc_merge_branch failed: %s", buf);
-    return false;
+  if (err && err_n) err[0] = '\0';
+  if (!gc || !gc->repo) return false;
+  char buf[8192] = {0};
+  bool ok = noedit ? git_run_sync_noedit(gc->repo, args, buf, sizeof(buf)) : git_run_sync(gc->repo, args, buf, sizeof(buf));
+  if (!ok && err && err_n) {
+    size_t len = strlen(buf);
+    while (len && (buf[len - 1] == '\n' || buf[len - 1] == '\r' || buf[len - 1] == ' ')) buf[--len] = '\0';
+    const char *tail = buf + (len > 600 ? len - 600 : 0);
+    snprintf(err, err_n, "%s", tail);
   }
-  return true;
+  return ok;
 }
 
-bool gc_rebase_onto(const char *branch) {
+bool gc_merge_branch(const char *name, char *err, size_t err_n) {
+  if (!name || !name[0]) return false;
+  const char *args[] = { "git", "merge", "--no-edit", name, NULL };
+  return gc_git_step(args, true, err, err_n);
+}
+
+bool gc_rebase_onto(const char *branch, char *err, size_t err_n) {
+  if (!branch || !branch[0]) return false;
+  const char *args[] = { "git", "rebase", "--autostash", branch, NULL };
+  return gc_git_step(args, true, err, err_n);
+}
+
+bool gc_rebase_onto_default(char *onto, size_t onto_n, char *err, size_t err_n) {
   gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo || !branch || !branch[0]) return false;
-  char buf[4096] = {0};
-  const char *args[] = { "git", "rebase", branch, NULL };
-  if (!git_run_sync(gc->repo, args, buf, sizeof(buf))) {
-    GC_LOG("gc_rebase_onto failed: %s", buf);
+  if (err && err_n) err[0] = '\0';
+  if (!gc || !gc->repo || !onto || !onto_n) return false;
+  char def[256] = {0}, cur[256] = {0};
+  if (!git_default_branch(gc->repo, def, sizeof(def)) || !git_rebase_base(gc->repo, onto, (int)onto_n)) {
+    snprintf(err, err_n, "%s", ui_tr("This repository has no default branch to rebase onto."));
     return false;
   }
-  return true;
+  if (git_current_branch(gc->repo, cur, sizeof(cur)) && !strcmp(cur, def)) {
+    snprintf(err, err_n, ui_tr("You are on %s. Switch to the branch you want to rebase onto it."), def);
+    return false;
+  }
+  return gc_rebase_onto(onto, err, err_n);
+}
+
+// The rebase, merge or pick in progress, read now (the snapshot may be a step behind).
+static git_op_kind_t gc_operation_kind(void) {
+  gc_state_t *gc = g_gc;
+  git_operation_t op;
+  return gc && gc->repo && git_get_operation(gc->repo, &op) ? op.kind : GIT_OP_NONE;
+}
+
+bool gc_operation_continue(char *err, size_t err_n) {
+  switch (gc_operation_kind()) {
+    case GIT_OP_REBASE:      { const char *a[] = { "git", "rebase", "--continue", NULL };      return gc_git_step(a, true, err, err_n); }
+    case GIT_OP_MERGE:       { const char *a[] = { "git", "commit", "--no-edit", NULL };       return gc_git_step(a, true, err, err_n); }
+    case GIT_OP_CHERRY_PICK: { const char *a[] = { "git", "cherry-pick", "--continue", NULL }; return gc_git_step(a, true, err, err_n); }
+    case GIT_OP_REVERT:      { const char *a[] = { "git", "revert", "--continue", NULL };      return gc_git_step(a, true, err, err_n); }
+    case GIT_OP_NONE: break;
+  }
+  return false;
+}
+
+bool gc_operation_skip(char *err, size_t err_n) {
+  switch (gc_operation_kind()) {
+    case GIT_OP_REBASE:      { const char *a[] = { "git", "rebase", "--skip", NULL };      return gc_git_step(a, true, err, err_n); }
+    case GIT_OP_CHERRY_PICK: { const char *a[] = { "git", "cherry-pick", "--skip", NULL }; return gc_git_step(a, true, err, err_n); }
+    case GIT_OP_REVERT:      { const char *a[] = { "git", "revert", "--skip", NULL };      return gc_git_step(a, true, err, err_n); }
+    default: break;
+  }
+  return false;
+}
+
+bool gc_operation_abort(char *err, size_t err_n) {
+  switch (gc_operation_kind()) {
+    case GIT_OP_REBASE:      { const char *a[] = { "git", "rebase", "--abort", NULL };      return gc_git_step(a, false, err, err_n); }
+    case GIT_OP_MERGE:       { const char *a[] = { "git", "merge", "--abort", NULL };       return gc_git_step(a, false, err, err_n); }
+    case GIT_OP_CHERRY_PICK: { const char *a[] = { "git", "cherry-pick", "--abort", NULL }; return gc_git_step(a, false, err, err_n); }
+    case GIT_OP_REVERT:      { const char *a[] = { "git", "revert", "--abort", NULL };      return gc_git_step(a, false, err, err_n); }
+    case GIT_OP_NONE: break;
+  }
+  return false;
 }
 
 bool gc_rename_branch(const char *old_name, const char *new_name) {
@@ -366,54 +425,38 @@ void gc_push_tags(void) {
 // Conflict resolution
 // ═══════════════════════════════════════════════════════════════════════════
 
-int gc_get_conflicted_files(char (*out)[512], int max) {
-  gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo || max <= 0) return 0;
-  char buf[16 * 1024] = {0};
-  const char *args[] = { "git", "diff", "--name-only", "--diff-filter=U", NULL };
-  if (!git_run_sync(gc->repo, args, buf, sizeof(buf))) return 0;
-  int count = 0;
-  char *p = buf;
-  while (*p && count < max) {
-    char *nl = strchr(p, '\n');
-    if (!nl) break;
-    *nl = '\0';
-    if (p[0]) { strncpy(out[count], p, 511); out[count][511] = '\0'; count++; }
-    p = nl + 1;
-  }
-  return count;
+// Resolves a conflicted file with one side. "Mine" is the branch being worked on: in a merge or pick
+// that is git's --ours, but a rebase replays my commits onto the other branch, so there it is --theirs.
+bool gc_conflict_use_version(const char *path, bool mine, char *err, size_t err_n) {
+  if (!path || !path[0]) return false;
+  bool ours = gc_operation_kind() == GIT_OP_REBASE ? !mine : mine;
+  const char *pick[] = { "git", "checkout", ours ? "--ours" : "--theirs", "--", path, NULL };
+  if (!gc_git_step(pick, false, err, err_n)) return false;
+  const char *add[] = { "git", "add", "--", path, NULL };
+  return gc_git_step(add, false, err, err_n);
 }
 
-bool gc_conflict_resolve(const char *path, const char *strategy) {
+// Stages a file the user resolved by hand, refusing while git's conflict markers are still in it.
+bool gc_conflict_mark_resolved(const char *path, char *err, size_t err_n) {
   gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo || !path || !strategy) return false;
-  char buf[1024] = {0};
-
-  if (strcmp(strategy, "ours") == 0) {
-    const char *args[] = { "git", "checkout", "--ours", path, NULL };
-    if (!git_run_sync(gc->repo, args, buf, sizeof(buf))) return false;
-    const char *add_args[] = { "git", "add", path, NULL };
-    return git_run_sync(gc->repo, add_args, buf, sizeof(buf));
+  if (err && err_n) err[0] = '\0';
+  if (!gc || !gc->repo || !path || !path[0]) return false;
+  char full[1100];
+  snprintf(full, sizeof(full), "%s/%s", git_repo_path(gc->repo), path);
+  FILE *f = fopen(full, "r");
+  if (f) {
+    char line[4096];
+    bool marked = false;
+    while (!marked && fgets(line, sizeof(line), f))
+      marked = !strncmp(line, "<<<<<<< ", 8) || !strncmp(line, ">>>>>>> ", 8);
+    fclose(f);
+    if (marked) {
+      snprintf(err, err_n, ui_tr("%s still has conflict markers. Edit them out, or use one version."), path);
+      return false;
+    }
   }
-  if (strcmp(strategy, "theirs") == 0) {
-    const char *args[] = { "git", "checkout", "--theirs", path, NULL };
-    if (!git_run_sync(gc->repo, args, buf, sizeof(buf))) return false;
-    const char *add_args[] = { "git", "add", path, NULL };
-    return git_run_sync(gc->repo, add_args, buf, sizeof(buf));
-  }
-  if (strcmp(strategy, "both") == 0) {
-    const char *add_args[] = { "git", "add", path, NULL };
-    return git_run_sync(gc->repo, add_args, buf, sizeof(buf));
-  }
-  return false;
-}
-
-void gc_abort_merge(void) {
-  gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo) return;
-  char buf[1024] = {0};
-  const char *args[] = { "git", "merge", "--abort", NULL };
-  git_run_sync(gc->repo, args, buf, sizeof(buf));
+  const char *add[] = { "git", "add", "--", path, NULL };
+  return gc_git_step(add, false, err, err_n);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

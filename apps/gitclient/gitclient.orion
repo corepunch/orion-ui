@@ -61,7 +61,12 @@
             <item name="checkout" label="Checkout..." shortcut="Ctrl+P" />
             <Separator />
             <item name="merge" label="Merge Into Current" shortcut="Ctrl+M" />
-            <item name="rebase" label="Rebase Current" />
+            <item name="rebase_default" label="Rebase onto Default Branch" />
+            <item name="rebase" label="Rebase onto Selected Branch" />
+            <Separator />
+            <item name="continue" label="Continue Rebase or Merge" />
+            <item name="skip" label="Skip Commit..." />
+            <item name="abort" label="Abort Rebase or Merge..." />
             <Separator />
             <item name="delete" label="Delete..." shortcut="Ctrl+D" />
             <item name="delete_merged" label="Delete Merged Branches..." />
@@ -89,6 +94,10 @@
             <Separator />
             <item name="reveal" label="Reveal in File Manager" />
             <item name="discard" label="Discard..." />
+            <Separator />
+            <item name="use_mine" label="Use My Version" />
+            <item name="use_theirs" label="Use Their Version" />
+            <item name="mark_resolved" label="Mark Resolved" />
         </menu>
 
         <menu name="remote" label="Remote">
@@ -148,6 +157,11 @@
                 <Button command="files.reveal" icon="folder" text="Reveal" tooltip="Reveal in the file manager" />
                 <Button command="files.discard" icon="trash" text="Discard" tooltip="Discard the selected file's changes" />
             </Group>
+            <Group label="Resolve">
+                <Button command="files.use_mine" icon="user" text="Use Mine" tooltip="Resolve the selected conflicted file with your branch's version" />
+                <Button command="files.use_theirs" icon="arrow-left" text="Use Theirs" tooltip="Resolve the selected conflicted file with the other branch's version" />
+                <Button command="files.mark_resolved" icon="check" text="Mark Resolved" tooltip="Stage a file you resolved by hand" />
+            </Group>
             <Group label="Stash">
                 <Button command="commit.stash" icon="import" text="Stash" tooltip="Stash changes" />
                 <Button command="commit.stash_pop" icon="upload-square" text="Pop" tooltip="Pop the stash" />
@@ -167,7 +181,13 @@
             </Group>
             <Group label="Integrate">
                 <Button command="branch.merge" icon="git-diff" text="Merge Into Current" size="large" />
-                <Button command="branch.rebase" icon="arrow-separate-vertical" text="Rebase Current" size="large" />
+                <Button command="branch.rebase_default" icon="arrow-separate-vertical" text="Rebase onto Main" size="large" tooltip="Rebase the current branch onto the default branch (its upstream when it has one)" />
+                <Button command="branch.rebase" icon="git-diff" text="Rebase onto Selected" tooltip="Rebase the current branch onto the branch selected in History" />
+            </Group>
+            <Group label="In Progress">
+                <Button command="branch.continue" icon="play" text="Continue" tooltip="Continue the rebase or merge once every conflict is resolved" />
+                <Button command="branch.skip" icon="skip-next" text="Skip Commit" tooltip="Leave out the commit that stopped the rebase" />
+                <Button command="branch.abort" icon="xmark" text="Abort" tooltip="Stop and put the branch back as it was" />
             </Group>
             <Group label="Manage">
                 <Button command="branch.rename" icon="edit-pencil" text="Rename" />
@@ -535,11 +555,22 @@
                 <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
             </PaneToolbar>
             <requires library="gitclient_components" />
+            <StackView name="operation_bar" orientation="horizontal" spacing="8" padding="14 8 14 8">
+                <Badge name="operation_state" text="Conflicts" icon="gc-x-circle" color="error" v-align="center" />
+                <StackView name="operation_text" spacing="2" flags="flexspace">
+                    <Label name="operation_title" text="" font="heading" />
+                    <Label name="operation_detail" text="" color="text-secondary" />
+                </StackView>
+                <Button command="branch.continue" icon="gc-play" text="Continue" v-align="center" tooltip="Continue once every conflict is resolved" />
+                <Button command="branch.skip" text="Skip Commit" v-align="center" tooltip="Leave out the commit that stopped" />
+                <Button command="branch.abort" text="Abort" v-align="center" tooltip="Stop and put the branch back as it was" />
+            </StackView>
             <SplitView name="changes_split" split-ratio="0.30" flags="flexspace">
                 <TabView name="changes_panel_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="changes_panel" text="Changes" spacing="4" padding="4">
                         <CheckBox name="stage_all" text="0 changed files" margin="4 0 0 0" />
                         <TableView name="changes_files" source="db.files" master="none" check-field="staged" column-titles="false" context-menu="files" flags="notitle,nofill,vscroll,flexspace">
+                            <RowIcon field="status" value="Conflicted" icon="gc-x-circle" color="error" />
                             <Column field="path" title="File" width="0" />
                             <Column field="status" title="Status" width="64" />
                         </TableView>
@@ -737,20 +768,6 @@
                 <Space />
                 <Button name="ok" text="Search" flags="BUTTON_DEFAULT" />
                 <Button name="cancel" text="Cancel" />
-            </StackView>
-        </form>
-        <form name="conflict_dialog" title="Merge Conflicts" width="400" height="280" auto_layout="1" spacing="6" padding="8">
-            <Label text="Conflicted files:" />
-            <ComboBox name="file_list" flags="flexspace" />
-            <StackView orientation="horizontal" spacing="6">
-                <Button name="ours" text="Accept Ours" />
-                <Button name="theirs" text="Accept Theirs" />
-                <Button name="both" text="Accept Both" />
-            </StackView>
-            <StackView orientation="horizontal" spacing="6">
-                <Space />
-                <Button name="abort" text="Abort Merge" />
-                <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
             </StackView>
         </form>
         <form name="create_tag_dialog" title="Create Tag" width="320" auto_layout="1" spacing="6" padding="8">

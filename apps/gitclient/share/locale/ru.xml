@@ -64,4 +64,62 @@
   <string source="This task saved no revision to review." where="code">Эта задача не сохранила версию для ревью.</string>
   <string source="The diff appears here when the task is ready for review." where="code">Изменения появятся здесь, когда задача будет готова к ревью.</string>
   <string source="No local changes" where="code">Нет локальных изменений</string>
+  <string source="Rebase onto Default Branch" where="menu">Перебазировать на основную ветку</string>
+  <string source="Rebase onto Selected Branch" where="menu">Перебазировать на выбранную ветку</string>
+  <string source="Continue Rebase or Merge" where="menu">Продолжить перебазирование или слияние</string>
+  <string source="Skip Commit..." where="menu">Пропустить коммит...</string>
+  <string source="Abort Rebase or Merge..." where="menu">Отменить перебазирование или слияние...</string>
+  <string source="Use My Version" where="menu">Взять мою версию</string>
+  <string source="Use Their Version" where="menu">Взять их версию</string>
+  <string source="Mark Resolved" where="menu">Отметить как решённый</string>
+  <string source="Rebase onto Main" where="ribbon">Перебазировать на main</string>
+  <string source="Rebase the current branch onto the default branch (its upstream when it has one)" where="ribbon">Перебазировать текущую ветку на основную (на её вышестоящую ветку, если она есть)</string>
+  <string source="Rebase onto Selected" where="ribbon">Перебазировать на выбранную</string>
+  <string source="Rebase the current branch onto the branch selected in History" where="ribbon">Перебазировать текущую ветку на ветку, выбранную в истории</string>
+  <string source="In Progress" where="ribbon">Незавершённая операция</string>
+  <string source="Continue" where="ribbon,changes_page">Продолжить</string>
+  <string source="Continue the rebase or merge once every conflict is resolved" where="ribbon">Продолжить перебазирование или слияние, когда все конфликты решены</string>
+  <string source="Skip Commit" where="ribbon,changes_page">Пропустить коммит</string>
+  <string source="Leave out the commit that stopped the rebase" where="ribbon">Пропустить коммит, на котором остановилось перебазирование</string>
+  <string source="Abort" where="ribbon,changes_page">Отменить</string>
+  <string source="Stop and put the branch back as it was" where="ribbon,changes_page">Остановить и вернуть ветку в прежнее состояние</string>
+  <string source="Resolve" where="ribbon">Конфликты</string>
+  <string source="Use Mine" where="ribbon">Моя версия</string>
+  <string source="Resolve the selected conflicted file with your branch's version" where="ribbon">Решить конфликт в выбранном файле версией вашей ветки</string>
+  <string source="Use Theirs" where="ribbon">Их версия</string>
+  <string source="Resolve the selected conflicted file with the other branch's version" where="ribbon">Решить конфликт в выбранном файле версией другой ветки</string>
+  <string source="Stage a file you resolved by hand" where="ribbon">Проиндексировать файл, конфликт в котором решён вручную</string>
+  <string source="Conflicts" where="changes_page">Конфликты</string>
+  <string source="Continue once every conflict is resolved" where="changes_page">Продолжить, когда все конфликты решены</string>
+  <string source="Leave out the commit that stopped" where="changes_page">Пропустить коммит, на котором произошла остановка</string>
+  <string source="This repository has no default branch to rebase onto." where="code">В этом репозитории нет основной ветки, на которую можно перебазировать.</string>
+  <string source="You are on %s. Switch to the branch you want to rebase onto it." where="code">Вы на ветке %s. Переключитесь на ветку, которую нужно перебазировать на неё.</string>
+  <string source="%s still has conflict markers. Edit them out, or use one version." where="code">В файле %s остались маркеры конфликта. Удалите их или возьмите одну из версий.</string>
+  <string source="Merge" where="code">Слияние</string>
+  <string source="Rebase" where="code">Перебазирование</string>
+  <string source="Select a branch in History first." where="code">Сначала выберите ветку в истории.</string>
+  <string source="The operation failed." where="code">Операция не выполнена.</string>
+  <string source="No rebase, merge or cherry-pick is in progress." where="code">Нет незавершённого перебазирования, слияния или переноса коммита.</string>
+  <string source="A merge has no commit to skip. Continue or abort it." where="code">В слиянии нет коммита, который можно пропустить. Продолжите или отмените его.</string>
+  <string source="Leave out &quot;%s&quot; and go on with the next commit?" where="code">Пропустить коммит «%s» и перейти к следующему?</string>
+  <string source="Leave out this commit and go on with the next one?" where="code">Пропустить этот коммит и перейти к следующему?</string>
+  <string source="Abort the rebase and put the branch back as it was before?" where="code">Отменить перебазирование и вернуть ветку в прежнее состояние?</string>
+  <string source="Abort the merge and put the branch back as it was before?" where="code">Отменить слияние и вернуть ветку в прежнее состояние?</string>
+  <string source="Abort and put the branch back as it was before?" where="code">Отменить и вернуть ветку в прежнее состояние?</string>
+  <string source="Resolve Conflict" where="code">Решение конфликта</string>
+  <string source="Select a conflicted file in Changes first." where="code">Сначала выберите файл с конфликтом в изменениях.</string>
+  <string source="Rebasing %s onto %s" where="code">Перебазирование %s на %s</string>
+  <string source="Rebasing onto %s" where="code">Перебазирование на %s</string>
+  <string source="Rebasing %s onto %s, commit %d of %d" where="code">Перебазирование %s на %s, коммит %d из %d</string>
+  <string source="Commit %d of %d: %s" where="code">Коммит %d из %d: %s</string>
+  <string source="Commit %d of %d" where="code">Коммит %d из %d</string>
+  <string source="Merging %s into %s" where="code">Слияние %s с %s</string>
+  <string source="Merging %s" where="code">Слияние %s</string>
+  <string source="Cherry-picking a commit" where="code">Перенос коммита</string>
+  <string source="Reverting a commit" where="code">Отмена коммита</string>
+  <string source="1 conflict" where="code">1 конфликт</string>
+  <string source="%d conflicts" where="code">Конфликтов: %d</string>
+  <string source="Ready to continue" where="code">Можно продолжить</string>
+  <string source="Resolve every conflicted file first: use a version or edit it, then Mark Resolved" where="code">Сначала решите конфликт в каждом файле: возьмите одну из версий или отредактируйте файл и отметьте его как решённый</string>
+  <string source="Go on with the next step" where="code">Перейти к следующему шагу</string>
 </strings>

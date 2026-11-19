@@ -227,28 +227,52 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_BRANCH_CHECKOUT:
       gc_show_switch_branch_dialog(gc->main_win);
       break;
-    case ID_BRANCH_MERGE: {
-      char name[256] = {0};
-      if (gc_get_selected_branch(name, sizeof(name), NULL)) {
-        if (!gc_merge_branch(name)) {
-          char files[64][512];
-          int n = gc_get_conflicted_files(files, 64);
-          if (n > 0) gc_show_conflict_dialog(gc->main_win);
-          else message_box(gc->main_win, "Merge failed.", "Merge", MB_OK);
-        } else gc_refresh_all();
-      } else message_box(gc->main_win, "No branch selected.", "Merge", MB_OK);
+    case ID_BRANCH_MERGE:
+    case ID_BRANCH_REBASE:
+    case ID_BRANCH_REBASE_DEFAULT: {
+      char name[256] = {0}, err[700] = {0};
+      const char *title = ui_tr(id == ID_BRANCH_MERGE ? "Merge" : "Rebase");
+      bool ok;
+      if (id == ID_BRANCH_REBASE_DEFAULT) ok = gc_rebase_onto_default(name, sizeof(name), err, sizeof(err));
+      else if (!gc_get_selected_branch(name, sizeof(name), NULL)) {
+        message_box(gc->main_win, ui_tr("Select a branch in History first."), title, MB_OK);
+        break;
+      } else ok = id == ID_BRANCH_MERGE ? gc_merge_branch(name, err, sizeof(err)) : gc_rebase_onto(name, err, sizeof(err));
+      gc_refresh_all();
+      git_operation_t op;
+      if (!ok && git_get_operation(gc->repo, &op) && op.kind != GIT_OP_NONE) gc_set_view_mode(GC_TAB_CHANGES);   // stopped: resolve there
+      else if (!ok) message_box(gc->main_win, err[0] ? err : ui_tr("The operation failed."), title, MB_OK);
       break;
     }
-    case ID_BRANCH_REBASE: {
-      char name[256] = {0};
-      if (gc_get_selected_branch(name, sizeof(name), NULL)) {
-        if (!gc_rebase_onto(name)) {
-          char files[64][512];
-          int n = gc_get_conflicted_files(files, 64);
-          if (n > 0) gc_show_conflict_dialog(gc->main_win);
-          else message_box(gc->main_win, "Rebase failed.", "Rebase", MB_OK);
-        } else gc_refresh_all();
-      } else message_box(gc->main_win, "No branch selected.", "Rebase", MB_OK);
+    case ID_BRANCH_CONTINUE:
+    case ID_BRANCH_SKIP:
+    case ID_BRANCH_ABORT: {
+      git_operation_t op;
+      if (!gc->repo || !git_get_operation(gc->repo, &op) || op.kind == GIT_OP_NONE) {
+        message_box(gc->main_win, ui_tr("No rebase, merge or cherry-pick is in progress."), ui_tr("Continue"), MB_OK);
+        break;
+      }
+      char prompt[700], err[700] = {0};
+      if (id == ID_BRANCH_SKIP) {
+        if (op.kind == GIT_OP_MERGE) { message_box(gc->main_win, ui_tr("A merge has no commit to skip. Continue or abort it."), ui_tr("Skip Commit"), MB_OK); break; }
+        if (op.subject[0]) snprintf(prompt, sizeof(prompt), ui_tr("Leave out \"%s\" and go on with the next commit?"), op.subject);
+        else snprintf(prompt, sizeof(prompt), "%s", ui_tr("Leave out this commit and go on with the next one?"));
+        if (message_box(gc->main_win, prompt, ui_tr("Skip Commit"), MB_YESNO) != IDYES) break;
+      }
+      if (id == ID_BRANCH_ABORT) {
+        const char *what = op.kind == GIT_OP_REBASE ? ui_tr("Abort the rebase and put the branch back as it was before?") :
+                           op.kind == GIT_OP_MERGE  ? ui_tr("Abort the merge and put the branch back as it was before?") :
+                                                      ui_tr("Abort and put the branch back as it was before?");
+        if (message_box(gc->main_win, what, ui_tr("Abort"), MB_YESNO) != IDYES) break;
+      }
+      bool ok = id == ID_BRANCH_CONTINUE ? gc_operation_continue(err, sizeof(err)) :
+                id == ID_BRANCH_SKIP     ? gc_operation_skip(err, sizeof(err)) : gc_operation_abort(err, sizeof(err));
+      gc_refresh_all();
+      git_operation_t after;
+      bool stopped_again = !ok && git_get_operation(gc->repo, &after) && after.kind != GIT_OP_NONE && after.step != op.step;
+      if (!ok && !stopped_again)
+        message_box(gc->main_win, err[0] ? err : ui_tr("The operation failed."),
+                    ui_tr(id == ID_BRANCH_CONTINUE ? "Continue" : id == ID_BRANCH_SKIP ? "Skip Commit" : "Abort"), MB_OK);
       break;
     }
     case ID_BRANCH_DELETE: {
@@ -388,6 +412,20 @@ void gc_handle_command_impl(uint16_t id) {
       bool ok = id == ID_FILES_STAGE_ALL ? gc_stage_all() : gc_unstage_all();
       if (ok) gc_refresh_all();
       else message_box(gc->main_win, "Operation failed.", "Files", MB_OK);
+      break;
+    }
+    case ID_FILES_USE_MINE:
+    case ID_FILES_USE_THEIRS:
+    case ID_FILES_MARK_RESOLVED: {
+      db_file_t *file = gc->changes_files_win ? (db_file_t *)(intptr_t)send_message(
+        gc->changes_files_win, tvGetSelectedRecord, 0, NULL) : NULL;
+      const char *title = ui_tr("Resolve Conflict");
+      if (!file || file->status[0] != 'U') { message_box(gc->main_win, ui_tr("Select a conflicted file in Changes first."), title, MB_OK); break; }
+      char err[700] = {0};
+      bool ok = id == ID_FILES_MARK_RESOLVED ? gc_conflict_mark_resolved(file->path, err, sizeof(err))
+                                             : gc_conflict_use_version(file->path, id == ID_FILES_USE_MINE, err, sizeof(err));
+      if (!ok) message_box(gc->main_win, err[0] ? err : ui_tr("The operation failed."), title, MB_OK);
+      gc_refresh_all();
       break;
     }
     case ID_FILES_REVEAL: {

@@ -220,6 +220,7 @@ void gc_apply_snapshot(git_repo_snapshot_t *snap) {
   send_db_message(gc->changes_db, dbLoad, GC_DB_LOAD_SNAPSHOT, snap);
   send_db_message(gc->history_db, dbLoad, GC_DB_LOAD_SNAPSHOT, snap);
   if (snap->parts & GIT_SNAP_SYNC) { gc->sync = snap->sync; gc->sync_valid = true; }
+  if ((snap->parts & GIT_SNAP_FILES) || !snap->parts) gc->op = snap->op;
 
   if (gc->branches_win)
     send_message(gc->branches_win, tvRefresh, 0, NULL);
@@ -328,6 +329,16 @@ void gc_render_status(void) {
     snprintf(status, sizeof(status), ui_tr("Loading %s..."), gc_repo_display_name(gc->repo));
   else if (gc->repo && !gc->sync_valid)
     snprintf(status, sizeof(status), "%s", ui_tr("Loading..."));
+  else if (gc->repo && gc->op.kind == GIT_OP_REBASE && gc->op.steps > 0)
+    snprintf(status, sizeof(status), ui_tr("Rebasing %s onto %s, commit %d of %d"), gc->op.branch, gc->op.onto, gc->op.step, gc->op.steps);
+  else if (gc->repo && gc->op.kind == GIT_OP_REBASE)
+    snprintf(status, sizeof(status), ui_tr("Rebasing %s onto %s"), gc->op.branch, gc->op.onto);
+  else if (gc->repo && gc->op.kind == GIT_OP_MERGE)
+    snprintf(status, sizeof(status), ui_tr("Merging %s into %s"), gc->op.onto, st->head);
+  else if (gc->repo && gc->op.kind == GIT_OP_CHERRY_PICK)
+    snprintf(status, sizeof(status), "%s", ui_tr("Cherry-picking a commit"));
+  else if (gc->repo && gc->op.kind == GIT_OP_REVERT)
+    snprintf(status, sizeof(status), "%s", ui_tr("Reverting a commit"));
   else if (gc->repo) {
     const char *kind = st->initial ? "first commit" : st->detached ? "detached" :
                        st->gone ? "upstream gone" : !st->upstream[0] ? "not published" : NULL;

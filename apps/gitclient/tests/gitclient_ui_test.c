@@ -594,7 +594,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 65);
+    ASSERT_EQUAL(gitclient_action_meta_count, 72);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -1065,6 +1065,163 @@ void test_agents_review_and_launch(void) {
   PASS();
 }
 
+static bool file_starts_with(const char *dir, const char *name, const char *text) {
+  char path[600], line[256] = {0};
+  snprintf(path, sizeof(path), "%s/%s", dir, name);
+  FILE *f = fopen(path, "r");
+  if (!f) return false;
+  bool ok = fgets(line, sizeof(line), f) && !strncmp(line, text, strlen(text));
+  fclose(f);
+  return ok;
+}
+
+static bool git_rev(const char *dir, const char *rev, char *out, size_t n) {
+  struct git_repo_s *repo = git_repo_open(dir);
+  if (!repo) return false;
+  const char *args[] = { "git", "rev-parse", rev, NULL };
+  char buf[128] = {0};
+  bool ok = git_run_sync(repo, args, buf, sizeof(buf));
+  git_repo_close(repo);
+  buf[strcspn(buf, "\r\n")] = '\0';
+  snprintf(out, n, "%s", buf);
+  return ok && buf[0];
+}
+
+void test_rebase_onto_main_resolve_continue_and_abort(void) {
+  TEST("rebase: onto the default branch, stop on a conflict, resolve with mine, continue; abort restores; merge aborts");
+  char root[256], path[600];
+  ASSERT_TRUE(gct_make_temp_dir(root, sizeof(root), "orion_rebase"));
+  ASSERT_TRUE(gct_git(root, "init -q -b main"));
+  ASSERT_TRUE(gct_git(root, "config user.email fixture@example.test"));
+  ASSERT_TRUE(gct_git(root, "config user.name Fixture"));
+  snprintf(path, sizeof(path), "%s/app.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "base\n"));
+  ASSERT_TRUE(gct_git(root, "add . && git commit -qm base"));
+  ASSERT_TRUE(gct_git(root, "checkout -qb feature"));
+  ASSERT_TRUE(gct_write_file(path, "feature\n"));
+  ASSERT_TRUE(gct_git(root, "commit -qam 'Feature edits app'"));
+  snprintf(path, sizeof(path), "%s/extra.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "extra\n"));
+  ASSERT_TRUE(gct_git(root, "add . && git commit -qm 'Feature adds extra'"));
+  ASSERT_TRUE(gct_git(root, "checkout -q main"));
+  snprintf(path, sizeof(path), "%s/app.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "main\n"));
+  ASSERT_TRUE(gct_git(root, "commit -qam 'Main edits app'"));
+  ASSERT_TRUE(gct_git(root, "checkout -q feature"));
+  char before[64], main_head[64];
+  ASSERT_TRUE(git_rev(root, "HEAD", before, sizeof(before)));
+  ASSERT_TRUE(git_rev(root, "main", main_head, sizeof(main_head)));
+
+  test_env_init();
+  ASSERT_TRUE(test_graphics_init(960, 640));
+  gc_state_t saved = g_test_state;
+  database_t *saved_db = ui_get_database();
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.history_db = make_db();
+  g_test_state.changes_db = make_changes_db();
+  DB_CLASS(github_database_proc);
+  g_test_state.github_db = create_database("gc-test-github", "github_database_proc", NULL);
+  ui_set_database(g_test_state.history_db);
+  register_database("db", g_test_state.history_db);
+  register_database("github_db", g_test_state.github_db);
+  g_test_state.workspace_db = gc_workspace_db_create();
+  g_test_state.sync_loads = true;
+  char plugin[1024];
+  snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  window_t *host = create_window_from_form(&gitclient_main_window_form, 0, 0, NULL, gc_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(host);
+  g_test_state.repo = git_repo_open(root);
+  ASSERT_NOT_NULL(g_test_state.repo);
+  gc_refresh_all_sync();
+  window_t *bar = get_window_item(host, ID_CHANGES_PAGE_OPERATION_BAR);
+  ASSERT_NOT_NULL(bar);
+  ASSERT_FALSE(window_has_state(bar, WINDOW_STATE_VISIBLE));
+
+  // Rebase onto main stops on the first commit, in conflict.
+  gc_handle_command(ID_BRANCH_REBASE_DEFAULT);
+  gc_refresh_all_sync();
+  ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_REBASE);
+  ASSERT_STR_EQUAL(g_test_state.op.branch, "feature");
+  ASSERT_STR_EQUAL(g_test_state.op.onto, "main");
+  ASSERT_EQUAL(g_test_state.op.step, 1);
+  ASSERT_EQUAL(g_test_state.op.steps, 2);
+  ASSERT_STR_EQUAL(g_test_state.op.subject, "Feature edits app");
+  ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
+  ASSERT_TRUE(window_has_state(bar, WINDOW_STATE_VISIBLE));
+  window_t *cont = get_window_item(bar, ID_BRANCH_CONTINUE);
+  ASSERT_NOT_NULL(cont);
+  ASSERT_TRUE(window_has_state(cont, WINDOW_STATE_DISABLED));
+  ASSERT_STR_EQUAL(get_window_item(bar, ID_CHANGES_PAGE_OPERATION_STATE)->title, "1 conflict");
+  ASSERT_STR_EQUAL(get_window_item(bar, ID_CHANGES_PAGE_OPERATION_TITLE)->title, "Rebasing feature onto main");
+
+  // Markers left in: Mark Resolved refuses. "Mine" mid-rebase is the feature commit, git's --theirs.
+  char err[700];
+  ASSERT_FALSE(gc_conflict_mark_resolved("app.txt", err, sizeof(err)));
+  ASSERT_TRUE(strstr(err, "conflict markers") != NULL);
+  ASSERT_TRUE(gc_conflict_use_version("app.txt", true, err, sizeof(err)));
+  ASSERT_TRUE(file_starts_with(root, "app.txt", "feature"));
+  gc_refresh_all_sync();
+  ASSERT_FALSE(window_has_state(cont, WINDOW_STATE_DISABLED));
+  ASSERT_STR_EQUAL(get_window_item(bar, ID_CHANGES_PAGE_OPERATION_STATE)->title, "Ready to continue");
+
+  // Continue replays the second commit cleanly and finishes on top of main.
+  ASSERT_TRUE(gc_operation_continue(err, sizeof(err)));
+  gc_refresh_all_sync();
+  ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_NONE);
+  ASSERT_FALSE(window_has_state(bar, WINDOW_STATE_VISIBLE));
+  char base[64];
+  ASSERT_TRUE(git_rev(root, "HEAD~2", base, sizeof(base)));
+  ASSERT_STR_EQUAL(base, main_head);
+  ASSERT_TRUE(file_starts_with(root, "extra.txt", "extra"));
+
+  // Abort puts the branch back exactly as it was.
+  ASSERT_TRUE(gct_git(root, "reset -q --hard") && gct_git(root, "checkout -q -B feature2 main~1"));
+  snprintf(path, sizeof(path), "%s/app.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "second\n"));
+  ASSERT_TRUE(gct_git(root, "commit -qam 'Second edits app'"));
+  ASSERT_TRUE(git_rev(root, "HEAD", before, sizeof(before)));
+  gc_handle_command(ID_BRANCH_REBASE_DEFAULT);
+  gc_refresh_all_sync();
+  ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_REBASE);
+  ASSERT_TRUE(gc_operation_abort(err, sizeof(err)));
+  gc_refresh_all_sync();
+  ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_NONE);
+  char after[64];
+  ASSERT_TRUE(git_rev(root, "HEAD", after, sizeof(after)));
+  ASSERT_STR_EQUAL(after, before);
+
+  // A merge conflict is a merge: Abort runs merge --abort, not rebase --abort.
+  ASSERT_TRUE(gc_merge_branch("main", err, sizeof(err)) == false);
+  gc_refresh_all_sync();
+  ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_MERGE);
+  ASSERT_STR_EQUAL(g_test_state.op.onto, "main");
+  ASSERT_TRUE(gc_operation_abort(err, sizeof(err)));
+  gc_refresh_all_sync();
+  ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_NONE);
+  ASSERT_TRUE(git_rev(root, "HEAD", after, sizeof(after)));
+  ASSERT_STR_EQUAL(after, before);
+
+  // On the default branch itself there is nothing to rebase onto.
+  ASSERT_TRUE(gct_git(root, "checkout -q main"));
+  char onto[96];
+  ASSERT_FALSE(gc_rebase_onto_default(onto, sizeof(onto), err, sizeof(err)));
+  ASSERT_TRUE(strstr(err, "You are on main") != NULL);
+
+  destroy_window(host);
+  fe_unload_component_plugins();
+  ui_set_database(saved_db);
+  destroy_database(g_test_state.history_db);
+  destroy_database(g_test_state.changes_db);
+  destroy_database(g_test_state.github_db);
+  destroy_database(g_test_state.workspace_db);
+  test_graphics_shutdown();
+  test_env_shutdown();
+  g_test_state = saved;
+  gct_remove_dir(root);
+  PASS();
+}
+
 void test_activitybar_navigation(void) {
   TEST("activity bar: clicks and View commands select one page, preserve state and resize beside the rail");
   test_env_init();
@@ -1495,6 +1652,7 @@ int main(void) {
     test_overview_runs_targets_in_terminal();
     test_activitybar_navigation();
     test_agents_review_and_launch();
+    test_rebase_onto_main_resolve_continue_and_abort();
     test_history_latest_commit_diff();
     test_gitclient_pane_layout();
     test_push_badge_tracks_unpushed_commits();

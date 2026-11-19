@@ -63,6 +63,16 @@ typedef struct { char name[256]; char hash[41]; char date[20]; } git_tag_t;
 typedef struct { char ref[64]; char message[512]; char branch[256]; } git_stash_t;
 typedef struct git_repo_s git_repo_t;
 
+// A multi-step git operation the checkout is in the middle of (.git/rebase-merge, MERGE_HEAD, ...).
+typedef enum { GIT_OP_NONE, GIT_OP_REBASE, GIT_OP_MERGE, GIT_OP_CHERRY_PICK, GIT_OP_REVERT } git_op_kind_t;
+typedef struct {
+  git_op_kind_t kind;
+  int step, steps;              // rebase: the commit being replayed and how many there are (0 when unknown)
+  char branch[96];              // rebase: the branch being rebased
+  char onto[96];                // rebase: what it is rebased onto; merge: what is merged in
+  char subject[160];            // the commit that stopped (rebase, cherry-pick, revert) or the merge message
+} git_operation_t;
+
 #define GC_MAX_WORKTREES 16
 #define GC_MAX_CHECKOUTS 128
 #define GC_WORKSPACE_MAGIC "gitclient-workspace 1"
@@ -176,7 +186,6 @@ enum {
 #define gc_new_branch_dialog_form gitclient_new_branch_dialog_form
 #define gc_clone_dialog_form gitclient_clone_dialog_form
 #define gc_remote_dialog_form gitclient_remote_dialog_form
-#define gc_conflict_dialog_form gitclient_conflict_dialog_form
 #define gc_search_dialog_form gitclient_search_dialog_form
 #define gc_create_tag_dialog_form gitclient_create_tag_dialog_form
 #define gc_push_pull_dialog_form gitclient_push_pull_dialog_form
@@ -249,6 +258,7 @@ typedef struct {
   unsigned repo_generation;                // bumped whenever another repository is opened; stale results are dropped
   git_sync_status_t sync;                  // last status read for gc->repo
   bool sync_valid;
+  git_operation_t op;                      // the rebase, merge or pick in progress (kind GIT_OP_NONE when none)
   bool overview_loading, overview_stale;   // a background load is running / the workspace changed while it ran
   bool ephemeral;
   char workspace[GC_MAX_RECENT_REPOS][512];
@@ -286,15 +296,18 @@ bool gc_delete_branch(const char *name, bool remote);
 int  gc_delete_merged_branches(void);
 bool gc_prune_remote(const char *remote);
 bool gc_reload_history_log(const char *ref);
-bool gc_merge_branch(const char *name);
-bool gc_rebase_onto(const char *branch);
+bool gc_merge_branch(const char *name, char *err, size_t err_n);
+bool gc_rebase_onto(const char *branch, char *err, size_t err_n);
+bool gc_rebase_onto_default(char *onto, size_t onto_n, char *err, size_t err_n);   // onto = the base it used
+bool gc_operation_continue(char *err, size_t err_n);
+bool gc_operation_skip(char *err, size_t err_n);
+bool gc_operation_abort(char *err, size_t err_n);
 bool gc_rename_branch(const char *old_name, const char *new_name);
 bool gc_discard_file(const char *path);
 bool gc_discard_all(void);
 bool gc_stage_hunk(const char *path, int hunk_idx);
-int  gc_get_conflicted_files(char (*out)[512], int max);
-bool gc_conflict_resolve(const char *path, const char *strategy);
-void gc_abort_merge(void);
+bool gc_conflict_use_version(const char *path, bool mine, char *err, size_t err_n);
+bool gc_conflict_mark_resolved(const char *path, char *err, size_t err_n);
 bool gc_create_tag(const char *name, const char *ref);
 bool gc_delete_tag(const char *name);
 void gc_push_tags(void);
@@ -323,6 +336,8 @@ bool git_get_diff(git_repo_t *repo, const char *path, bool staged, char *buf, in
 int  git_get_branches(git_repo_t *repo, git_branch_t *out, int max);
 bool git_current_branch(git_repo_t *repo, char *buf, int buf_sz);
 bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz);
+bool git_get_operation(git_repo_t *repo, git_operation_t *out);
+bool git_rebase_base(git_repo_t *repo, char *buf, int buf_sz);   // the default branch's upstream when it has one, else the branch
 bool git_prune_remote(git_repo_t *repo, const char *remote);
 int  git_delete_merged_branches(git_repo_t *repo);
 int  git_get_remotes(git_repo_t *repo, char (*out)[256], int max);
@@ -346,6 +361,7 @@ typedef struct {
   unsigned generation;         // the open-repository generation this was started for
   int parts;
   git_sync_status_t sync;
+  git_operation_t op;             // read with GIT_SNAP_FILES
   git_file_status_t files[256];   int file_count;
   git_branch_t branches[256];     int branch_count;
   git_commit_t commits[500];      int commit_count; int commit_branch;   // log of the current branch (-1 = none)
@@ -362,6 +378,7 @@ bool git_workspace_checkouts_async(char (*roots)[512], int root_count, window_t 
 bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win);
 bool git_run_async(git_repo_t *repo, git_op_t op, const char *args[], window_t *notify_win);
 bool git_run_sync(git_repo_t *repo, const char *args[], char *buf, int buf_sz);
+bool git_run_sync_noedit(git_repo_t *repo, const char *args[], char *buf, int buf_sz);   // GIT_EDITOR=true: never waits on an editor
 void git_async_result_free(git_async_result_t *r);
 
 void gc_create_menubar(void);
@@ -435,7 +452,6 @@ bool gc_show_commit_dialog(window_t *parent, bool amend);
 bool gc_show_new_branch_dialog(window_t *parent);
 bool gc_show_switch_branch_dialog(window_t *parent);
 bool gc_show_rename_branch_dialog(window_t *parent, const char *cur_name);
-void gc_show_conflict_dialog(window_t *parent);
 void gc_show_create_tag_dialog(window_t *parent);
 void gc_show_push_pull_dialog(window_t *parent, git_op_t op);
 void gc_show_clone_dialog(window_t *parent);

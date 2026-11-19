@@ -268,6 +268,23 @@ bool git_run_sync(git_repo_t *repo, const char *args[],
   return rc == 0;
 }
 
+// Continue steps would otherwise open the user's editor for the commit message and wait on it.
+bool git_run_sync_noedit(git_repo_t *repo, const char *args[], char *buf, int buf_sz) {
+  if (!repo || !args) return false;
+  char cmd[GC_CMD_BUF_SIZE], full[GC_CMD_BUF_SIZE + 64];
+  gc_build_cmd(repo->path, args, cmd, sizeof(cmd));
+  if (!cmd[0]) return false;
+#ifdef _WIN32
+  snprintf(full, sizeof(full), "set \"GIT_EDITOR=true\" && %s", cmd);
+#else
+  char *git = strstr(cmd, " && git");
+  if (!git) return false;
+  snprintf(full, sizeof(full), "%.*s && GIT_EDITOR=true git%s", (int)(git - cmd), cmd, git + 7);
+#endif
+  GC_LOG("git_run_sync_noedit: %s", full);
+  return gc_popen_read(full, buf, buf_sz) == 0;
+}
+
 // ============================================================
 // Public: git log
 // ============================================================
@@ -545,6 +562,114 @@ bool git_default_branch(git_repo_t *repo, char *buf, int buf_sz) {
     }
   }
   return false;
+}
+
+// ── Operations in progress: rebase, merge, cherry-pick, revert ──────────────
+
+static bool git_file_line(const char *path, char *out, size_t n) {
+  FILE *f = fopen(path, "r");
+  if (!f) return false;
+  bool ok = fgets(out, (int)n, f) != NULL;
+  fclose(f);
+  if (ok) out[strcspn(out, "\r\n")] = '\0';
+  return ok && out[0];
+}
+
+static int git_file_int(const char *dir, const char *name) {
+  char path[1100], line[32];
+  snprintf(path, sizeof(path), "%s/%s", dir, name);
+  return git_file_line(path, line, sizeof(line)) ? atoi(line) : 0;
+}
+
+// A branch or remote branch pointing at hash, else the hash itself, shortened.
+static void git_commit_name(git_repo_t *repo, const char *hash, char *out, size_t n) {
+  char buf[2048] = {0};
+  const char *args[] = { "git", "for-each-ref", "--points-at", hash, "--format=%(refname:short)",
+                         "refs/heads", "refs/remotes", NULL };
+  if (git_run_sync(repo, args, buf, sizeof(buf))) {
+    buf[strcspn(buf, "\r\n")] = '\0';
+    if (buf[0] && !strchr(buf, ' ')) { snprintf(out, n, "%s", buf); return; }
+  }
+  snprintf(out, n, "%.12s", hash);
+}
+
+static void git_commit_subject(git_repo_t *repo, const char *rev, char *out, size_t n) {
+  char buf[512] = {0};
+  const char *args[] = { "git", "log", "-1", "--format=%s", rev, NULL };
+  out[0] = '\0';
+  if (git_run_sync(repo, args, buf, sizeof(buf))) { buf[strcspn(buf, "\r\n")] = '\0'; snprintf(out, n, "%s", buf); }
+}
+
+bool git_get_operation(git_repo_t *repo, git_operation_t *out) {
+  if (!out) return false;
+  memset(out, 0, sizeof(*out));
+  if (!repo) return false;
+  // --git-path answers for linked worktrees too, where .git is a file.
+  char buf[4096] = {0};
+  const char *args[] = { "git", "rev-parse", "--git-path", "rebase-merge", "--git-path", "rebase-apply",
+                         "--git-path", "MERGE_HEAD", "--git-path", "CHERRY_PICK_HEAD", "--git-path", "REVERT_HEAD",
+                         "--git-path", "MERGE_MSG", NULL };
+  if (!git_run_sync(repo, args, buf, sizeof(buf))) return false;
+  enum { P_REBASE_MERGE, P_REBASE_APPLY, P_MERGE_HEAD, P_PICK_HEAD, P_REVERT_HEAD, P_MERGE_MSG, P_COUNT };
+  char paths[P_COUNT][1100] = {{0}};
+  char *line = buf;
+  for (int i = 0; i < P_COUNT && line && *line; i++) {
+    char *nl = strchr(line, '\n');
+    if (nl) *nl = '\0';
+    gc_trim_line(line);
+    bool absolute = line[0] == '/' || (line[0] && line[1] == ':');
+    if (absolute) snprintf(paths[i], sizeof(paths[i]), "%s", line);
+    else snprintf(paths[i], sizeof(paths[i]), "%s/%s", repo->path, line);
+    line = nl ? nl + 1 : NULL;
+  }
+  struct stat st;
+  char head[256] = {0}, hash[96] = {0};
+  for (int dir = P_REBASE_MERGE; dir <= P_REBASE_APPLY; dir++) {
+    if (!paths[dir][0] || stat(paths[dir], &st) != 0) continue;
+    out->kind = GIT_OP_REBASE;
+    out->step  = git_file_int(paths[dir], dir == P_REBASE_MERGE ? "msgnum" : "next");
+    out->steps = git_file_int(paths[dir], dir == P_REBASE_MERGE ? "end" : "last");
+    char path[1200];
+    snprintf(path, sizeof(path), "%s/head-name", paths[dir]);
+    if (git_file_line(path, head, sizeof(head)))
+      snprintf(out->branch, sizeof(out->branch), "%s", strncmp(head, "refs/heads/", 11) ? head : head + 11);
+    snprintf(path, sizeof(path), "%s/onto", paths[dir]);
+    if (git_file_line(path, hash, sizeof(hash))) git_commit_name(repo, hash, out->onto, sizeof(out->onto));
+    git_commit_subject(repo, "REBASE_HEAD", out->subject, sizeof(out->subject));
+    return true;
+  }
+  if (paths[P_MERGE_HEAD][0] && git_file_line(paths[P_MERGE_HEAD], hash, sizeof(hash))) {
+    out->kind = GIT_OP_MERGE;
+    git_commit_name(repo, hash, out->onto, sizeof(out->onto));
+    if (!git_file_line(paths[P_MERGE_MSG], out->subject, sizeof(out->subject))) out->subject[0] = '\0';
+    return true;
+  }
+  if (paths[P_PICK_HEAD][0] && git_file_line(paths[P_PICK_HEAD], hash, sizeof(hash))) {
+    out->kind = GIT_OP_CHERRY_PICK;
+    git_commit_subject(repo, hash, out->subject, sizeof(out->subject));
+    return true;
+  }
+  if (paths[P_REVERT_HEAD][0] && git_file_line(paths[P_REVERT_HEAD], hash, sizeof(hash))) {
+    out->kind = GIT_OP_REVERT;
+    git_commit_subject(repo, hash, out->subject, sizeof(out->subject));
+    return true;
+  }
+  return true;
+}
+
+bool git_rebase_base(git_repo_t *repo, char *buf, int buf_sz) {
+  if (!repo || !buf || buf_sz <= 0) return false;
+  char def[256] = {0};
+  if (!git_default_branch(repo, def, sizeof(def))) { buf[0] = '\0'; return false; }
+  char spec[300], up[256] = {0};
+  snprintf(spec, sizeof(spec), "%s@{upstream}", def);
+  const char *args[] = { "git", "rev-parse", "--abbrev-ref", "--verify", "--quiet", spec, NULL };
+  if (git_run_sync(repo, args, up, sizeof(up))) {
+    up[strcspn(up, "\r\n")] = '\0';
+    if (up[0]) { snprintf(buf, (size_t)buf_sz, "%s", up); return true; }
+  }
+  snprintf(buf, (size_t)buf_sz, "%s", def);
+  return true;
 }
 
 static int git_branch_rank(const git_branch_t *b) {
@@ -1124,7 +1249,10 @@ git_repo_snapshot_t *git_repo_snapshot_read(const char *path, int parts, unsigne
   snprintf(s->path, sizeof(s->path), "%s", repo.path);
   s->parts = parts; s->generation = generation; s->commit_branch = -1;
   if (parts & GIT_SNAP_SYNC) git_get_sync_status(&repo, &s->sync);
-  if (parts & GIT_SNAP_FILES) s->file_count = git_get_status(&repo, s->files, ARRAY_LEN(s->files));
+  if (parts & GIT_SNAP_FILES) {
+    s->file_count = git_get_status(&repo, s->files, ARRAY_LEN(s->files));
+    git_get_operation(&repo, &s->op);
+  }
   if (parts & GIT_SNAP_HISTORY) {
     s->branch_count = git_get_branches(&repo, s->branches, ARRAY_LEN(s->branches));
     for (int b = 0; b < s->branch_count; b++) {

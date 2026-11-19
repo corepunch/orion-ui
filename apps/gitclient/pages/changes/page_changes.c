@@ -4,6 +4,56 @@
 #include "../../gc_actions.h"
 #include <ctype.h>
 
+// The bar above Changes while a rebase, merge or pick is stopped: what it is, where it is, what is left.
+static void page_changes_update_operation(int conflicts) {
+  gc_state_t *gc = g_gc;
+  window_t *bar = gc->changes_page_win ? get_window_item(gc->changes_page_win, ID_CHANGES_PAGE_OPERATION_BAR) : NULL;
+  if (!bar) return;
+  const git_operation_t *op = &gc->op;
+  bool on = gc->repo && op->kind != GIT_OP_NONE;
+  if (window_has_state(bar, WINDOW_STATE_VISIBLE) != on) {
+    show_window(bar, on);
+    window_layout_sync(gc->changes_page_win);
+  }
+  if (!on) return;
+  char title[400] = {0}, detail[400] = {0};
+  switch (op->kind) {
+    case GIT_OP_REBASE:
+      if (op->branch[0]) snprintf(title, sizeof(title), ui_tr("Rebasing %s onto %s"), op->branch, op->onto);
+      else snprintf(title, sizeof(title), ui_tr("Rebasing onto %s"), op->onto);
+      if (op->steps > 0 && op->subject[0]) snprintf(detail, sizeof(detail), ui_tr("Commit %d of %d: %s"), op->step, op->steps, op->subject);
+      else if (op->steps > 0) snprintf(detail, sizeof(detail), ui_tr("Commit %d of %d"), op->step, op->steps);
+      break;
+    case GIT_OP_MERGE:
+      if (gc->sync.head[0]) snprintf(title, sizeof(title), ui_tr("Merging %s into %s"), op->onto, gc->sync.head);
+      else snprintf(title, sizeof(title), ui_tr("Merging %s"), op->onto);
+      snprintf(detail, sizeof(detail), "%s", op->subject);
+      break;
+    case GIT_OP_CHERRY_PICK: snprintf(title, sizeof(title), "%s", ui_tr("Cherry-picking a commit")); snprintf(detail, sizeof(detail), "%s", op->subject); break;
+    case GIT_OP_REVERT:      snprintf(title, sizeof(title), "%s", ui_tr("Reverting a commit"));      snprintf(detail, sizeof(detail), "%s", op->subject); break;
+    case GIT_OP_NONE: break;
+  }
+  set_window_item_text(bar, ID_CHANGES_PAGE_OPERATION_TITLE, "%s", title);
+  set_window_item_text(bar, ID_CHANGES_PAGE_OPERATION_DETAIL, "%s", detail);
+  window_t *badge = get_window_item(bar, ID_CHANGES_PAGE_OPERATION_STATE);
+  if (badge) {
+    char text[64];
+    if (conflicts == 1) snprintf(text, sizeof(text), "%s", ui_tr("1 conflict"));
+    else if (conflicts) snprintf(text, sizeof(text), ui_tr("%d conflicts"), conflicts);
+    else snprintf(text, sizeof(text), "%s", ui_tr("Ready to continue"));
+    set_window_title(badge, text);
+    send_message(badge, btnSetIconName, 0, (void *)(conflicts ? "gc-x-circle" : "gc-check-circle"));
+    send_message(badge, bdSetColor, conflicts ? brTextError : brTextSuccess, NULL);
+  }
+  window_t *cont = get_window_item(bar, ID_BRANCH_CONTINUE), *skip = get_window_item(bar, ID_BRANCH_SKIP);
+  if (cont) {
+    enable_window(cont, conflicts == 0);
+    send_message(cont, btnSetTooltip, 0, (void *)ui_tr(conflicts ? "Resolve every conflicted file first: use a version or edit it, then Mark Resolved" : "Go on with the next step"));
+  }
+  if (skip) show_window(skip, op->kind != GIT_OP_MERGE);
+  window_layout_sync(bar);
+}
+
 void page_changes_update_commit(void) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->main_win) return;
@@ -15,6 +65,7 @@ void page_changes_update_commit(void) {
     count++; staged += file->staged; conflicts += file->status[0] == 'U';
   }
   free_result_list(rows);
+  page_changes_update_operation(conflicts);
   window_t *all = get_window_item(gc->main_win, ID_CHANGES_PAGE_STAGE_ALL);
   window_t *commit = get_window_item(gc->main_win, ID_CHANGES_PAGE_COMMIT_NOW);
   window_t *summary = get_window_item(gc->main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
@@ -145,6 +196,11 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
         gc_refresh_all();
       }
     }
+    return true;
+  }
+
+  if (code == btnClicked && (id == ID_BRANCH_CONTINUE || id == ID_BRANCH_SKIP || id == ID_BRANCH_ABORT)) {
+    (void)gc_execute_action(id);
     return true;
   }
 

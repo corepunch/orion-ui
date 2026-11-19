@@ -81,6 +81,38 @@ build/bin/gitclient /tmp/ws/work/api-gateway
 ![Overview](../../docs/screenshots/gitclient_overview.jpg)
 ![Focus](../../docs/screenshots/gitclient_focused.jpg)
 
+## Rebasing and resolving conflicts
+
+**Branch → Rebase onto Default Branch** (the ribbon's **Rebase onto Main**)
+rebases the current branch onto the default branch: onto its upstream, such as
+`origin/main`, when it tracks one, otherwise onto the local branch. It is
+refused on the default branch itself. **Rebase onto Selected Branch** uses the
+branch selected in History, and **Merge Into Current** merges it. Rebases run
+with `--autostash`, so uncommitted changes come back when the rebase ends or is
+aborted.
+
+When a rebase, merge, cherry-pick or revert stops, Git Client opens Changes with
+a bar above the panes. The bar names the operation and the commit that stopped
+("Rebasing feature onto origin/main", "Commit 2 of 5: ..."). Its badge counts
+the conflicted files, and the status bar repeats the progress. Conflicted files
+carry a red icon. Resolve each one from the file menu, the context menu or the
+ribbon's **Resolve** group:
+
+| Command | Effect |
+|---|---|
+| Use My Version | Keeps the current branch's side. During a rebase that is the commit being replayed (git's `--theirs`); in a merge or pick it is `--ours`. |
+| Use Their Version | Keeps the other side. |
+| Mark Resolved | Stages a file edited by hand; refused while `<<<<<<<` or `>>>>>>>` markers remain. |
+
+**Continue** is enabled once no conflicts remain. It runs `rebase --continue`,
+`cherry-pick --continue` or `revert --continue`, or commits the merge, with
+`GIT_EDITOR=true` so no editor opens. If the next commit conflicts too, the bar
+moves on to it. **Skip Commit** (not for merges) leaves out the commit that
+stopped, after a confirmation. **Abort** runs the operation's own `--abort` and
+puts the branch back as it was. When a step fails, the message box shows git's
+own explanation. The state comes from the repository (`rebase-merge`,
+`MERGE_HEAD`, ...), so it also shows for operations started in a terminal.
+
 ## Agent tasks
 
 Open **Agents** (Ctrl+4), then **Start Three Agents**. Enter one task per row
