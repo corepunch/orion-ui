@@ -393,6 +393,12 @@ lua-docs-check: $(CGEN_BIN)
 launch-check:
 	@python3 -I tools/launch_check.py .
 
+# Xcode project generation and resource bundling, e.g. the theme sheets App Store
+# builds need at runtime (App Review 2.1(a), Jamsheet 1.1 build 116).
+.PHONY: xcode-check
+xcode-check:
+	@cd tools/xcode && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s . -p 'test_*.py'
+
 # Lua bindings, editor metadata and reference share an XML source of truth.
 LEDGER_API_XML = apps/ledger/ledger-api.xml
 LEDGER_API_HEADER = $(GENERATED_DIR)/apps/ledger/ledger_api.h
@@ -546,7 +552,7 @@ plugins: $(COMPONENT_PLUGIN_BINS)
 # orionc, cgen) are left out so the refresh cannot form a cycle.
 LINKED_BINS      = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(BIN_DIR)/doom-ed$(EXE_EXT) $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
 BUILT_APP_BINS   = $(filter-out $(MAKECMDGOALS),$(wildcard $(LINKED_BINS)))
-NO_REFRESH_GOALS = clean help install% ipad% android% mac-deploy list-devices app-source check-lua launch-check .launch-check-database refresh-built-apps
+NO_REFRESH_GOALS = clean help install% ipad% android% mac-deploy list-devices app-source check-lua launch-check xcode-check .launch-check-database refresh-built-apps
 NO_REFRESH_FILES = $(filter-out $(LINKED_BINS) $(TEST_BINS),$(filter $(BUILD_DIR)/%,$(MAKECMDGOALS)))
 REFRESH_GOALS    = $(filter-out $(NO_REFRESH_GOALS) $(NO_REFRESH_FILES),$(MAKECMDGOALS))
 .PHONY: refresh-built-apps
@@ -667,7 +673,7 @@ $(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: tools/app_sources.mk $(CORE_LIB
 # ── Tests ────────────────────────────────────────────────────────────────
 include apps/doom-ed/build.mk
 
-test: share $(TEST_BINS) lua-docs-check launch-check
+test: share $(TEST_BINS) lua-docs-check launch-check xcode-check
 	@echo "Running tests..."
 	python3 apps/ledger/tests/test_1cd_extract.py
 	python3 apps/ledger/tests/test_1cd_stage.py
