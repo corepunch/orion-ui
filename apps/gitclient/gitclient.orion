@@ -127,11 +127,17 @@
     </menus>
 
     <!-- Standalone, Git Client's commands are a ribbon: File is the application menu and the
-         Home tab holds the everyday commands. Commit and Stash live beside the message on
-         Changes, so the ribbon does not repeat them. As a gem the shell owns the menu row,
-         so the menus above and the toolbar below serve there. -->
+         everyday commands stay beside the tabs as the Quick Access Toolbar. As a gem the shell
+         owns the menu row, so the menus above and the toolbar below serve there. -->
     <ribbon>
         <ApplicationMenu menu="file" />
+        <QuickAccessToolbar>
+            <Button command="remote.sync" icon="data-transfer-both" tooltip="Publish, pull, or push the current branch" />
+            <Button command="remote.fetch" icon="git-fetch" tooltip="Fetch from remote" />
+            <Button command="commit.commit" icon="git-commit" tooltip="Commit staged changes" />
+            <Button command="repo.search" icon="search" tooltip="Search repository history" />
+            <Button command="repo.refresh" icon="refresh" tooltip="Refresh" />
+        </QuickAccessToolbar>
         <Tab label="Home">
             <Group label="Sync">
                 <Button command="remote.sync" icon="data-transfer-both" text="Sync" size="large" tooltip="Publish, pull, or push the current branch" />
@@ -140,6 +146,7 @@
                 <Button command="remote.push" icon="upload" text="Push" />
             </Group>
             <Group label="Commit">
+                <Button command="commit.commit_now" icon="git-commit" text="Commit" size="large" tooltip="Commit the staged files with the message in Changes (Ctrl+Enter)" />
                 <Button command="commit.commit" icon="chat-lines" text="Write Message" tooltip="Go to the commit message in Changes (Ctrl+K)" />
                 <Button command="commit.amend" icon="edit-pencil" text="Amend Last" tooltip="Amend the last commit" />
                 <Button command="commit.undo" icon="undo" text="Undo Last" tooltip="Undo the last commit" />
@@ -154,6 +161,7 @@
                 <Button command="files.discard" icon="trash" text="Discard" tooltip="Discard the selected file's changes" />
             </Group>
             <Group label="Stash">
+                <Button command="commit.stash" icon="import" text="Stash" tooltip="Stash changes" />
                 <Button command="commit.stash_pop" icon="upload-square" text="Pop" tooltip="Pop the stash" />
                 <Button command="commit.stash_drop" icon="xmark" text="Drop" tooltip="Drop a stash" />
             </Group>
