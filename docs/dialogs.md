@@ -57,6 +57,10 @@ void end_dialog(window_t *win, uint32_t code);
 `win` may be the dialog window itself or **any child** (e.g. a button).
 `code` is returned to the `show_dialog[_from_form]` caller.
 
+**Enter and Escape.** Enter presses the dialog's `BUTTON_DEFAULT` button when the focused control
+does not use the key. Escape ends the dialog with `-1`, as its close box does (`IDCANCEL` in a
+WinAPI dialog); text fields leave editing and pass Escape on, as an EDIT leaves `VK_ESCAPE` to its dialog.
+
 **Conventions:**
 
 | Code | Meaning |

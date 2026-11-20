@@ -873,6 +873,10 @@ void dispatch_message(ui_event_t *msg) {
             send_message(def, evLeftButtonDown, 0, NULL);
             send_message(def, evLeftButtonUp, 0, NULL);
           }
+        } else if (key == AX_KEY_ESCAPE) {
+          // Escape cancels a dialog the way its close box does (IDCANCEL in a WinAPI dialog).
+          window_t *root = get_root_window(g_ui_runtime.focused);
+          if (root && (root->flags & WINDOW_DIALOG)) end_dialog(root, -1);
         } else if (key == AX_KEY_F12) {
           char path[1024];
           time_t now = time(NULL);

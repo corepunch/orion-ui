@@ -320,6 +320,23 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       } else {
         return false;
       }
+    case edSetText:   // selects the item with this text (CB_SELECTSTRING), so a DDX_TEXT binding round-trips
+      for (uint32_t i = 0; lparam && i < win->cursor_pos; i++) {
+        if (strncmp(texts[i], (const char *)lparam, sizeof(combobox_string_t))) continue;
+        strncpy(win->title, texts[i], sizeof(win->title));
+        win->title[sizeof(win->title) - 1] = '\0';
+        invalidate_window(win);
+        return true;
+      }
+      if (lparam && ((const char *)lparam)[0]) {
+        fprintf(stderr, "[combobox] set text rejected win=%u text=\"%s\": no such item among %u\n",
+                win->id, (const char *)lparam, (unsigned)win->cursor_pos);
+        fflush(stderr);
+      }
+      return false;
+    case edGetText:   // wparam = buffer size, lparam = buffer: the selected item's text
+      if (lparam && wparam) snprintf((char *)lparam, wparam, "%s", win->title);
+      return (result_t)strlen(win->title);
     case cbGetCurrentSelection:
       for (uint32_t i = 0; i < win->cursor_pos; i++) {
         if (!strncmp(texts[i], win->title, sizeof(win->title))) {

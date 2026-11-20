@@ -51,6 +51,25 @@ static void begin_editing(window_t *ed) {
 
 // ── tests ─────────────────────────────────────────────────────────────────
 
+void test_edit_escape_reaches_the_dialog(void) {
+    TEST("win_textedit: Escape leaves editing and is not consumed, so a dialog can cancel");
+
+    test_env_init();
+    window_t *parent = test_env_create_window("P", 0, 0, 200, 100, edit_parent_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *ed = make_edit(parent, 1, "draft");
+    ASSERT_NOT_NULL(ed);
+    begin_editing(ed);
+    ASSERT_TRUE(window_has_state(ed, WINDOW_STATE_EDITING));
+    ASSERT_FALSE(send_message(ed, evKeyDown, AX_KEY_ESCAPE, NULL));
+    ASSERT_FALSE(window_has_state(ed, WINDOW_STATE_EDITING));
+    ASSERT_STR_EQUAL(ed->title, "draft");
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 void test_edit_initial_text(void) {
     TEST("win_textedit: create with initial text preserves it");
 
@@ -494,6 +513,7 @@ int main(int argc, char *argv[]) {
     test_edit_change_notifies_parent_per_edit();
     test_edit_leading_icon();
     test_edit_utf8();
+    test_edit_escape_reaches_the_dialog();
 
     TEST_END();
 }

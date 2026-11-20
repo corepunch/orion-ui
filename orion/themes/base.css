@@ -358,6 +358,7 @@ Terminal, DiffView { font: var(--text-mono); }
    colours map onto the status roles. */
 DiffView {
   background: var(--column-view-bg); color: var(--text-normal);
+  padding-left: 8px; --meta-color: var(--text-secondary);   /* file headers (diff, index, ---, +++) step back */
   --hunk-selection: color-mix(in srgb, var(--accent) 14%, var(--column-view-bg));
   --ansi-black: var(--text-secondary); --ansi-red:     var(--text-error);   --ansi-green: var(--text-success); --ansi-yellow: var(--text-warning);
   --ansi-blue:  var(--text-info);      --ansi-magenta: var(--folder-text);  --ansi-cyan:  var(--text-info);    --ansi-white:  var(--text-normal);

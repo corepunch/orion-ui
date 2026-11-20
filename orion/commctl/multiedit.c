@@ -419,7 +419,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           return false;
 
         case AX_KEY_ESCAPE:
-          return true;
+          return false;   // a dialog cancels
 
         default:
           return false;

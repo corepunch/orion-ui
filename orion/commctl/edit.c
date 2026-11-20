@@ -185,9 +185,9 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
             window_set_state(win, WINDOW_STATE_EDITING, false);
           }
           break;
-        case AX_KEY_ESCAPE:
+        case AX_KEY_ESCAPE:   // leaves editing; the key goes on, so a dialog cancels (as an EDIT leaves VK_ESCAPE to its dialog)
           window_set_state(win, WINDOW_STATE_EDITING, false);
-          break;
+          return false;
         case AX_KEY_BACKSPACE:
           if (win->cursor_pos > 0 && window_has_state(win, WINDOW_STATE_EDITING)) {
             int previous = edit_previous(win->title, win->cursor_pos);

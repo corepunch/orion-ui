@@ -552,7 +552,8 @@ reported on stderr.
   secondary text, with the pair centred in a taller row; the other columns
   keep their widths and alignment beside it (`REPORTVIEW_CELL_STACKED`). It
   suits summaries such as "Касса организации" over "50.01", with the balance
-  on the right. Stacked lists read as rows and draw no column dividers.
+  on the right. Stacked lists read as rows and draw no column dividers, and
+  neither does a list with `column-titles="false"`.
   (`two-line` instead joins every other column into the subtitle.)
 - `color="info"` on a `<Column>` draws that column's text in a theme role
   (the RowIcon roles), for an action caption ("Post", "Close Month") or
@@ -602,6 +603,10 @@ with a polymorphic relation; code can too:
 send_message(combo, cbSetSource, (uint32_t)schema->table_id, ib);
 send_message(combo, cbSetCurrentValue, (uint32_t)record->debit_subconto_id, NULL);
 ```
+
+`edSetText` selects the item whose text matches, like `CB_SELECTSTRING`, and returns false (logging
+the request) when no item has that text; `edGetText` copies the selected item's text. A `DDX_TEXT`
+binding on a ComboBox therefore pre-selects the bound value and reads the choice back.
 
 ## TabView
 

@@ -61,6 +61,33 @@ void test_cb_add_string(void) {
     PASS();
 }
 
+void test_cb_set_text_selects_item(void) {
+    TEST("win_combobox: edSetText selects the item with that text (CB_SELECTSTRING); edGetText reads it");
+
+    test_env_init();
+    window_t *parent = test_env_create_window("P", 0, 0, 200, 100, cb_parent_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    window_t *cb = make_combobox(parent, 1);
+    ASSERT_NOT_NULL(cb);
+    send_message(cb, cbAddString, 0, "main");
+    send_message(cb, cbAddString, 0, "feature");
+    send_message(cb, cbAddString, 0, "review");
+    ASSERT_EQUAL((int)send_message(cb, cbGetCurrentSelection, 0, NULL), 2);   // the last item added
+
+    ASSERT_TRUE(send_message(cb, edSetText, 0, (void *)"main"));
+    ASSERT_EQUAL((int)send_message(cb, cbGetCurrentSelection, 0, NULL), 0);
+    char text[32] = {0};
+    ASSERT_EQUAL((int)send_message(cb, edGetText, sizeof(text), text), 4);
+    ASSERT_STR_EQUAL(text, "main");
+
+    ASSERT_FALSE(send_message(cb, edSetText, 0, (void *)"missing"));   // rejected, logged, selection kept
+    ASSERT_EQUAL((int)send_message(cb, cbGetCurrentSelection, 0, NULL), 0);
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 void test_cb_get_list_box_text(void) {
     TEST("win_combobox: cbGetListBoxText retrieves text by index");
 
@@ -614,6 +641,7 @@ int main(int argc, char *argv[]) {
     test_cb_dropdown_outside_click_cancels();
     test_cb_dropdown_mouse_click_commits_selection();
     test_cb_dropdown_scrolled_mouse_click_commits_visible_item();
+    test_cb_set_text_selects_item();
 
     TEST_END();
 }

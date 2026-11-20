@@ -312,10 +312,13 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     int sep_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
     ctrl_state_t divider_state = (int)col == data->resize_hot_col && data->resize_col < 0 ? CTRL_HOVER : CTRL_NORMAL;
 #if REPORTVIEW_RESIZE_FULL_HEIGHT
-    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections && data->cell_style != REPORTVIEW_CELL_STACKED)   // grouped and stacked lists read as rows
-      theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
+    // Grouped, stacked and untitled lists read as rows; an empty list's cue text runs under the header only.
+    int divider_h = !data->count && data->placeholder[0] ? header_h : cr.h;
+    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections && data->cell_style != REPORTVIEW_CELL_STACKED &&
+        data->column_titles_visible && divider_h > 0)
+      theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, divider_h), divider_state);
 #else
-    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
+    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections && data->column_titles_visible)   // grouped and untitled lists read as rows
       theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x, header_h, 1, cr.h - header_h), CTRL_NORMAL);
     if (header_h > 0 && sep_x >= 0 && sep_x <= eff_w)
       theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, header_h), divider_state);
