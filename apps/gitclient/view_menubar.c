@@ -132,6 +132,9 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_VIEW_WORKTREES:
       gc_show_worktrees_dialog(gc->main_win);
       break;
+    case ID_VIEW_SPLIT_DIFF:
+      gc_diff_set_split(!gc->split_diff);
+      break;
     case ID_FILE_OPEN_REPO: {
       char path[512] = {0};
       openfilename_t ofn = {0};

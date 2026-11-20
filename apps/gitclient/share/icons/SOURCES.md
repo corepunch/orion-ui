@@ -39,6 +39,7 @@ same revision (`assets/regular/<name>.svg`), saved with a `gc-` prefix:
 | gc-arrow-line-up.svg | arrow-line-up | show the hidden lines above a hunk |
 | gc-arrow-line-down.svg | arrow-line-down | show the hidden lines below a hunk |
 | gc-arrows-out-line-vertical.svg | arrows-out-line-vertical | show all the hidden lines between two hunks |
+| gc-columns.svg | columns | View > Side by Side diff |
 
 The Changes pair uses Bootstrap Icons v1.13.1's `file-diff` and `file-diff-fill`,
 which show additions and deletions on a document. Blind review found Phosphor's

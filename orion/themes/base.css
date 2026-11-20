@@ -370,6 +370,7 @@ DiffView {
   --removed-gutter:     color-mix(in srgb, var(--text-error) 22%, var(--column-view-bg));
   --removed-inner:      color-mix(in srgb, var(--text-error) 34%, var(--column-view-bg));
   --hunk-background:    color-mix(in srgb, var(--accent) 8%, var(--column-view-bg));
+  --empty-background:   color-mix(in srgb, var(--text-normal) 3%, var(--column-view-bg));   /* side by side: no counterpart */
   --hunk-selection:     color-mix(in srgb, var(--accent) 18%, var(--column-view-bg));
   --included-gutter: var(--accent); --included-color: var(--accent-text);   /* lines the commit takes */
 }

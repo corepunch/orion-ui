@@ -594,7 +594,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 73);
+    ASSERT_EQUAL(gitclient_action_meta_count, 74);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -1265,7 +1265,8 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
   irect16_t content = window_scroll_content_rect(diff);
   int row_h = text_line_height("DiffView");
   #define ROW_OF(line_index) diff_row_of(diff, (line_index))
-  #define CLICK(x, row) send_message(diff, evLeftButtonDown, MAKEDWORD((x), content.y + (row) * row_h + row_h / 2), NULL)
+  #define AT(x, row) MAKEDWORD((x), content.y + (row) * row_h + row_h / 2)
+  #define CLICK(x, row) (send_message(diff, evLeftButtonDown, AT(x, row), NULL), send_message(diff, evLeftButtonUp, AT(x, row), NULL))
   CLICK(content.x + 2, ROW_OF(st->hunk_offsets[1]));
   ASSERT_EQUAL(st->hunk_count, 1);
   int seven = -1;
@@ -1296,8 +1297,37 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
   st->current_hunk = 0;
   send_message(diff, evKeyDown, AX_KEY_ENTER, NULL);
   ASSERT_TRUE(gct_git(root, "diff --cached --quiet"));
+
+  // A drag down the gutter takes every line it crosses, and the index is written once, on release.
+  int first_del = -1, last_add = -1;
+  for (int i = 0; i < st->line_count; i++) {
+    if (st->lines[i].kind == GC_DIFF_DEL && first_del < 0) first_del = i;
+    if (st->lines[i].kind == GC_DIFF_ADD) last_add = i;
+  }
+  send_message(diff, evLeftButtonDown, AT(content.x + 2, ROW_OF(first_del)), NULL);
+  send_message(diff, evMouseMove, AT(content.x + 2, ROW_OF(last_add)), NULL);
+  ASSERT_TRUE(gct_git(root, "diff --cached --quiet"));   // nothing written mid-drag
+  send_message(diff, evLeftButtonUp, AT(content.x + 2, ROW_OF(last_add)), NULL);
+  ASSERT_TRUE(gct_git(root, "diff --quiet"));           // all four lines staged
+  st = diff->userdata;
+
+  // Side by side, a removed line and the added line that replaced it share a row;
+  // the new half's gutter takes only the addition out.
+  gc_diff_set_split(true);
+  ASSERT_TRUE(st->split);
+  send_message(diff, evPaint, 0, NULL);
+  int pair_row = -1;
+  for (int r = 0; r < st->row_count; r++)
+    if (st->rows[r].split && st->rows[r].line >= 0 && !strcmp(st->lines[st->rows[r].line].text, "two") &&
+        st->rows[r].right.line >= 0 && !strcmp(st->lines[st->rows[r].right.line].text, "Two!")) pair_row = r;
+  ASSERT_TRUE(pair_row >= 0);
+  CLICK(content.x + content.w / 2 + 2, pair_row);
+  ASSERT_FALSE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx -- '-two'"));
+  gc_diff_set_split(false);
   #undef ROW_OF
   #undef CLICK
+  #undef AT
   ASSERT_TRUE(gct_git(root, "reset -q --hard"));
 
   destroy_window(host);

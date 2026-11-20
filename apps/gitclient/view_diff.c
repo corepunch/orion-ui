@@ -173,5 +173,20 @@ void gc_diff_refresh(void) {
 }
 
 void gc_diff_set_text(window_t *win, const char *text) {
-  if (win) send_message(win, edSetText, 0, (void *)text);
+  if (!win) return;
+  gc_diff_state_t *st = win->userdata;
+  if (st && g_gc && st->split != g_gc->split_diff) send_message(win, dvSetSplit, g_gc->split_diff, NULL);
+  send_message(win, edSetText, 0, (void *)text);
+}
+
+void gc_diff_set_split(bool split) {
+  gc_state_t *gc = g_gc;
+  if (!gc) return;
+  gc->split_diff = split;
+  window_t *ribbon = gc->chrome_win ? app_chrome_ribbon(gc->chrome_win) : NULL;
+  if (ribbon) send_message(ribbon, rbSetState, ID_VIEW_SPLIT_DIFF, (void *)(uintptr_t)(split ? TBSTATE_CHECKED : 0));
+  window_t *agents = gc->agents_page_win ? get_window_item(gc->agents_page_win, ID_AGENTS_PAGE_REVIEW_DIFF) : NULL;
+  window_t *views[] = { gc->changes_diff_win, gc->history_diff_win, agents };
+  for (size_t i = 0; i < sizeof(views) / sizeof(views[0]); i++)
+    if (views[i]) send_message(views[i], dvSetSplit, split, NULL);
 }

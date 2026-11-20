@@ -451,4 +451,7 @@
   <string source="Update Remote" where="code">Изменение удалённого репозитория</string>
   <string source="Upstream branch is gone" where="code">Вышестоящая ветка удалена</string>
   <string source="launch.xml has errors" where="code">В launch.xml есть ошибки</string>
+  <string source="Side-by-Side Diff" where="menu">Изменения рядом</string>
+  <string source="Side by Side">Рядом</string>
+  <string source="Show the old and new file next to each other">Показать старую и новую версии файла рядом</string>
 </strings>

@@ -67,7 +67,7 @@ static void pair_run(gc_diff_state_t *st, int from, int to) {
 static void parse_diff(window_t *win, gc_diff_state_t *st) {
   free(st->lines);
   st->lines = NULL;
-  st->line_count = st->hunk_count = st->row_count = st->wrap_cols = 0;
+  st->line_count = st->hunk_count = st->row_count = st->wrap_width = 0;
   st->current_hunk = -1;
 
   int count = 1;
@@ -168,7 +168,7 @@ static bool insert_context(gc_diff_state_t *st, int at, int hunk, int first, int
                                           .old_no = first + k + old_offset, .new_no = first + k, .hunk = hunk };
   st->line_count += count;
   for (int h = 0; h < st->hunk_count; h++) if (st->hunk_offsets[h] >= at) st->hunk_offsets[h] += count;
-  st->wrap_cols = 0;
+  st->wrap_width = 0;
   return true;
 }
 
@@ -181,7 +181,7 @@ static void merge_hunk(gc_diff_state_t *st, int h) {
   for (int k = h; k + 1 < st->hunk_count; k++) st->hunk_offsets[k] = st->hunk_offsets[k + 1] - 1;
   st->hunk_count--;
   if (st->current_hunk >= h) st->current_hunk = MAX(0, st->current_hunk - 1);
-  st->wrap_cols = 0;
+  st->wrap_width = 0;
 }
 
 // Show new-side lines [first, end) wherever they border a hunk.
@@ -249,7 +249,7 @@ static void set_source(window_t *win, gc_diff_state_t *st, const char *text) {
   for (int n = st->source_count; n >= 10; n /= 10) digits++;
   st->number_digits = MAX(st->number_digits, digits);
   for (int r = 0; r < st->revealed_count; r++) reveal_lines(st, st->revealed[r].first, st->revealed[r].end);
-  st->wrap_cols = 0;
+  st->wrap_width = 0;
 }
 
 static int gap_size(const gc_diff_state_t *st, int h) { hunk_span_t g = gap_before(st, h); return MAX(0, g.end - g.first); }
@@ -258,7 +258,7 @@ static int gap_size(const gc_diff_state_t *st, int h) { hunk_span_t g = gap_befo
 
 typedef struct {
   int cw, lh, ch;                // cell width, row height, glyph height
-  int pad, check, number, marker, text_x, right;
+  int pad, check, number, marker, text_x, right;   // offsets within a column: the view, or one half
 } diff_metrics_t;
 
 static diff_metrics_t diff_metrics(const gc_diff_state_t *st) {
@@ -270,7 +270,7 @@ static diff_metrics_t diff_metrics(const gc_diff_state_t *st) {
   m.check  = ui_px("DiffView", "--check-size") + m.pad;
   m.number = st->number_digits * m.cw + m.pad;
   m.marker = 2 * m.cw;
-  m.text_x = m.check + 2 * m.number + m.pad + m.marker;
+  m.text_x = m.check + (st->split ? 1 : 2) * m.number + m.pad + m.marker;   // split: each half numbers one side
   m.right  = ui_px("DiffView", "padding-right");
   return m;
 }
@@ -332,49 +332,87 @@ static bool push_row(gc_diff_state_t *st, int rows, gc_diff_row_t row) {
   return true;
 }
 
-// Wrap every line to cols columns, breaking after the last space that fits.
-// A last row, line == line_count, holds the button that shows the lines after
-// the last hunk. Returns the row count; rows are stored only when store is set.
-static int layout_rows(gc_diff_state_t *st, int cols, bool store) {
+// Cut line i into slices of at most cols columns, breaking after the last space that fits.
+static int wrap_line(const gc_diff_state_t *st, int i, int cols, gc_diff_cell_t *out, int max) {
   static text_cell_t cells[DIFF_MAX_CELLS];
-  int rows = 0;
+  int n = line_cells(st, &st->lines[i], cells, DIFF_MAX_CELLS, 0, 0), start = 0, count = 0;
+  do {
+    int len = MIN(cols, n - start);
+    if (start + len < n) {
+      int brk = len;
+      while (brk > 0 && cells[start + brk - 1].codepoint != ' ') brk--;
+      if (brk > 0) len = brk;
+    }
+    if (count < max) out[count++] = (gc_diff_cell_t){i, start, len};
+    start += len;
+  } while (start < n);
+  return count;
+}
+
+static int text_columns(const gc_diff_state_t *st, int width) {
+  diff_metrics_t m = diff_metrics(st);
+  return MAX(8, (width - m.text_x - m.right) / m.cw);
+}
+
+static bool spans_view(const gc_diff_line_t *l) { return l->kind == GC_DIFF_HUNK || l->kind == GC_DIFF_META || l->kind == GC_DIFF_NOTE; }
+
+// Lay the lines out in rows for a view width pixels wide. Side by side, each run
+// of removed and added lines pairs up line by line, as GitHub Desktop pairs them,
+// and the shorter side leaves empty cells. A last row, line == line_count, holds
+// the button that shows the lines after the last hunk. Returns the row count;
+// rows are stored only when store is set.
+static int layout_rows(gc_diff_state_t *st, int width, bool store) {
+  static gc_diff_cell_t a[DIFF_MAX_CELLS], b[DIFF_MAX_CELLS];
+  static int dels[DIFF_MAX_CELLS], adds[DIFF_MAX_CELLS];
+  int full = text_columns(st, width), half = text_columns(st, width / 2), rows = 0;
+  const gc_diff_cell_t none = {-1, 0, 0};
   for (int i = 0; i < st->line_count; i++) {
-    if (line_hidden(st, &st->lines[i])) continue;
-    int n = line_cells(st, &st->lines[i], cells, DIFF_MAX_CELLS, 0, 0), start = 0;
-    do {
-      int len = MIN(cols, n - start);
-      if (start + len < n) {
-        int brk = len;
-        while (brk > 0 && cells[start + brk - 1].codepoint != ' ') brk--;
-        if (brk > 0) len = brk;
+    const gc_diff_line_t *l = &st->lines[i];
+    if (line_hidden(st, l)) continue;
+    if (!st->split || spans_view(l)) {
+      int k = wrap_line(st, i, full, a, DIFF_MAX_CELLS);
+      for (int q = 0; q < k; q++, rows++)
+        if (store && !push_row(st, rows, (gc_diff_row_t){a[q].line, a[q].start, a[q].len, none, false})) return rows;
+      continue;
+    }
+    if (l->kind == GC_DIFF_CONTEXT) {
+      int k = wrap_line(st, i, half, a, DIFF_MAX_CELLS);
+      for (int q = 0; q < k; q++, rows++)
+        if (store && !push_row(st, rows, (gc_diff_row_t){a[q].line, a[q].start, a[q].len, a[q], true})) return rows;
+      continue;
+    }
+    int nd = 0, na = 0, j = i;
+    for (; j < st->line_count && (st->lines[j].kind == GC_DIFF_DEL || st->lines[j].kind == GC_DIFF_ADD); j++) {
+      if (st->lines[j].kind == GC_DIFF_DEL && nd < DIFF_MAX_CELLS) dels[nd++] = j;
+      if (st->lines[j].kind == GC_DIFF_ADD && na < DIFF_MAX_CELLS) adds[na++] = j;
+    }
+    for (int p = 0; p < MAX(nd, na); p++) {
+      int kl = p < nd ? wrap_line(st, dels[p], half, a, DIFF_MAX_CELLS) : 0;
+      int kr = p < na ? wrap_line(st, adds[p], half, b, DIFF_MAX_CELLS) : 0;
+      for (int q = 0; q < MAX(kl, kr); q++, rows++) {
+        gc_diff_cell_t left = q < kl ? a[q] : none, right = q < kr ? b[q] : none;
+        if (store && !push_row(st, rows, (gc_diff_row_t){left.line, left.start, left.len, right, true})) return rows;
       }
-      if (store && !push_row(st, rows, (gc_diff_row_t){i, start, len})) return rows;
-      rows++;
-      start += len;
-    } while (start < n);
+    }
+    i = j - 1;
   }
   if (st->hunk_count && gap_size(st, st->hunk_count) > 0) {
-    if (store && !push_row(st, rows, (gc_diff_row_t){st->line_count, 0, 0})) return rows;
+    if (store && !push_row(st, rows, (gc_diff_row_t){st->line_count, 0, 0, none, false})) return rows;
     rows++;
   }
   return rows;
 }
 
-static int wrap_columns(const gc_diff_state_t *st, int width) {
-  diff_metrics_t m = diff_metrics(st);
-  return MAX(8, (width - m.text_x - m.right) / m.cw);
-}
-
 static void ensure_rows(window_t *win, gc_diff_state_t *st) {
-  int cols = wrap_columns(st, window_scroll_content_rect(win).w);
-  if (cols == st->wrap_cols && st->rows) return;
-  st->wrap_cols = cols;
-  st->row_count = layout_rows(st, cols, true);
+  int width = window_scroll_content_rect(win).w;
+  if (width == st->wrap_width && st->rows) return;
+  st->wrap_width = width;
+  st->row_count = layout_rows(st, width, true);
 }
 
 static int row_of_line(const gc_diff_state_t *st, int line) {
   for (int r = 0; r < st->row_count; r++)
-    if (st->rows[r].line >= line) return r;
+    if (st->rows[r].line >= line || (st->rows[r].split && st->rows[r].right.line >= line)) return r;
   return MAX(0, st->row_count - 1);
 }
 
@@ -416,19 +454,28 @@ static void scroll_by(window_t *win, int dy) {
 
 typedef enum { HIT_NONE, HIT_LINE, HIT_HUNK, HIT_UP, HIT_DOWN, HIT_ALL, HIT_BELOW } diff_hit_t;
 
-// What a content-space point is over, and its line (line_count for the last row).
-// A hunk header's gutter holds its expand buttons: one when the gap above is
-// short or the hunk is the first, else lines below the hunk above on the left
-// and lines above this hunk on the right.
-static diff_hit_t hit_test(window_t *win, gc_diff_state_t *st, uint32_t wparam, int *line) {
+// What a content-space point is over, its line (line_count for the last row),
+// and, side by side, its half (1 old, 2 new; 0 across the view). A hunk header's
+// gutter holds its expand buttons: one when the gap above is short or the hunk
+// is the first, else lines below the hunk above on its left half and lines above
+// this hunk on its right half.
+static diff_hit_t hit_test(window_t *win, gc_diff_state_t *st, uint32_t wparam, int *line, int *side) {
+  *side = 0;
   if (!st->line_count) return HIT_NONE;
   ensure_rows(win, st);
   irect16_t content = window_scroll_content_rect(win);
   diff_metrics_t m = diff_metrics(st);
   int x = (int16_t)LOWORD(wparam) - content.x, y = (int16_t)HIWORD(wparam) - content.y, r = y / m.lh;
   if (y < 0 || r >= st->row_count) return HIT_NONE;
-  *line = st->rows[r].line;
-  bool gutter = x < m.text_x - m.marker - m.pad / 2;
+  const gc_diff_row_t *vr = &st->rows[r];
+  *line = vr->line;
+  if (vr->split) {
+    *side = x >= content.w / 2 ? 2 : 1;
+    if (*side == 2) { x -= content.w / 2; *line = vr->right.line; }
+    if (*line < 0) return HIT_NONE;
+  }
+  int gutter_w = m.text_x - m.marker - m.pad / 2;
+  bool gutter = x < gutter_w;
   if (*line == st->line_count) return HIT_BELOW;
   gc_diff_line_t *l = &st->lines[*line];
   if (l->kind == GC_DIFF_HUNK && l->hunk >= 0) {
@@ -437,9 +484,47 @@ static diff_hit_t hit_test(window_t *win, gc_diff_state_t *st, uint32_t wparam, 
     if (!gap) return HIT_NONE;
     if (l->hunk == 0) return HIT_UP;
     if (gap <= GC_DIFF_EXPAND_STEP) return HIT_ALL;
-    return x < m.check + m.number ? HIT_DOWN : HIT_UP;
+    return x < gutter_w / 2 ? HIT_DOWN : HIT_UP;
   }
   return gutter && l->selectable ? HIT_LINE : HIT_NONE;
+}
+
+// The line under a content-space y on the dragged half, held to the rows so a
+// drag past either end keeps going.
+static int line_at_y(window_t *win, gc_diff_state_t *st, int y) {
+  ensure_rows(win, st);
+  if (!st->row_count) return -1;
+  int r = CLAMP((y - window_scroll_content_rect(win).y) / diff_metrics(st).lh, 0, st->row_count - 1);
+  if (st->rows[r].line == st->line_count && r > 0) r--;   // the expand row after the last hunk
+  const gc_diff_row_t *vr = &st->rows[r];
+  if (!vr->split) return vr->line;
+  int line = st->drag_side == 2 ? vr->right.line : vr->line;
+  return line >= 0 ? line : st->drag_side == 2 ? vr->line : vr->right.line;
+}
+
+// A gutter drag sets every selectable line from the anchor to the pointer the
+// way the first one went, and puts the lines it has left back, as GitHub Desktop does.
+static void drag_to(gc_diff_state_t *st, int line) {
+  int lo = MIN(st->drag_anchor, line), hi = MAX(st->drag_anchor, line);
+  for (int i = 0; i < st->line_count; i++) {
+    const gc_diff_line_t *l = &st->lines[i];
+    bool on_side = !st->drag_side || l->kind == (st->drag_side == 1 ? GC_DIFF_DEL : GC_DIFF_ADD);
+    if (l->selectable) st->lines[i].included = i >= lo && i <= hi && on_side ? st->drag_target : st->drag_base[i];
+  }
+}
+
+static bool drag_end(window_t *win, gc_diff_state_t *st, bool keep) {
+  if (!st->drag_base) return false;
+  bool changed = false;
+  for (int i = 0; i < st->line_count; i++) {
+    if (!keep) st->lines[i].included = st->drag_base[i];
+    changed |= st->lines[i].included != st->drag_base[i];
+  }
+  free(st->drag_base);
+  st->drag_base = NULL;
+  set_capture(NULL);
+  invalidate_window(win);
+  return changed;
 }
 
 static bool hunk_selectable(const gc_diff_state_t *st, int h) {
@@ -464,12 +549,63 @@ static void draw_expander(const char *icon, irect16_t r, uint32_t col) {
   draw_sysicon(icon, r.x + (r.w - size) / 2, r.y + (r.h - size) / 2, size, col);
 }
 
+enum { SIDE_BOTH, SIDE_OLD, SIDE_NEW };
+
+// One column of a row: the whole view, or a half side by side. Its gutter shows
+// the line numbers the column has room for, a check on included lines, or a hunk
+// header's expand buttons; the body holds the slice of text.
+static void paint_cell(gc_diff_state_t *st, const diff_metrics_t *m, irect16_t r, int line, int start, int len, int side) {
+  static text_cell_t cells[DIFF_MAX_CELLS];
+  uint32_t ink = ui_color("DiffView", "color"), gutter_ink = ui_color("DiffView", "--gutter-color");
+  irect16_t gutter = rect_split_left(r, m->text_x - m->marker - m->pad / 2), body = rect_trim_left(r, gutter.w);
+  if (line < 0) {   // the side a removal or addition has no counterpart on
+    fill_rect(ui_color("DiffView", "--gutter-background"), gutter);
+    fill_rect(ui_color("DiffView", "--empty-background"), body);
+    return;
+  }
+  if (line == st->line_count) {   // the button for the lines after the last hunk
+    fill_rect(ui_color("DiffView", "--hunk-background"), r);
+    draw_expander("gc-arrow-line-down", gutter, gutter_ink);
+    return;
+  }
+  const gc_diff_line_t *l = &st->lines[line];
+  const char *bg_key = NULL, *gutter_key = NULL, *inner_key = NULL, *marker = NULL;
+  switch (l->kind) {
+    case GC_DIFF_ADD:  bg_key = "--added-background";   gutter_key = "--added-gutter";   inner_key = "--added-inner";   marker = "+"; break;
+    case GC_DIFF_DEL:  bg_key = "--removed-background"; gutter_key = "--removed-gutter"; inner_key = "--removed-inner"; marker = "-"; break;
+    case GC_DIFF_HUNK: bg_key = l->hunk == st->current_hunk ? "--hunk-selection" : "--hunk-background"; gutter_key = bg_key; break;
+    default: break;
+  }
+  bool checked = l->selectable && l->included;
+  if (checked) gutter_key = "--included-gutter";
+  fill_rect(gutter_key ? ui_color("DiffView", gutter_key) : ui_color("DiffView", "--gutter-background"), gutter);
+  if (bg_key) fill_rect(ui_color("DiffView", bg_key), body);
+  int ty = r.y + (m->lh - m->ch) / 2;
+  if (start == 0 && l->kind == GC_DIFF_HUNK && l->hunk >= 0) {
+    int gap = gap_size(st, l->hunk);
+    irect16_t down = rect_split_left(gutter, gutter.w / 2), up = rect_trim_left(gutter, down.w);
+    if (gap && l->hunk == 0)                    draw_expander("gc-arrow-line-up", gutter, gutter_ink);
+    else if (gap && gap <= GC_DIFF_EXPAND_STEP) draw_expander("gc-arrows-out-line-vertical", gutter, gutter_ink);
+    else if (gap) { draw_expander("gc-arrow-line-down", down, gutter_ink); draw_expander("gc-arrow-line-up", up, gutter_ink); }
+  } else if (start == 0) {
+    uint32_t numbers = checked ? ui_color("DiffView", "--included-color") : gutter_ink;
+    int check_size = ui_px("DiffView", "--check-size");
+    if (checked) draw_sysicon("gc-check", r.x + m->pad / 2, r.y + (m->lh - check_size) / 2, check_size, numbers);
+    int first = r.x + m->check + m->number;
+    if (side == SIDE_BOTH) { draw_number(l->old_no, first, ty, numbers); draw_number(l->new_no, first + m->number, ty, numbers); }
+    else draw_number(side == SIDE_OLD ? l->old_no : l->new_no, first, ty, numbers);
+    if (marker) draw_text("DiffView", marker, r.x + m->text_x - m->marker, ty, ink);
+  }
+  uint32_t text_ink = spans_view(l) ? ui_color("DiffView", "--meta-color") : ink;
+  int n = line_cells(st, l, cells, DIFF_MAX_CELLS, text_ink, inner_key ? ui_color("DiffView", inner_key) : 0);
+  if (start < n) draw_text_cells("DiffView", cells + start, MIN(len, n - start), r.x + m->text_x, ty);
+}
+
 static void paint(window_t *win, gc_diff_state_t *st) {
   irect16_t client = get_client_rect(win);
   fill_rect(ui_color("DiffView", "background"), client);
   if (!st) return;
   diff_metrics_t m = diff_metrics(st);
-  uint32_t ink = ui_color("DiffView", "color");
 
   if (!st->line_count) {
     const char *text = st->placeholder[0] ? st->placeholder : ui_tr("No local changes");
@@ -480,56 +616,17 @@ static void paint(window_t *win, gc_diff_state_t *st) {
   }
 
   ensure_rows(win, st);
-  uint32_t gutter_bg = ui_color("DiffView", "--gutter-background"), gutter_ink = ui_color("DiffView", "--gutter-color");
-  uint32_t meta = ui_color("DiffView", "--meta-color"), check = ui_color("DiffView", "--included-color");
-  int check_size = ui_px("DiffView", "--check-size");
-  static text_cell_t cells[DIFF_MAX_CELLS];
-  int cells_line = -1, n = 0;
-  int first = MAX(0, (int)win->vscroll.pos / m.lh);
-  for (int r = first; r < st->row_count; r++) {
+  for (int r = MAX(0, (int)win->vscroll.pos / m.lh); r < st->row_count; r++) {
     irect16_t row = window_scroll_rect_to_client(win, row_rect(win, r));
     if (row.y >= client.y + client.h) break;
     const gc_diff_row_t *vr = &st->rows[r];
-    if (vr->line == st->line_count) {   // the button for the lines after the last hunk
-      fill_rect(ui_color("DiffView", "--hunk-background"), row);
-      draw_expander("gc-arrow-line-down", rect_split_left(row, m.text_x - m.marker - m.pad / 2), gutter_ink);
+    if (!vr->split) {
+      paint_cell(st, &m, row, vr->line, vr->start, vr->len, SIDE_BOTH);
       continue;
     }
-    gc_diff_line_t *l = &st->lines[vr->line];
-    const char *bg_key = NULL, *gutter_key = NULL, *inner_key = NULL, *marker = NULL;
-    switch (l->kind) {
-      case GC_DIFF_ADD:  bg_key = "--added-background";   gutter_key = "--added-gutter";   inner_key = "--added-inner";   marker = "+"; break;
-      case GC_DIFF_DEL:  bg_key = "--removed-background"; gutter_key = "--removed-gutter"; inner_key = "--removed-inner"; marker = "-"; break;
-      case GC_DIFF_HUNK: bg_key = l->hunk == st->current_hunk ? "--hunk-selection" : "--hunk-background"; gutter_key = bg_key; break;
-      default: break;
-    }
-    if (l->selectable && l->included) gutter_key = "--included-gutter";
-    irect16_t gutter = rect_split_left(row, m.text_x - m.marker - m.pad / 2);
-    irect16_t body = rect_trim_left(row, gutter.w);
-    fill_rect(gutter_key ? ui_color("DiffView", gutter_key) : gutter_bg, gutter);
-    if (bg_key) fill_rect(ui_color("DiffView", bg_key), body);
-    int ty = row.y + (m.lh - m.ch) / 2;
-    if (vr->start == 0 && l->kind == GC_DIFF_HUNK && l->hunk >= 0) {
-      int gap = gap_size(st, l->hunk);
-      irect16_t down = rect_split_left(gutter, m.check + m.number), up = rect_trim_left(gutter, down.w);
-      if (gap && l->hunk == 0)               draw_expander("gc-arrow-line-up", gutter, gutter_ink);
-      else if (gap && gap <= GC_DIFF_EXPAND_STEP) draw_expander("gc-arrows-out-line-vertical", gutter, gutter_ink);
-      else if (gap) { draw_expander("gc-arrow-line-down", down, gutter_ink); draw_expander("gc-arrow-line-up", up, gutter_ink); }
-    } else if (vr->start == 0) {
-      uint32_t numbers = l->selectable && l->included ? check : gutter_ink;
-      if (l->selectable && l->included)
-        draw_sysicon("gc-check", row.x + m.pad / 2, row.y + (m.lh - check_size) / 2, check_size, check);
-      draw_number(l->old_no, row.x + m.check + m.number, ty, numbers);
-      draw_number(l->new_no, row.x + m.check + 2 * m.number, ty, numbers);
-      if (marker) draw_text("DiffView", marker, row.x + m.text_x - m.marker, ty, ink);
-    }
-    if (vr->line != cells_line) {
-      uint32_t text_ink = l->kind == GC_DIFF_HUNK || l->kind == GC_DIFF_META || l->kind == GC_DIFF_NOTE ? meta : ink;
-      n = line_cells(st, l, cells, DIFF_MAX_CELLS, text_ink, inner_key ? ui_color("DiffView", inner_key) : 0);
-      cells_line = vr->line;
-    }
-    if (vr->start < n)
-      draw_text_cells("DiffView", cells + vr->start, MIN(vr->len, n - vr->start), row.x + m.text_x, ty);
+    irect16_t left = rect_split_left(row, row.w / 2);
+    paint_cell(st, &m, left, vr->line, vr->start, vr->len, SIDE_OLD);
+    paint_cell(st, &m, rect_trim_left(row, left.w), vr->right.line, vr->right.start, vr->right.len, SIDE_NEW);
   }
 }
 
@@ -547,13 +644,14 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
 
     case evDestroy:
-      if (st) { free_source(st); free(st->lines); free(st->rows); free(st); win->userdata = NULL; }
+      if (st) { free(st->drag_base); free_source(st); free(st->lines); free(st->rows); free(st); win->userdata = NULL; }
       return false;
 
     case edSetText: {   // lparam: plain unified diff text; the view keeps a copy and parses it
       if (!st) return false;
       const char *text = lparam ? (const char *)lparam : "";
       if (text != st->diff_buf) snprintf(st->diff_buf, sizeof(st->diff_buf), "%s", text);
+      if (st->drag_base) drag_end(win, st, false);   // the lines it remembered are gone
       free_source(st);
       parse_diff(win, st);
       scroll_info_t si = { .fMask = SIF_POS, .nPos = 0 };
@@ -570,6 +668,15 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       invalidate_window(win);
       return true;
 
+    case dvSetSplit:
+      if (!st) return false;
+      if (st->drag_base) drag_end(win, st, false);
+      st->split = wparam != 0;
+      st->wrap_width = 0;
+      window_sync_scroll_content(win);
+      invalidate_window(win);
+      return true;
+
     case edSetPlaceholder:
       if (!st) return false;
       snprintf(st->placeholder, sizeof(st->placeholder), "%s", lparam ? (const char *)lparam : "");
@@ -580,7 +687,7 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       layout_measure_t *m = lparam;
       if (!st || !m) return false;
       m->desired_w = 0;
-      m->desired_h = st->line_count ? layout_rows(st, wrap_columns(st, m->avail_w), false) * diff_metrics(st).lh : 0;
+      m->desired_h = st->line_count ? layout_rows(st, m->avail_w, false) * diff_metrics(st).lh : 0;
       return true;
     }
 
@@ -600,14 +707,24 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evLeftButtonDown: {
       set_focus(win);
       if (!st) return true;
-      int line = -1;
-      diff_hit_t hit = hit_test(win, st, wparam, &line);
+      int line = -1, side = 0;
+      diff_hit_t hit = hit_test(win, st, wparam, &line, &side);
       int h = line >= 0 && line < st->line_count ? st->lines[line].hunk : st->hunk_count;
       if (h >= 0 && h < st->hunk_count) st->current_hunk = h;
       hunk_span_t g = h >= 0 ? gap_before(st, h) : (hunk_span_t){0};
       bool toggled = false;
       switch (hit) {
-        case HIT_LINE:  st->lines[line].included = !st->lines[line].included; toggled = true; break;
+        case HIT_LINE:
+          free(st->drag_base);
+          st->drag_base = malloc((size_t)st->line_count * sizeof(bool));
+          if (!st->drag_base) { fprintf(stderr, "[gitclient] diff drag allocation failed lines=%d\n", st->line_count); fflush(stderr); break; }
+          for (int i = 0; i < st->line_count; i++) st->drag_base[i] = st->lines[i].included;
+          st->drag_anchor = line;
+          st->drag_side = side;
+          st->drag_target = !st->lines[line].included;
+          drag_to(st, line);
+          set_capture(win);
+          break;
         case HIT_HUNK:  toggled = toggle_hunk(st, h); break;
         case HIT_UP:    expand(st, MAX(g.first, g.end - GC_DIFF_EXPAND_STEP), g.end); break;
         case HIT_DOWN:
@@ -621,10 +738,26 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     }
 
+    case evMouseMove:
+      if (!st || !st->drag_base) return false;
+      drag_to(st, line_at_y(win, st, (int16_t)HIWORD(wparam)));
+      invalidate_window(win);
+      return true;
+
+    case evLeftButtonUp:
+      if (!st || !st->drag_base) return false;
+      if (drag_end(win, st, true)) notify_toggled(win);
+      return true;
+
+    case evPointerCancel:
+      if (!st || !st->drag_base) return false;
+      drag_end(win, st, false);
+      return true;
+
     case evGetTooltipText: {
-      int line = -1;
+      int line = -1, side = 0;
       const char *tip = NULL;
-      switch (st && lparam ? hit_test(win, st, wparam, &line) : HIT_NONE) {
+      switch (st && lparam ? hit_test(win, st, wparam, &line, &side) : HIT_NONE) {
         case HIT_UP:    tip = ui_tr("Show lines above"); break;
         case HIT_DOWN:
         case HIT_BELOW: tip = ui_tr("Show lines below"); break;

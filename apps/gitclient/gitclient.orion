@@ -37,6 +37,7 @@
             <item name="all_commits" label="All Commits" />
             <item name="reflog" label="Reflog" />
             <item name="worktrees" label="Worktrees" />
+            <item name="split_diff" label="Side-by-Side Diff" />
             <Separator />
             <item name="next_pane" label="Focus Next Pane" shortcut="Ctrl+Alt+Tab" />
             <item name="next_tab" label="Next View Tab" shortcut="Ctrl+Tab" />
@@ -233,6 +234,9 @@
                 <Button command="view.all_commits" icon="list" text="All Commits" />
                 <Button command="view.reflog" icon="clock-rotate-right" text="Reflog" />
                 <Button command="view.worktrees" icon="view-grid" text="Worktrees" />
+            </Group>
+            <Group label="Diff">
+                <Button command="view.split_diff" icon="gc-columns" text="Side by Side" size="large" toggle="true" tooltip="Show the old and new file next to each other" />
             </Group>
             <Group label="Split">
                 <Button command="view.split_right" icon="pane-split-right" text="Split Right" size="large" />

@@ -116,6 +116,9 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
       if (sel != gc->selected_commit) {
         gc->selected_commit = sel;
         gc->selected_file   = -1;
+        // Load this commit's files now and show the one the table selects, as GitHub Desktop does.
+        tableview_handle_master_selection(main_win, gc->log_win);
+        if (gc->history_files_win) gc->selected_file = (int)send_message(gc->history_files_win, RVM_GETSELECTION, 0, NULL);
         gc->files_win = gc->history_files_win;
         gc->diff_win  = gc->history_diff_win;
         gc_diff_refresh();

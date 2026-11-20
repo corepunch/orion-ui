@@ -49,7 +49,8 @@ static void gc_view_activated(int tab) {
       gc->diff_win  = gc->history_diff_win;
       gc->selected_commit = gc->log_win
         ? (int)send_message(gc->log_win, RVM_GETSELECTION, 0, NULL) : -1;
-      gc->selected_file = -1;
+      gc->selected_file = gc->selected_commit >= 0 && gc->history_files_win
+        ? (int)send_message(gc->history_files_win, RVM_GETSELECTION, 0, NULL) : -1;   // the row the Files table shows selected
       break;
     case GC_TAB_GITHUB:
       gc->files_win = NULL;

@@ -268,6 +268,7 @@ typedef struct {
   int worktree_count;
   bool worktree_syncing;
   bool diff_cache_valid;
+  bool split_diff;   // View > Side-by-Side Diff, for this session
   int last_diff_commit;
   int last_diff_file;
   char last_diff_path[512];
@@ -422,6 +423,7 @@ void gc_run_show_terminal(bool show);
 void gc_run_sync_targets(void);
 bool gc_run_handle_command(uint32_t wparam, void *lparam);
 void gc_diff_set_text(window_t *win, const char *text);   // plain unified diff; the view parses it
+void gc_diff_set_split(bool split);                       // every diff view: old and new side by side, or unified
 result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_recent_load(void);
 void gc_recent_save(void);
