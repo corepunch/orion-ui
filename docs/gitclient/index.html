@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Client — a morning with your repositories</title>
+<meta name="description" content="A native git client for workspaces of many repositories, with parallel Codex and Claude Code tasks reviewed as real commits.">
+<link rel="icon" href="shots/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fragment+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1222;--bg2:#141a2e;--card:#182039;--line:rgba(160,175,230,.14);--text:#eef1fb;--muted:#9aa3c4;--dim:#69729a;
+  --accent:#7b6cff;--accent2:#a99fff;--blue:#5b8def;--green:#7ccf8a;--amber:#e8b45a;--red:#ef6f7a;
+  --sans:Manrope,system-ui,sans-serif;--mono:"Fragment Mono",ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font:17px/1.65 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+.wrap{max-width:1280px;margin:0 auto;padding:0 28px}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:40;background:linear-gradient(var(--bg) 40%,transparent)}
+.top .wrap{display:flex;align-items:center;height:70px;gap:12px}
+.top img{width:30px;border-radius:8px}
+.top b{font-weight:700}
+.top .dl{margin-left:auto;padding:9px 16px;border-radius:99px;background:var(--text);color:var(--bg);font-weight:600;font-size:14px}
+.progress{position:fixed;top:0;left:0;height:2px;background:var(--accent);z-index:60;width:0}
+
+.intro{min-height:100vh;display:grid;place-items:center;text-align:center;padding:120px 0 40px;position:relative}
+.intro::before{content:"";position:absolute;inset:0;background:radial-gradient(800px 420px at 50% 38%,rgba(123,108,255,.28),transparent 70%)}
+.intro>div{position:relative}
+.time{font:14px var(--mono);color:var(--accent2);letter-spacing:.04em}
+.intro h1{font-size:clamp(46px,7.6vw,104px);line-height:.98;letter-spacing:-.045em;font-weight:800;margin:20px auto 24px;max-width:1000px}
+.intro h1 span{background:linear-gradient(90deg,#a99fff,#6fb3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro p{color:var(--muted);font-size:20px;max-width:620px;margin:0 auto}
+.scroll{margin-top:56px;font:13px var(--mono);color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:12px}
+.scroll i{width:22px;height:36px;border:2px solid var(--dim);border-radius:12px;position:relative}
+.scroll i::after{content:"";position:absolute;left:50%;top:7px;width:4px;height:7px;margin-left:-2px;border-radius:2px;background:var(--accent2);animation:s 1.6s infinite}
+@keyframes s{to{transform:translateY(10px);opacity:0}}
+
+/* story */
+.story{display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:56px;position:relative}
+.steps{padding:30vh 0 40vh}
+.step{min-height:78vh;display:flex;flex-direction:column;justify-content:center;opacity:.25;transition:opacity .5s}
+.step.on{opacity:1}
+.step .clock{font:13px var(--mono);color:var(--accent2);display:flex;align-items:center;gap:10px}
+.step .clock::before{content:"";width:28px;height:1px;background:var(--accent2)}
+.step h2{font-size:clamp(28px,3vw,40px);line-height:1.1;letter-spacing:-.03em;font-weight:800;margin:14px 0 14px}
+.step p{color:var(--muted)}
+.step .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.step .tags span{font:12px var(--mono);border:1px solid var(--line);border-radius:99px;padding:4px 10px;color:var(--muted)}
+kbd{font:12px var(--mono);padding:2px 7px;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;background:var(--card);color:var(--text)}
+
+.viewer{position:sticky;top:0;height:100vh;display:flex;align-items:center}
+.screen{position:relative;width:100%;aspect-ratio:4/3;max-height:82vh;border-radius:16px;overflow:hidden;border:1px solid var(--line);
+  background:#0a0d18;box-shadow:0 50px 120px -30px rgba(80,60,220,.45),0 0 0 1px rgba(0,0,0,.5)}
+.cam{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;transition:transform 1.1s cubic-bezier(.65,0,.25,1)}
+.cam img{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .6s}
+.cam img.on{opacity:1}
+.ring{position:absolute;border:2px solid var(--accent2);border-radius:12px;box-shadow:0 0 0 9999px rgba(10,13,24,.55),0 0 30px rgba(169,159,255,.6);transition:all 1.1s cubic-bezier(.65,0,.25,1);pointer-events:none}
+.caption{position:absolute;left:16px;bottom:16px;font:12px var(--mono);background:rgba(10,13,24,.85);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted);backdrop-filter:blur(8px)}
+
+/* mobile fallback */
+.mshot{display:none;margin-top:22px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+
+/* after story */
+section.more{padding:120px 0;border-top:1px solid var(--line)}
+.more h2{font-size:clamp(34px,4.6vw,56px);letter-spacing:-.04em;font-weight:800;line-height:1.05;max-width:760px}
+.more .lede{color:var(--muted);font-size:19px;max-width:600px;margin-top:16px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
+.card h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.card p{color:var(--muted);font-size:15px}
+.card .k{margin-top:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:56px}
+.two figure{border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.two figcaption{padding:14px 18px;background:var(--bg2);font-size:14px;color:var(--muted)}
+.two figcaption b{color:var(--text)}
+
+.end{padding:140px 0;text-align:center;position:relative}
+.end::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 320px at 50% 70%,rgba(123,108,255,.25),transparent 70%)}
+.end>*{position:relative}
+.end h2{font-size:clamp(40px,6vw,76px);letter-spacing:-.045em;font-weight:800;line-height:1}
+.end p{color:var(--muted);margin:18px auto 34px;max-width:520px}
+.btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{padding:14px 22px;border-radius:12px;font-weight:600;font-size:15px}
+.btn.p{background:linear-gradient(135deg,#7b6cff,#5b8def);color:#fff;box-shadow:0 10px 30px -8px rgba(123,108,255,.7)}
+.btn.g{border:1px solid var(--line)}
+footer{padding:30px 0;color:var(--dim);font-size:13px;border-top:1px solid var(--line)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+@media (max-width:960px){
+  .story{grid-template-columns:1fr}
+  .viewer{display:none}
+  .steps{padding:20px 0}
+  .step{min-height:auto;opacity:1;padding:48px 0;border-bottom:1px solid var(--line)}
+  .mshot{display:block}
+  .cards,.two{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.cam,.ring,.cam img{transition:none}}
+</style>
+</head>
+<body>
+<div class="progress" id="prog"></div>
+<div class="top"><div class="wrap"><img src="shots/icon.png" alt=""><b>Git Client</b><a class="dl" href="https://github.com/corepunch/orion-ui/releases">Download</a></div></div>
+
+<header class="intro"><div class="wrap">
+  <div class="time">08:57 · Tuesday · eight repositories, thirteen worktrees</div>
+  <h1>A morning with <span>every repository</span> you touch.</h1>
+  <p>Follow one platform engineer through her first hour — from “what did I leave behind?” to three agents finishing her backlog in parallel.</p>
+  <div class="scroll"><i></i>scroll</div>
+</div></header>
+
+<div class="wrap story">
+  <div class="steps" id="steps">
+    <article class="step" data-img="0" data-r="92,262,1210,1240">
+      <div class="clock">08:58</div>
+      <h2>One glance at the whole workspace.</h2>
+      <p>Overview lists every checkout of every repository, grouped by project. Each row says its state in words, and the icon gives the verdict.</p>
+      <div class="tags"><span>Overview</span><span><kbd>⌘</kbd> <kbd>0</kbd></span></div>
+      <img class="mshot" src="shots/crop-worktrees.webp" alt="Worktree table" loading="lazy">
+    </article>
+    <article class="step" data-img="0" data-r="92,650,1210,190">
+      <div class="clock">08:59</div>
+      <h2>A conflict is waiting in billing.</h2>
+      <p>Red for a merge in flight, amber for uncommitted work, blue arrows for commits to push or pull. <em>Needs attention</em> hides everything that's fine.</p>
+      <div class="tags"><span>1 conflict, 1 new</span><span>4 staged, 3 modified</span></div>
+    </article>
+    <article class="step" data-img="1" data-r="0,0,2048,250">
+      <div class="clock">09:04</div>
+      <h2>Everything is one keystroke away.</h2>
+      <p>The ribbon groups Sync, Commit, Files and Stash. Every button is also a menu item with its shortcut — the menu tree is the map of the app.</p>
+      <div class="tags"><span>Commit <kbd>⌘K</kbd></span><span>Fetch all <kbd>⌘⇧R</kbd></span></div>
+      <img class="mshot" src="shots/crop-ribbon.webp" alt="Ribbon toolbar" loading="lazy">
+    </article>
+    <article class="step" data-img="1" data-r="90,262,1955,520">
+      <div class="clock">09:12</div>
+      <h2>Finish yesterday's change.</h2>
+      <p>Open the checkout and you land on Changes. Tick to stage, read the diff beside it; the button tells you what Commit will do.</p>
+      <div class="tags"><span>Changes</span><span><kbd>⌘</kbd> <kbd>1</kbd></span></div>
+      <img class="mshot" src="shots/crop-changes.webp" alt="Changes and diff" loading="lazy">
+    </article>
+    <article class="step" data-img="2" data-r="90,262,1955,1236">
+      <div class="clock">09:20</div>
+      <h2>History, branches and worktrees together.</h2>
+      <p>The History sidebar is a branch desk: current, default, local and remote-only, with Prune and Delete Merged. Drag any pane anywhere.</p>
+      <div class="tags"><span>History</span><span><kbd>⌘</kbd> <kbd>2</kbd></span><span>Dockable</span></div>
+      <img class="mshot" src="shots/crop-history.webp" alt="History" loading="lazy">
+    </article>
+    <article class="step" data-img="3" data-r="366,728,1312,426">
+      <div class="clock">09:31</div>
+      <h2>Three tasks off the backlog. At once.</h2>
+      <p>On the Agents page she describes one task per row and picks Codex or Claude Code for each. Every task starts from the current commit, in its own worktree.</p>
+      <div class="tags"><span>Agents</span><span><kbd>⌘</kbd> <kbd>4</kbd></span></div>
+      <img class="mshot" src="shots/crop-dialog.webp" alt="Start Three Agents" loading="lazy">
+    </article>
+    <article class="step" data-img="4" data-r="1300,1040,748,460">
+      <div class="clock">09:33</div>
+      <h2>Each agent gets its own worktree.</h2>
+      <p>A branch, a worktree and a live terminal per task. The new worktrees appear in Overview like any other; stopping one leaves the others running.</p>
+      <div class="tags"><span>agent-1</span><span>agent-2</span><span>agent-3</span></div>
+      <img class="mshot" src="shots/crop-terminal.webp" alt="Agent terminal" loading="lazy">
+    </article>
+    <article class="step" data-img="5" data-r="92,318,776,456">
+      <div class="clock">09:41</div>
+      <h2>The tasks sort themselves.</h2>
+      <p>The list reads like an inbox. Finished and failed runs wait under <b>Needs your attention</b>, the metrics task is still <b>In progress</b>, and a count beside the button sums it up. A run with changes is saved as a snapshot commit on its task branch.</p>
+      <div class="tags"><span>2 to review</span><span>1 in progress</span></div>
+      <img class="mshot" src="shots/crop-tasks.webp" alt="Tasks grouped by what needs attention" loading="lazy">
+    </article>
+    <article class="step" data-img="5" data-r="876,318,1168,1180">
+      <div class="clock">09:44</div>
+      <h2>Review the diff. Run the revision.</h2>
+      <p>The review names the task, its state, its agent and the two revisions it compares. The diff is against the original base. <b>Run Reviewed Revision</b> opens a detached worktree at the snapshot and starts the default target from its own launch.xml.</p>
+      <div class="tags"><span>Snapshot</span><span>launch.xml</span></div>
+      <img class="mshot" src="shots/crop-review.webp" alt="Review diff" loading="lazy">
+    </article>
+  </div>
+  <div class="viewer"><div class="screen" id="screen">
+    <div class="cam" id="cam">
+      <img class="on" src="shots/window-overview.webp" alt="">
+      <img src="shots/window-changes.webp" alt="">
+      <img src="shots/window-history.webp" alt="">
+      <img src="shots/window-dialog.webp" alt="">
+      <img src="shots/window-overview-agents.webp" alt="">
+      <img src="shots/window-agents.webp" alt="">
+      <div class="ring" id="ring"></div>
+    </div>
+    <div class="caption" id="cap">Overview</div>
+  </div></div>
+</div>
+
+<section class="more"><div class="wrap">
+  <h2>And one file that knows how every branch runs.</h2>
+  <p class="lede">launch.xml is committed with the code. Parameters, env and build steps per target; guessed from your build files when it's missing.</p>
+  <div class="cards">
+    <div class="card"><h3>Run in a real terminal</h3><p>Targets start in a PTY, so colours and progress lines look as they do in a shell. A failing target opens its tab for you.</p></div>
+    <div class="card"><h3>Per worktree</h3><p>A level added on a branch appears only in that worktree. The Overview row shows the default target.</p></div>
+    <div class="card"><h3>Kept honest</h3><p><code>make launch-check</code> verifies every make target and file a launch.xml mentions.</p></div>
+  </div>
+  <div class="two">
+    <figure><img src="shots/crop-launch.webp" alt="Launch targets" loading="lazy"><figcaption><b>Launch targets</b> for api-gateway</figcaption></figure>
+    <figure><img src="shots/window-overview-light.webp" alt="Overview, light appearance" loading="lazy"><figcaption><b>Light appearance</b> — same workspace</figcaption></figure>
+  </div>
+</div></section>
+
+<div class="end">
+  <img src="shots/icon.png" alt="" style="width:92px;margin:0 auto 26px;border-radius:21px">
+  <h2>Have a calmer morning.</h2>
+  <p>Native on macOS and Linux, written in C on Orion UI.</p>
+  <div class="btns"><a class="btn p" href="https://github.com/corepunch/orion-ui/releases">Download Git Client</a><a class="btn g" href="https://github.com/corepunch/orion-ui/tree/main/apps/gitclient">Source</a></div>
+</div>
+<footer><div class="wrap"><span>Git Client · Orion UI</span><span>Icons: Phosphor</span></div></footer>
+
+<script>
+const W=2048,H=1536,names=['Overview','Changes','History','Agents · new batch','Overview · agents running','Agents · review'];
+const steps=[...document.querySelectorAll('.step')],cam=document.getElementById('cam'),ring=document.getElementById('ring'),
+  imgs=[...cam.querySelectorAll('img')],cap=document.getElementById('cap'),screen=document.getElementById('screen');
+function focus(st){
+  const i=+st.dataset.img,[x,y,w,h]=st.dataset.r.split(',').map(Number);
+  imgs.forEach((im,k)=>im.classList.toggle('on',k===i));
+  const pad=40,rx=Math.max(0,x-pad),ry=Math.max(0,y-pad),rw=Math.min(W,w+pad*2),rh=Math.min(H,h+pad*2);
+  let s=Math.min(W/rw,H/rh,2.4); s=Math.max(1,s);
+  let tx=-(rx+rw/2)*s+W/2, ty=-(ry+rh/2)*s+H/2;
+  tx=Math.min(0,Math.max(W-W*s,tx)); ty=Math.min(0,Math.max(H-H*s,ty));
+  const k=screen.clientWidth/W;
+  cam.style.transform=`translate(${tx*k}px,${ty*k}px) scale(${s})`;
+  ring.style.left=x/W*100+'%';ring.style.top=y/H*100+'%';ring.style.width=w/W*100+'%';ring.style.height=h/H*100+'%';
+  ring.style.opacity=(w>=W-10&&h>=H-300)?0:1;
+  cap.textContent=names[i];
+}
+let active=steps[0];
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){steps.forEach(s=>s.classList.remove('on'));e.target.classList.add('on');active=e.target;focus(active)}}),{rootMargin:'-45% 0px -45% 0px'});
+steps.forEach(s=>io.observe(s));
+steps[0].classList.add('on');focus(steps[0]);
+addEventListener('resize',()=>focus(active));
+const prog=document.getElementById('prog');
+addEventListener('scroll',()=>{prog.style.width=(scrollY/(document.body.scrollHeight-innerHeight)*100)+'%'},{passive:true});
+</script>
+</body>
+</html>
