@@ -27,11 +27,11 @@ static result_t create_tag_proc(window_t *win, uint32_t msg,
   if (id == ID_CREATE_TAG_DIALOG_OK) {
     dialog_pull(win, st, tag_bindings, ARRAY_LEN(tag_bindings));
     if (!st->name[0]) {
-      message_box(win, "Please enter a tag name.", "Create Tag", MB_OK);
+      message_box(win, ui_tr("Please enter a tag name."), ui_tr("Create Tag"), MB_OK);
       return true;
     }
     if (!gc_create_tag(st->name, st->ref[0] ? st->ref : NULL)) {
-      message_box(win, "Failed to create tag.", "Create Tag", MB_OK);
+      message_box(win, ui_tr("Failed to create tag."), ui_tr("Create Tag"), MB_OK);
       return true;
     }
     end_dialog(win, 1);

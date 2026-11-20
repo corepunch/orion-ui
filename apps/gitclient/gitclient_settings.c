@@ -198,7 +198,7 @@ bool gc_workspace_open(const char *file, bool confirm) {
   int n = gc_workspace_read(file, roots, GC_MAX_RECENT_REPOS);
   if (n < 0) {
     fprintf(stderr, "[gc] not a workspace file: %s\n", file); fflush(stderr);
-    if (gc->main_win) message_box(gc->main_win, "That file is not a gitclient workspace.", "Open Workspace", MB_OK);
+    if (gc->main_win) message_box(gc->main_win, ui_tr("That file is not a gitclient workspace."), ui_tr("Open Workspace"), MB_OK);
     return false;
   }
   if (confirm && gc_workspace_unsaved() && gc->main_win &&

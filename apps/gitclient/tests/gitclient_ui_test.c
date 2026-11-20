@@ -594,7 +594,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 72);
+    ASSERT_EQUAL(gitclient_action_meta_count, 73);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -1201,6 +1201,20 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
   ASSERT_EQUAL(g_test_state.op.kind, GIT_OP_NONE);
   ASSERT_TRUE(git_rev(root, "HEAD", after, sizeof(after)));
   ASSERT_STR_EQUAL(after, before);
+
+  // Discard keeps the work in a stash: the tree is clean, and popping the stash brings it back.
+  snprintf(path, sizeof(path), "%s/app.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "edited\n"));
+  snprintf(path, sizeof(path), "%s/scratch.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "untracked\n"));
+  ASSERT_TRUE(gc_discard_all());
+  ASSERT_TRUE(file_starts_with(root, "app.txt", "second"));
+  ASSERT_FALSE(file_starts_with(root, "scratch.txt", "untracked"));
+  ASSERT_TRUE(gct_git(root, "stash list | grep -q 'Discarded changes'"));
+  ASSERT_TRUE(gct_git(root, "stash pop -q"));
+  ASSERT_TRUE(file_starts_with(root, "app.txt", "edited"));
+  ASSERT_TRUE(file_starts_with(root, "scratch.txt", "untracked"));
+  ASSERT_TRUE(gct_git(root, "stash push -q --include-untracked"));   // leave the tree clean for the next step
 
   // On the default branch itself there is nothing to rebase onto.
   ASSERT_TRUE(gct_git(root, "checkout -q main"));

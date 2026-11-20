@@ -60,11 +60,11 @@ static result_t new_branch_proc(window_t *win, uint32_t msg,
         if (src->id == ID_NEW_BRANCH_DIALOG_OK) {
           dialog_pull(win, st, branch_bindings, ARRAY_LEN(branch_bindings));
           if (!st->name[0]) {
-            message_box(win, "Please enter a branch name.", "New Branch", MB_OK);
+            message_box(win, ui_tr("Please enter a branch name."), ui_tr("New Branch"), MB_OK);
             return true;
           }
           if (!gc_create_branch(st->name, st->from[0] ? st->from : NULL, st->checkout)) {
-            message_box(win, "Branch creation failed.", "New Branch", MB_OK);
+            message_box(win, ui_tr("Branch creation failed."), ui_tr("New Branch"), MB_OK);
             return true;
           }
           st->result = true;

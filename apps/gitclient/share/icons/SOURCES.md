@@ -34,6 +34,7 @@ same revision (`assets/regular/<name>.svg`), saved with a `gc-` prefix:
 | gc-terminal-window.svg | terminal-window | show the target terminal |
 | gc-hourglass.svg | hourglass | agent task preparing, stopping or saving |
 | gc-minus-circle.svg | minus-circle | agent task stopped or without changes |
+| gc-git-merge.svg | git-merge | Merge Into Current |
 
 The Changes pair uses Bootstrap Icons v1.13.1's `file-diff` and `file-diff-fill`,
 which show additions and deletions on a document. Blind review found Phosphor's

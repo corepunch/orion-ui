@@ -155,7 +155,7 @@ void gc_open_checkout(const char *checkout, bool known) {
   }
   git_repo_t *next = git_repo_open(checkout);
   if (!next) {
-    message_box(gc->main_win, "Not a valid git repository.", "Open Repository", MB_OK);
+    message_box(gc->main_win, ui_tr("Not a valid git repository."), ui_tr("Open Repository"), MB_OK);
     return;
   }
   git_repo_close(gc->repo);
@@ -176,7 +176,7 @@ void gc_open_repo(const char *path) {
   if (!gc || !path || !path[0]) return;
   char checkout[512], main_root[512];
   if (!git_locate(path, checkout, sizeof(checkout), main_root, sizeof(main_root))) {
-    message_box(gc->main_win, "Not a valid git repository.", "Open Repository", MB_OK);
+    message_box(gc->main_win, ui_tr("Not a valid git repository."), ui_tr("Open Repository"), MB_OK);
     return;
   }
   gc_open_checkout(checkout, false);
@@ -196,12 +196,12 @@ bool gc_handle_open_file(const char *path) {
   if (!gc || !path || !path[0]) return false;
   if (gc_workspace_file_is(path)) return gc_workspace_open(path, true);
   if (!gc_path_is_dir(path)) {
-    if (gc->main_win) message_box(gc->main_win, "Drop a git folder, or a gitclient workspace file.", "Git Client", MB_OK);
+    if (gc->main_win) message_box(gc->main_win, ui_tr("Drop a git folder, or a gitclient workspace file."), ui_tr("Git Client"), MB_OK);
     return false;
   }
   char checkout[512], main_root[512];
   if (!git_locate(path, checkout, sizeof(checkout), main_root, sizeof(main_root))) {
-    if (gc->main_win) message_box(gc->main_win, "That folder is not a git repository.", "Git Client", MB_OK);
+    if (gc->main_win) message_box(gc->main_win, ui_tr("That folder is not a git repository."), ui_tr("Git Client"), MB_OK);
     return false;
   }
   gc_add_repo(checkout);
@@ -340,21 +340,26 @@ void gc_render_status(void) {
   else if (gc->repo && gc->op.kind == GIT_OP_REVERT)
     snprintf(status, sizeof(status), "%s", ui_tr("Reverting a commit"));
   else if (gc->repo) {
-    const char *kind = st->initial ? "first commit" : st->detached ? "detached" :
-                       st->gone ? "upstream gone" : !st->upstream[0] ? "not published" : NULL;
-    snprintf(status, sizeof(status), "Branch: %s%s  ^%d  v%d%s%s%s%s",
-             st->head, st->dirty ? " *" : "", st->ahead, st->behind,
-             st->upstream[0] ? "  " : "", st->upstream[0] ? st->upstream : "",
-             kind ? "  (" : "", kind ? kind : "");
-    if (kind) strncat(status, ")", sizeof(status) - strlen(status) - 1);
-    if (gc->repo_loading) {
-      size_t len = strlen(status);
-      snprintf(status + len, sizeof(status) - len, "  |  %s", ui_tr("Refreshing..."));
+    // Facts in words, each one translated whole: "main · 2 to push · Uncommitted changes · 6 worktrees".
+    char facts[6][160] = {{0}};
+    int nf = 0;
+    snprintf(facts[nf++], sizeof(facts[0]), "%s", st->head);
+    if (st->initial)            snprintf(facts[nf++], sizeof(facts[0]), "%s", ui_tr("No commits yet"));
+    else if (st->detached)      snprintf(facts[nf++], sizeof(facts[0]), "%s", ui_tr("Detached HEAD"));
+    else if (st->gone)          snprintf(facts[nf++], sizeof(facts[0]), "%s", ui_tr("Upstream branch is gone"));
+    else if (!st->upstream[0])  snprintf(facts[nf++], sizeof(facts[0]), "%s", ui_tr("Not published"));
+    else if (!st->ahead && !st->behind) snprintf(facts[nf++], sizeof(facts[0]), ui_tr("Up to date with %s"), st->upstream);
+    else {
+      if (st->ahead)  snprintf(facts[nf++], sizeof(facts[0]), ui_tr("%d to push"), st->ahead);
+      if (st->behind) snprintf(facts[nf++], sizeof(facts[0]), ui_tr("%d to pull"), st->behind);
     }
-    if (gc->worktree_count > 1) {
+    if (st->dirty && nf < 6)              snprintf(facts[nf++], sizeof(facts[0]), "%s", ui_tr("Uncommitted changes"));
+    if (gc->worktree_count > 1 && nf < 6) snprintf(facts[nf++], sizeof(facts[0]), ui_tr("%d worktrees"), gc->worktree_count);
+    if (gc->repo_loading && nf < 6)       snprintf(facts[nf++], sizeof(facts[0]), "%s", ui_tr("Refreshing..."));
+    status[0] = '\0';
+    for (int i = 0; i < nf; i++) {
       size_t len = strlen(status);
-      if (len < sizeof(status))
-        snprintf(status + len, sizeof(status) - len, "  |  %d worktrees", gc->worktree_count);
+      snprintf(status + len, sizeof(status) - len, "%s%s", i ? "  \u00b7  " : "", facts[i]);
     }
   }
   send_message(gc->main_win, evStatusBar, 0, (void *)status);
@@ -462,7 +467,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       git_async_result_t *res = (git_async_result_t *)lparam;
       if (res) {
         if (!res->success) {
-          message_box(win, res->output, "Operation failed", MB_OK);
+          message_box(win, res->output, ui_tr("Operation failed"), MB_OK);
         } else if (res->op == GIT_OP_CLONE) {
           gc_state_t *gc_ = g_gc;
           if (gc_ && gc_->clone_path[0])

@@ -301,39 +301,30 @@ bool gc_rename_branch(const char *old_name, const char *new_name) {
 // Discard changes
 // ═══════════════════════════════════════════════════════════════════════════
 
-bool gc_discard_file(const char *path) {
+// Discarded work goes to a stash ("Discarded changes to <path>"), not into the void: the working tree ends
+// up exactly as checkout + clean would leave it, and Pop Stash brings the changes back.
+static bool gc_discard_to_stash(const char *label, const char *path) {
   gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo || !path) return false;
-  char buf[1024] = {0};
-  git_file_status_t files[256]; int n = git_get_status(gc->repo, files, 256);
-  git_file_status_t *file = NULL;
-  for (int i = 0; i < n; i++) if (!strcmp(files[i].path, path)) { file = &files[i]; break; }
-  if (!file) return false;
-  if (file->untracked) {
-    const char *args[] = { "git", "clean", "-f", "--", path, NULL };
-    return git_run_sync(gc->repo, args, buf, sizeof(buf));
-  }
-  if (file->index_status == 'A') {
-    const char *args[] = { "git", "rm", "-f", "--", path, NULL };
-    return git_run_sync(gc->repo, args, buf, sizeof(buf));
-  }
-  const char *args[] = { "git", "restore", "--source=HEAD", "--staged", "--worktree", "--", path, NULL };
-  return git_run_sync(gc->repo, args, buf, sizeof(buf));
+  if (!gc || !gc->repo) return false;
+  char buf[4096] = {0}, message[700];
+  snprintf(message, sizeof(message), "%s", label);
+  const char *args[] = { "git", "stash", "push", "--include-untracked", "--message", message, path ? "--" : NULL, path, NULL };
+  if (git_run_sync(gc->repo, args, buf, sizeof(buf))) return true;
+  fprintf(stderr, "[gitclient] discard to stash failed path=%s: %s\n", path ? path : "(all)", buf);
+  fflush(stderr);
+  return false;
+}
+
+bool gc_discard_file(const char *path) {
+  if (!path || !path[0]) return false;
+  char label[640];
+  snprintf(label, sizeof(label), "Discarded changes to %s", path);
+  return gc_discard_to_stash(label, path);
 }
 
 bool gc_discard_all(void) {
-  gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo) return false;
-  char buf[4096] = {0};
-  const char *args_co[] = { "git", "checkout", "--", ".", NULL };
-  git_run_sync(gc->repo, args_co, buf, sizeof(buf));
-  const char *args_cl[] = { "git", "clean", "-fd", NULL };
-  return git_run_sync(gc->repo, args_cl, buf, sizeof(buf));
+  return gc_discard_to_stash("Discarded changes", NULL);
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Clone
-// ═══════════════════════════════════════════════════════════════════════════
 
 bool gc_clone_repo(const char *url, const char *path) {
   gc_state_t *gc = g_gc;

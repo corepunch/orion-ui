@@ -88,6 +88,39 @@ void page_changes_update_commit(void) {
   }
 }
 
+// Commits the staged files with the summary and description, as the Commit button and Ctrl+Enter do.
+bool page_changes_commit(void) {
+  gc_state_t *gc = g_gc;
+  window_t *main_win = gc ? gc->main_win : NULL;
+  if (!main_win) return false;
+  page_changes_update_commit();
+  window_t *commit = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_NOW);
+  if (!commit || window_has_state(commit, WINDOW_STATE_DISABLED)) return false;
+  char summary[512] = {0}, desc[2048] = {0}, message[2600] = {0};
+  window_t *sw = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
+  window_t *dw = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_DESCRIPTION);
+  if (sw) send_message(sw, edGetText, sizeof(summary), summary);
+  if (dw) send_message(dw, edGetText, sizeof(desc),    desc);
+  if (!summary[0]) {
+    message_box(main_win, ui_tr("Enter a commit summary."), ui_tr("Commit"), MB_OK);
+    return false;
+  }
+  char identity_name[128], identity_email[256];
+  if (!git_get_identity(gc->repo, identity_name, sizeof(identity_name), identity_email, sizeof(identity_email))) {
+    gc_show_identity_dialog(main_win);
+    return false;
+  }
+  snprintf(message, sizeof(message), "%s%s%s", summary, desc[0] ? "\n\n" : "", desc);
+  if (!gc_commit(message, false)) {
+    message_box(main_win, ui_tr("Commit failed. Check staged files and Git identity."), ui_tr("Commit"), MB_OK);
+    return false;
+  }
+  if (sw) send_message(sw, edSetText, 0, "");
+  if (dw) send_message(dw, edSetText, 0, "");
+  gc_refresh_all();
+  return true;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Window proc — captures outlets on evCreate, otherwise transparent to parent.
 // ──────────────────────────────────────────────────────────────────────────────
@@ -154,7 +187,7 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
 
     if (file) {
       bool ok = checked ? gc_stage_file(file->path) : gc_unstage_file(file->path);
-      if (!ok) message_box(main_win, "Operation failed.", "File", MB_OK);
+      if (!ok) message_box(main_win, ui_tr("Operation failed."), ui_tr("File"), MB_OK);
       gc_refresh_all();
     }
     return true;
@@ -208,40 +241,12 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
     if (id == ID_CHANGES_PAGE_STAGE_ALL) {
       bool checked = send_message(src, btnGetCheck, 0, NULL) == btnStateChecked;
       if (!(checked ? gc_stage_all() : gc_unstage_all()))
-        message_box(main_win, "Could not update staged files.", "Stage Files", MB_OK);
+        message_box(main_win, ui_tr("Could not update staged files."), ui_tr("Stage Files"), MB_OK);
       gc_refresh_all();
       return true;
     }
     if (id == ID_CHANGES_PAGE_COMMIT_NOW) {
-      page_changes_update_commit();
-      window_t *commit = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_NOW);
-      if (!commit || window_has_state(commit, WINDOW_STATE_DISABLED)) return true;
-      char summary[512] = {0}, desc[2048] = {0}, message[2600] = {0};
-      window_t *sw = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
-      window_t *dw = get_window_item(main_win, ID_CHANGES_PAGE_COMMIT_DESCRIPTION);
-      if (sw) send_message(sw, edGetText, sizeof(summary), summary);
-      if (dw) send_message(dw, edGetText, sizeof(desc),    desc);
-      if (!summary[0]) {
-        message_box(main_win, "Enter a commit summary.", "Commit", MB_OK);
-        return true;
-      }
-      char identity_name[128], identity_email[256];
-      if (!git_get_identity(gc->repo, identity_name, sizeof(identity_name),
-                            identity_email, sizeof(identity_email))) {
-        gc_show_identity_dialog(main_win);
-        return true;
-      }
-      snprintf(message, sizeof(message), "%s%s%s",
-               summary, desc[0] ? "\n\n" : "", desc);
-      if (gc_commit(message, false)) {
-        if (sw) send_message(sw, edSetText, 0, "");
-        if (dw) send_message(dw, edSetText, 0, "");
-        gc_refresh_all();
-      } else {
-        message_box(main_win,
-                    "Commit failed. Check staged files and Git identity.",
-                    "Commit", MB_OK);
-      }
+      page_changes_commit();
       return true;
     }
 

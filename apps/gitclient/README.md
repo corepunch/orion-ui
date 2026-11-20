@@ -81,6 +81,24 @@ build/bin/gitclient /tmp/ws/work/api-gateway
 ![Overview](../../docs/screenshots/gitclient_overview.jpg)
 ![Focus](../../docs/screenshots/gitclient_focused.jpg)
 
+## Committing, discarding and pushing safely
+
+Write the message in the commit box on Changes: **Ctrl+K** (Commit → Write
+Commit Message) puts the cursor in its summary, and **Ctrl+Enter** (Commit →
+Commit Staged Files, the ribbon's large Commit button) commits the staged
+files with it. The Commit dialog remains only for Amend Last Commit.
+
+**Discard** never deletes work outright. Discarding one file, or every change,
+runs `git stash push --include-untracked`, so the working tree ends up as
+`checkout` plus `clean` would leave it, and the changes wait in the stash list
+("Discarded changes to <file>") until **Pop Stash** brings them back or the
+stash is dropped.
+
+**Push** opens with the current branch selected. Its force option uses
+`--force-with-lease`: it overwrites the remote branch only if nobody has pushed
+to it since your last fetch. Prune appears only for Fetch. Every dialog closes
+with **Escape**.
+
 ## Rebasing and resolving conflicts
 
 **Branch → Rebase onto Default Branch** (the ribbon's **Rebase onto Main**)

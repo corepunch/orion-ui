@@ -28,11 +28,11 @@ static result_t rename_branch_proc(window_t *win, uint32_t msg,
   if (id == ID_BRANCH_RENAME_DIALOG_OK) {
     dialog_pull(win, st, rename_bindings, ARRAY_LEN(rename_bindings));
     if (!st->new_name[0]) {
-      message_box(win, "Please enter a branch name.", "Rename Branch", MB_OK);
+      message_box(win, ui_tr("Please enter a branch name."), ui_tr("Rename Branch"), MB_OK);
       return true;
     }
     if (!gc_rename_branch(st->cur_name, st->new_name)) {
-      message_box(win, "Branch rename failed.", "Rename Branch", MB_OK);
+      message_box(win, ui_tr("Branch rename failed."), ui_tr("Rename Branch"), MB_OK);
       return true;
     }
     st->result = true;

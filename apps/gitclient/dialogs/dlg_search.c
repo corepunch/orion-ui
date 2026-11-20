@@ -33,8 +33,9 @@ static result_t search_dlg_proc(window_t *win, uint32_t msg,
         int count = 0;
         for (char *p = buf; *p; p++) if (*p == '\n') count++;
         char notice[128];
-        snprintf(notice, sizeof(notice), "Found %d matching commits.", count);
-        message_box(win, notice, "Search Results", MB_OK);
+        if (count == 1) snprintf(notice, sizeof(notice), "%s", ui_tr("Found 1 matching commit."));
+        else snprintf(notice, sizeof(notice), ui_tr("Found %d matching commits."), count);
+        message_box(win, notice, ui_tr("Search Results"), MB_OK);
       }
     }
     end_dialog(win, 1);

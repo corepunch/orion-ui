@@ -1,6 +1,7 @@
 // Menu bar and command dispatch — uses generated menus from gitclient.orion.
 
 #include "gitclient.h"
+#include "pages/changes/page_changes.h"
 #include "gc_agents.h"
 #include "gc_actions.h"
 #include <orion/gem.h>
@@ -123,7 +124,7 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_VIEW_ALL_COMMITS:
       gc_set_view_mode(GC_TAB_HISTORY);
       if (!gc_reload_history_log("--all"))
-        message_box(gc->main_win, "Could not load the full commit graph.", "All Commits", MB_OK);
+        message_box(gc->main_win, ui_tr("Could not load the full commit graph."), ui_tr("All Commits"), MB_OK);
       break;
     case ID_VIEW_REFLOG:
       gc_show_reflog_dialog(gc->main_win);
@@ -158,7 +159,7 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_FILE_SAVE_WORKSPACE: {
       if (gc->workspace_file[0]) {
         if (!gc_workspace_save(gc->workspace_file))
-          message_box(gc->main_win, "Could not save the workspace.", "Save Workspace", MB_OK);
+          message_box(gc->main_win, ui_tr("Could not save the workspace."), ui_tr("Save Workspace"), MB_OK);
         break;
       }
       char path[512];
@@ -177,13 +178,13 @@ void gc_handle_command_impl(uint16_t id) {
       if (!strchr(base, '.')) {
         size_t len = strlen(path);
         if (len + strlen(".gitworkspace") >= sizeof(path)) {
-          message_box(gc->main_win, "Could not save the workspace.", "Save Workspace", MB_OK);
+          message_box(gc->main_win, ui_tr("Could not save the workspace."), ui_tr("Save Workspace"), MB_OK);
           break;
         }
         memcpy(path + len, ".gitworkspace", strlen(".gitworkspace") + 1);
       }
       if (!gc_workspace_save(path))
-        message_box(gc->main_win, "Could not save the workspace.", "Save Workspace", MB_OK);
+        message_box(gc->main_win, ui_tr("Could not save the workspace."), ui_tr("Save Workspace"), MB_OK);
       break;
     }
     case ID_FILE_CLONE:
@@ -280,18 +281,18 @@ void gc_handle_command_impl(uint16_t id) {
       bool is_cur = false;
       if (gc_get_selected_branch(name, sizeof(name), &is_cur)) {
         if (is_cur && !strncmp(name, "remotes/", 8)) {
-          message_box(gc->main_win, "Cannot delete remote-tracking branch.", "Delete", MB_OK);
+          message_box(gc->main_win, ui_tr("Cannot delete remote-tracking branch."), ui_tr("Delete"), MB_OK);
           break;
         }
         if (is_cur) {
-          message_box(gc->main_win, "Cannot delete the current branch.", "Delete", MB_OK);
+          message_box(gc->main_win, ui_tr("Cannot delete the current branch."), ui_tr("Delete"), MB_OK);
           break;
         }
         bool remote = !strncmp(name, "remotes/", 8);
         if (!gc_delete_branch(name, remote))
-          message_box(gc->main_win, "Delete failed.", "Delete", MB_OK);
+          message_box(gc->main_win, ui_tr("Delete failed."), ui_tr("Delete"), MB_OK);
         else gc_refresh_all();
-      } else message_box(gc->main_win, "No branch selected.", "Delete", MB_OK);
+      } else message_box(gc->main_win, ui_tr("No branch selected."), ui_tr("Delete"), MB_OK);
       break;
     }
     case ID_BRANCH_DELETE_MERGED: {
@@ -303,11 +304,12 @@ void gc_handle_command_impl(uint16_t id) {
         break;
       int n = gc_delete_merged_branches();
       if (n < 0)
-        message_box(gc->main_win, "Could not determine the default branch (origin/HEAD, main or master).", "Delete Merged", MB_OK);
+        message_box(gc->main_win, ui_tr("Could not determine the default branch (origin/HEAD, main or master)."), ui_tr("Delete Merged"), MB_OK);
       else {
         char msg[128];
-        snprintf(msg, sizeof(msg), "Deleted %d merged branch%s.", n, n == 1 ? "" : "es");
-        message_box(gc->main_win, msg, "Delete Merged", MB_OK);
+        if (n == 1) snprintf(msg, sizeof(msg), "%s", ui_tr("Deleted 1 merged branch."));
+        else snprintf(msg, sizeof(msg), ui_tr("Deleted %d merged branches."), n);
+        message_box(gc->main_win, msg, ui_tr("Delete Merged"), MB_OK);
         gc_refresh_all();
       }
       break;
@@ -326,7 +328,7 @@ void gc_handle_command_impl(uint16_t id) {
       if (!gc->repo || !gc->tags_win) break;
       int sel = (int)send_message(gc->tags_win, RVM_GETSELECTION, 0, NULL);
       if (sel < 0) {
-        message_box(gc->main_win, "No tag selected.", "Delete Tag", MB_OK);
+        message_box(gc->main_win, ui_tr("No tag selected."), ui_tr("Delete Tag"), MB_OK);
         break;
       }
       result_node_t *rows = (result_node_t *)send_db_message(
@@ -342,10 +344,10 @@ void gc_handle_command_impl(uint16_t id) {
       }
       if (!tag_name) { free_result_list(rows); break; }
       char msg[320];
-      snprintf(msg, sizeof(msg), "Delete tag \"%s\"?", tag_name);
-      if (message_box(gc->main_win, msg, "Delete Tag", MB_YESNO) == IDYES) {
+      snprintf(msg, sizeof(msg), ui_tr("Delete tag \"%s\"?"), tag_name);
+      if (message_box(gc->main_win, msg, ui_tr("Delete Tag"), MB_YESNO) == IDYES) {
         if (!gc_delete_tag(tag_name))
-          message_box(gc->main_win, "Failed to delete tag.", "Delete Tag", MB_OK);
+          message_box(gc->main_win, ui_tr("Failed to delete tag."), ui_tr("Delete Tag"), MB_OK);
         else gc_refresh_all();
       }
       free_result_list(rows);
@@ -354,8 +356,20 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_TAG_PUSH:
       gc_push_tags();
       break;
-    case ID_COMMIT_COMMIT:
-      if (gc->main_win) gc_show_commit_dialog(gc->main_win, false);
+    case ID_COMMIT_COMMIT: {   // the commit box on Changes is the one place to write a commit
+      if (!gc->main_win) break;
+      gc_set_view_mode(GC_TAB_CHANGES);
+      window_t *summary = get_window_item(gc->main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
+      if (summary) set_focus(summary);
+      break;
+    }
+    case ID_COMMIT_COMMIT_NOW:
+      if (!gc->main_win) break;
+      if (gc->tab != GC_TAB_CHANGES) gc_set_view_mode(GC_TAB_CHANGES);
+      if (!page_changes_commit()) {
+        window_t *summary = get_window_item(gc->main_win, ID_CHANGES_PAGE_COMMIT_SUMMARY);
+        if (summary) set_focus(summary);
+      }
       break;
     case ID_COMMIT_AMEND:
       if (gc->main_win) gc_show_commit_dialog(gc->main_win, true);
@@ -364,12 +378,12 @@ void gc_handle_command_impl(uint16_t id) {
       git_sync_status_t st = {0};
       git_get_sync_status(gc->repo, &st);
       char prompt[256];
-      snprintf(prompt, sizeof(prompt),
-               "Undo the last commit and keep its changes staged?%s",
-               st.ahead == 0 && st.upstream[0] ? "\nThe commit may already be published." : "");
-      if (message_box(gc->main_win, prompt, "Undo Commit", MB_YESNO) == IDYES) {
+      snprintf(prompt, sizeof(prompt), "%s", st.ahead == 0 && st.upstream[0]
+               ? ui_tr("Undo the last commit and keep its changes staged?\nThe commit may already be published.")
+               : ui_tr("Undo the last commit and keep its changes staged?"));
+      if (message_box(gc->main_win, prompt, ui_tr("Undo Commit"), MB_YESNO) == IDYES) {
         if (gc_undo_commit()) gc_refresh_all();
-        else message_box(gc->main_win, "Undo failed.", "Undo Commit", MB_OK);
+        else message_box(gc->main_win, ui_tr("Undo failed."), ui_tr("Undo Commit"), MB_OK);
       }
       break;
     }
@@ -383,8 +397,8 @@ void gc_handle_command_impl(uint16_t id) {
       break;
     case ID_COMMIT_DISCARD:
       if (message_box(gc->main_win,
-                       "Discard ALL uncommitted changes?\nThis cannot be undone.",
-                       "Discard Changes", MB_YESNO) == IDYES) {
+                       ui_tr("Discard all uncommitted changes?\nThey are kept as a stash named \"Discarded changes\", so Pop Stash brings them back."),
+                       ui_tr("Discard Changes"), MB_YESNO) == IDYES) {
         gc_discard_all();
         gc_refresh_all();
       }
@@ -394,24 +408,24 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_FILES_DISCARD: {
       db_file_t *file = gc->files_win ? (db_file_t *)(intptr_t)send_message(
         gc->files_win, tvGetSelectedRecord, 0, NULL) : NULL;
-      if (!file) { message_box(gc->main_win, "No file selected.", "File", MB_OK); break; }
+      if (!file) { message_box(gc->main_win, ui_tr("No file selected."), ui_tr("File"), MB_OK); break; }
       if (id == ID_FILES_DISCARD) {
         char prompt[640]; snprintf(prompt, sizeof(prompt),
-          "Permanently discard all uncommitted changes to \"%s\"?\nThis cannot be undone.", file->path);
+          ui_tr("Discard the uncommitted changes to \"%s\"?\nThey are kept as a stash, so Pop Stash brings them back."), file->path);
         if (message_box(gc->main_win, prompt, "Discard File", MB_YESNO) != IDYES) break;
       }
       bool ok = id == ID_FILES_STAGE   ? gc_stage_file(file->path) :
                 id == ID_FILES_UNSTAGE ? gc_unstage_file(file->path) :
                                          gc_discard_file(file->path);
       if (ok) gc_refresh_all();
-      else message_box(gc->main_win, "Operation failed.", "File", MB_OK);
+      else message_box(gc->main_win, ui_tr("Operation failed."), ui_tr("File"), MB_OK);
       break;
     }
     case ID_FILES_STAGE_ALL:
     case ID_FILES_UNSTAGE_ALL: {
       bool ok = id == ID_FILES_STAGE_ALL ? gc_stage_all() : gc_unstage_all();
       if (ok) gc_refresh_all();
-      else message_box(gc->main_win, "Operation failed.", "Files", MB_OK);
+      else message_box(gc->main_win, ui_tr("Operation failed."), ui_tr("Files"), MB_OK);
       break;
     }
     case ID_FILES_USE_MINE:
@@ -446,18 +460,18 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_COMMIT_STASH_DROP: {
       db_stash_t *stash = gc->stash_win ? (db_stash_t *)(intptr_t)send_message(
         gc->stash_win, tvGetSelectedRecord, 0, NULL) : NULL;
-      if (!stash) { message_box(gc->main_win, "No stash selected.", "Drop Stash", MB_OK); break; }
-      char prompt[160]; snprintf(prompt, sizeof(prompt), "Drop %s?", stash->ref);
-      if (message_box(gc->main_win, prompt, "Drop Stash", MB_YESNO) == IDYES) {
+      if (!stash) { message_box(gc->main_win, ui_tr("No stash selected."), ui_tr("Drop Stash"), MB_OK); break; }
+      char prompt[160]; snprintf(prompt, sizeof(prompt), ui_tr("Drop %s?"), stash->ref);
+      if (message_box(gc->main_win, prompt, ui_tr("Drop Stash"), MB_YESNO) == IDYES) {
         if (gc_stash_drop(stash->ref)) gc_refresh_all();
-        else message_box(gc->main_win, "Drop failed.", "Drop Stash", MB_OK);
+        else message_box(gc->main_win, ui_tr("Drop failed."), ui_tr("Drop Stash"), MB_OK);
       }
       break;
     }
     case ID_REMOTE_SYNC:
       if (gc_sync()) gc_refresh_all();
       else message_box(gc->main_win,
-        "Sync failed. Check the remote, upstream, and working tree.", "Sync", MB_OK);
+        ui_tr("Sync failed. Check the remote, upstream, and working tree."), ui_tr("Sync"), MB_OK);
       break;
     case ID_REMOTE_FETCH_ALL: gc_overview_fetch_all(); break;
     case ID_REMOTE_FETCH:
@@ -475,10 +489,10 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_REMOTE_PRUNE:
       if (!gc->repo) break;
       if (gc_prune_remote(NULL)) {
-        message_box(gc->main_win, "Pruned stale remote-tracking branches.", "Prune", MB_OK);
+        message_box(gc->main_win, ui_tr("Pruned stale remote-tracking branches."), ui_tr("Prune"), MB_OK);
         gc_refresh_all();
       } else {
-        message_box(gc->main_win, "Prune failed. Add a remote first.", "Prune", MB_OK);
+        message_box(gc->main_win, ui_tr("Prune failed. Add a remote first."), ui_tr("Prune"), MB_OK);
       }
       break;
     case ID_HELP_ABOUT:

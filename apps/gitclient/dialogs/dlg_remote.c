@@ -64,11 +64,11 @@ static result_t remote_dlg_proc(window_t *win, uint32_t msg,
           send_message(get_window_item(win, ID_REMOTE_DIALOG_URL),
                        edGetText, sizeof(url), url);
           if (!name[0] || !url[0]) {
-            message_box(win, "Please enter both name and URL.", "Add Remote", MB_OK);
+            message_box(win, ui_tr("Please enter both name and URL."), ui_tr("Add Remote"), MB_OK);
             return true;
           }
           if (!gc_add_remote(name, url))
-            message_box(win, "Failed to add remote.", "Add Remote", MB_OK);
+            message_box(win, ui_tr("Failed to add remote."), ui_tr("Add Remote"), MB_OK);
           refresh_remote_list(win);
           return true;
         }
@@ -81,15 +81,15 @@ static result_t remote_dlg_proc(window_t *win, uint32_t msg,
           send_message(get_window_item(win, ID_REMOTE_DIALOG_URL),
                        edGetText, sizeof(url), url);
           if (!name[0]) {
-            message_box(win, "Please enter the remote name.", "Update Remote", MB_OK);
+            message_box(win, ui_tr("Please enter the remote name."), ui_tr("Update Remote"), MB_OK);
             return true;
           }
           if (!url[0]) {
-            message_box(win, "Please enter the remote URL.", "Update Remote", MB_OK);
+            message_box(win, ui_tr("Please enter the remote URL."), ui_tr("Update Remote"), MB_OK);
             return true;
           }
           if (!gc_set_remote_url(name, url))
-            message_box(win, "Failed to update remote.", "Update Remote", MB_OK);
+            message_box(win, ui_tr("Failed to update remote."), ui_tr("Update Remote"), MB_OK);
           refresh_remote_list(win);
           return true;
         }
@@ -99,15 +99,15 @@ static result_t remote_dlg_proc(window_t *win, uint32_t msg,
           send_message(get_window_item(win, ID_REMOTE_DIALOG_NAME),
                        edGetText, sizeof(name), name);
           if (!name[0]) {
-            message_box(win, "Please enter the remote name.", "Remove Remote", MB_OK);
+            message_box(win, ui_tr("Please enter the remote name."), ui_tr("Remove Remote"), MB_OK);
             return true;
           }
           char msg[320];
-          snprintf(msg, sizeof(msg), "Remove remote \"%s\"?", name);
+          snprintf(msg, sizeof(msg), ui_tr("Remove remote \"%s\"?"), name);
           if (message_box(win, msg, "Remove Remote", MB_YESNO) != IDYES)
             return true;
           if (!gc_remove_remote(name))
-            message_box(win, "Failed to remove remote.", "Remove Remote", MB_OK);
+            message_box(win, ui_tr("Failed to remove remote."), ui_tr("Remove Remote"), MB_OK);
           refresh_remote_list(win);
           return true;
         }

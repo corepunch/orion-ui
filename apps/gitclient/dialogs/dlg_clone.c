@@ -60,11 +60,11 @@ static result_t clone_dlg_proc(window_t *win, uint32_t msg,
                        edGetText, sizeof(path), path);
 
           if (!url[0]) {
-            message_box(win, "Please enter a repository URL.", "Clone", MB_OK);
+            message_box(win, ui_tr("Please enter a repository URL."), ui_tr("Clone"), MB_OK);
             return true;
           }
           if (!path[0]) {
-            message_box(win, "Please select a destination path.", "Clone", MB_OK);
+            message_box(win, ui_tr("Please select a destination path."), ui_tr("Clone"), MB_OK);
             return true;
           }
 

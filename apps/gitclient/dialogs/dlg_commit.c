@@ -42,11 +42,11 @@ static result_t commit_dlg_proc(window_t *win, uint32_t msg,
         if (src->id == ID_COMMIT_DIALOG_OK) {
           dialog_pull(win, st, commit_bindings, ARRAY_LEN(commit_bindings));
           if (!st->msg_text[0]) {
-            message_box(win, "Please enter a commit message.", "Commit", MB_OK);
+            message_box(win, ui_tr("Please enter a commit message."), ui_tr("Commit"), MB_OK);
             return true;
           }
           if (!gc_commit(st->msg_text, st->amend)) {
-            message_box(win, "Commit failed.", "Commit", MB_OK);
+            message_box(win, ui_tr("Commit failed."), ui_tr("Commit"), MB_OK);
             return true;
           }
           st->result = true;

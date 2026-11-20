@@ -74,7 +74,8 @@
         </menu>
 
         <menu name="commit" label="Commit">
-            <item name="commit" label="Commit..." shortcut="Ctrl+K" />
+            <item name="commit" label="Write Commit Message" shortcut="Ctrl+K" />
+            <item name="commit_now" label="Commit Staged Files" shortcut="Ctrl+Enter" />
             <item name="amend" label="Amend Last Commit" />
             <item name="undo" label="Undo Last Commit" />
             <Separator />
@@ -144,7 +145,8 @@
                 <Button command="remote.push" icon="upload" text="Push" />
             </Group>
             <Group label="Commit">
-                <Button command="commit.commit" icon="git-commit" text="Commit" size="large" tooltip="Commit staged changes" />
+                <Button command="commit.commit_now" icon="git-commit" text="Commit" size="large" tooltip="Commit the staged files with the message in Changes (Ctrl+Enter)" />
+                <Button command="commit.commit" icon="chat-lines" text="Write Message" tooltip="Go to the commit message in Changes (Ctrl+K)" />
                 <Button command="commit.amend" icon="edit-pencil" text="Amend Last" tooltip="Amend the last commit" />
                 <Button command="commit.undo" icon="undo" text="Undo Last" tooltip="Undo the last commit" />
                 <Button command="commit.discard" icon="trash" text="Discard Changes" />
@@ -156,11 +158,6 @@
                 <Button command="files.unstage_all" icon="minus-square" text="Unstage All" />
                 <Button command="files.reveal" icon="folder" text="Reveal" tooltip="Reveal in the file manager" />
                 <Button command="files.discard" icon="trash" text="Discard" tooltip="Discard the selected file's changes" />
-            </Group>
-            <Group label="Resolve">
-                <Button command="files.use_mine" icon="user" text="Use Mine" tooltip="Resolve the selected conflicted file with your branch's version" />
-                <Button command="files.use_theirs" icon="arrow-left" text="Use Theirs" tooltip="Resolve the selected conflicted file with the other branch's version" />
-                <Button command="files.mark_resolved" icon="check" text="Mark Resolved" tooltip="Stage a file you resolved by hand" />
             </Group>
             <Group label="Stash">
                 <Button command="commit.stash" icon="import" text="Stash" tooltip="Stash changes" />
@@ -180,11 +177,14 @@
                 <Button command="branch.checkout" icon="arrow-right" text="Checkout" size="large" />
             </Group>
             <Group label="Integrate">
-                <Button command="branch.merge" icon="git-diff" text="Merge Into Current" size="large" />
+                <Button command="branch.merge" icon="gc-git-merge" text="Merge Into Current" size="large" tooltip="Merge the branch selected in History into the current branch" />
                 <Button command="branch.rebase_default" icon="arrow-separate-vertical" text="Rebase onto Main" size="large" tooltip="Rebase the current branch onto the default branch (its upstream when it has one)" />
-                <Button command="branch.rebase" icon="git-diff" text="Rebase onto Selected" tooltip="Rebase the current branch onto the branch selected in History" />
+                <Button command="branch.rebase" icon="arrow-separate-vertical" text="Rebase onto Selected" tooltip="Rebase the current branch onto the branch selected in History" />
             </Group>
-            <Group label="In Progress">
+            <Group label="Conflicts">
+                <Button command="files.use_mine" icon="user" text="Use Mine" tooltip="Resolve the selected conflicted file with your branch's version" />
+                <Button command="files.use_theirs" icon="arrow-left" text="Use Theirs" tooltip="Resolve the selected conflicted file with the other branch's version" />
+                <Button command="files.mark_resolved" icon="check" text="Mark Resolved" tooltip="Stage a file you resolved by hand" />
                 <Button command="branch.continue" icon="play" text="Continue" tooltip="Continue the rebase or merge once every conflict is resolved" />
                 <Button command="branch.skip" icon="skip-next" text="Skip Commit" tooltip="Leave out the commit that stopped the rebase" />
                 <Button command="branch.abort" icon="xmark" text="Abort" tooltip="Stop and put the branch back as it was" />
@@ -452,7 +452,7 @@
                             <RowIcon icon="gc-check-circle" color="success" />
                             <Column field="name" title="Worktree" width="0" />
                             <Column field="branch" title="Branch" width="0" />
-                            <Column field="state" title="State" width="150" style="badge" />
+                            <Column field="state" title="State" width="184" style="badge" />
                             <Column field="target" title="Runs" width="120" color="info" />
                         </TableView>
                     </StackView>
@@ -572,7 +572,7 @@
                         <TableView name="changes_files" source="db.files" master="none" check-field="staged" column-titles="false" context-menu="files" flags="notitle,nofill,vscroll,flexspace">
                             <RowIcon field="status" value="Conflicted" icon="gc-x-circle" color="error" />
                             <Column field="path" title="File" width="0" />
-                            <Column field="status" title="Status" width="64" />
+                            <Column field="status" title="Status" width="88" color="secondary" />
                         </TableView>
                         <TextEdit name="commit_summary" placeholder="Summary (required)" />
                         <MultiEdit name="commit_description" placeholder="Description" height="64" flags="vscroll" />
@@ -592,21 +592,22 @@
                 <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
             </PaneToolbar>
             <requires library="gitclient_components" />
-            <SplitView name="history_main_split" flags="flexspace">
+            <SplitView name="history_main_split" split-ratio="0.3" flags="flexspace">
                 <SplitView name="left_split" orientation="vertical" flags="flexspace" width="180">
                     <TabView name="branches_tabs" hide-single-tab="true" flags="flexspace">
-                        <TableView name="branches" text="Branches" source="db.branches" context-menu="branches" flags="notitle,nofill,vscroll">
+                        <TableView name="branches" text="Branches" source="db.branches" context-menu="branches" cell-style="stacked" column-titles="false" flags="notitle,nofill,vscroll">
+                            <RowIcon field="is_current" icon="gc-check-circle" color="success" />
                             <Column field="name" title="Branch" width="0" />
-                            <Column field="kind" title="" width="64" />
-                            <Column field="activity" title="Activity" width="72" />
+                            <Column field="activity" title="Updated" />
+                            <Column field="kind" title="Kind" width="72" color="secondary" />
                         </TableView>
                     </TabView>
                     <SplitView name="tags_worktrees_split" split-ratio="0.35" flags="flexspace">
                         <SplitView name="tags_stash_split" orientation="vertical" flags="flexspace">
                             <TabView name="tags_tabs" hide-single-tab="true" flags="flexspace">
-                                <TableView name="tags" text="Tags" source="db.tags" context-menu="tags" flags="notitle,nofill,vscroll">
+                                <TableView name="tags" text="Tags" source="db.tags" context-menu="tags" cell-style="stacked" column-titles="false" flags="notitle,nofill,vscroll">
                                     <Column field="name" title="Tag" width="0" />
-                                    <Column field="date" title="Date" width="80" />
+                                    <Column field="date" title="Date" />
                                 </TableView>
                             </TabView>
                             <TabView name="stash_list_tabs" hide-single-tab="true" flags="flexspace">
@@ -617,14 +618,14 @@
                             </TabView>
                         </SplitView>
                         <TabView name="worktrees_tabs" hide-single-tab="true" flags="flexspace">
-                            <TableView name="worktrees" text="Worktrees" source="db.worktrees" master="none" flags="notitle,nofill,vscroll">
+                            <TableView name="worktrees" text="Worktrees" source="db.worktrees" master="none" column-titles="false" flags="notitle,nofill,vscroll">
                                 <Column field="name" title="Worktree" width="0" />
-                                <Column field="status" title="State" width="64" />
+                                <Column field="status" title="State" width="72" color="secondary" />
                             </TableView>
                         </TabView>
                     </SplitView>
                 </SplitView>
-                <SplitView name="history_content_split" flags="flexspace">
+                <SplitView name="history_content_split" split-ratio="0.42" flags="flexspace">
                     <SplitView name="log_files_split" orientation="vertical" flags="flexspace">
                         <TabView name="log_tabs" hide-single-tab="true" flags="flexspace">
                             <TableView name="log" text="Commits" source="db.commits" cell-style="two-line" flags="notitle,nofill,vscroll,flexspace">
@@ -653,7 +654,7 @@
             <SplitView name="github_split" orientation="vertical" flags="flexspace">
                 <TabView name="issues_panel_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="issues_panel" text="Issues" spacing="4" padding="4">
-                        <TableView name="issues" source="github_db.issues" flags="notitle,nofill,vscroll,flexspace">
+                        <TableView name="issues" source="github_db.issues" placeholder="No open issues to show. Git Client reads them with the GitHub CLI: install gh and sign in with gh auth login." flags="notitle,nofill,vscroll,flexspace">
                             <Column field="number" title="#" width="40" />
                             <Column field="title" title="Title" width="0" />
                             <Column field="state" title="State" width="64" />
@@ -664,7 +665,7 @@
                 </TabView>
                 <TabView name="pulls_panel_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="pulls_panel" text="Pull Requests" spacing="4" padding="4">
-                        <TableView name="pulls" source="github_db.pulls" flags="notitle,nofill,vscroll,flexspace">
+                        <TableView name="pulls" source="github_db.pulls" placeholder="No open pull requests to show. Git Client reads them with the GitHub CLI: install gh and sign in with gh auth login." flags="notitle,nofill,vscroll,flexspace">
                             <Column field="number" title="#" width="40" />
                             <Column field="title" title="Title" width="0" />
                             <Column field="state" title="State" width="64" />
@@ -799,7 +800,7 @@
                 </Column>
             </GridView>
             <CheckBox name="prune" text="Prune deleted remote branches" />
-            <CheckBox name="force" text="Force" />
+            <CheckBox name="force" text="Force push if the remote has not moved" tooltip="Uses --force-with-lease: it overwrites the remote branch only when nobody has pushed since your last fetch" />
             <StackView orientation="horizontal" spacing="6">
                 <Space />
                 <Button name="ok" text="OK" flags="BUTTON_DEFAULT" />
@@ -849,7 +850,7 @@
                 </Column>
             </GridView>
             <CheckBox name="global" text="Use for all repositories" />
-            <Label name="status" text="Stored in this repository unless global is selected." />
+            <Label name="status" text="Without it, the identity is saved for this repository only." color="text-secondary" />
             <StackView orientation="horizontal" spacing="4">
                 <Space />
                 <Button name="ok" text="Save" flags="BUTTON_DEFAULT" />

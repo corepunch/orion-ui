@@ -32,7 +32,7 @@ static result_t switch_proc(window_t *win, uint32_t msg, uint32_t wparam, void *
     window_t *list = get_window_item(win, ID_SWITCH_BRANCH_DIALOG_BRANCHES); char name[256] = {0};
     if (list) strncpy(name, list->title, sizeof(name) - 1);
     if (name[0] && gc_checkout_branch(name)) { st->result = true; end_dialog(win, 1); }
-    else message_box(win, "Could not switch branches.", "Switch Branch", MB_OK);
+    else message_box(win, ui_tr("Could not switch branches."), ui_tr("Switch Branch"), MB_OK);
     return true;
   }
   return false;

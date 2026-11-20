@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="Agents" where="menu,agents_page">Агенты</string>
   <string source="Start Three Agents..." where="menu,agents_page">Запустить трёх агентов...</string>
@@ -72,23 +72,21 @@
   <string source="Use My Version" where="menu">Взять мою версию</string>
   <string source="Use Their Version" where="menu">Взять их версию</string>
   <string source="Mark Resolved" where="menu">Отметить как решённый</string>
-  <string source="Rebase onto Main" where="ribbon">Перебазировать на main</string>
-  <string source="Rebase the current branch onto the default branch (its upstream when it has one)" where="ribbon">Перебазировать текущую ветку на основную (на её вышестоящую ветку, если она есть)</string>
-  <string source="Rebase onto Selected" where="ribbon">Перебазировать на выбранную</string>
-  <string source="Rebase the current branch onto the branch selected in History" where="ribbon">Перебазировать текущую ветку на ветку, выбранную в истории</string>
-  <string source="In Progress" where="ribbon">Незавершённая операция</string>
-  <string source="Continue" where="ribbon,changes_page">Продолжить</string>
-  <string source="Continue the rebase or merge once every conflict is resolved" where="ribbon">Продолжить перебазирование или слияние, когда все конфликты решены</string>
-  <string source="Skip Commit" where="ribbon,changes_page">Пропустить коммит</string>
-  <string source="Leave out the commit that stopped the rebase" where="ribbon">Пропустить коммит, на котором остановилось перебазирование</string>
-  <string source="Abort" where="ribbon,changes_page">Отменить</string>
-  <string source="Stop and put the branch back as it was" where="ribbon,changes_page">Остановить и вернуть ветку в прежнее состояние</string>
-  <string source="Resolve" where="ribbon">Конфликты</string>
-  <string source="Use Mine" where="ribbon">Моя версия</string>
-  <string source="Resolve the selected conflicted file with your branch's version" where="ribbon">Решить конфликт в выбранном файле версией вашей ветки</string>
-  <string source="Use Theirs" where="ribbon">Их версия</string>
-  <string source="Resolve the selected conflicted file with the other branch's version" where="ribbon">Решить конфликт в выбранном файле версией другой ветки</string>
-  <string source="Stage a file you resolved by hand" where="ribbon">Проиндексировать файл, конфликт в котором решён вручную</string>
+  <string source="Rebase onto Main">Перебазировать на main</string>
+  <string source="Rebase the current branch onto the default branch (its upstream when it has one)">Перебазировать текущую ветку на основную (на её вышестоящую ветку, если она есть)</string>
+  <string source="Rebase onto Selected">Перебазировать на выбранную</string>
+  <string source="Rebase the current branch onto the branch selected in History">Перебазировать текущую ветку на ветку, выбранную в истории</string>
+  <string source="Continue" where="changes_page">Продолжить</string>
+  <string source="Continue the rebase or merge once every conflict is resolved">Продолжить перебазирование или слияние, когда все конфликты решены</string>
+  <string source="Skip Commit" where="changes_page">Пропустить коммит</string>
+  <string source="Leave out the commit that stopped the rebase">Пропустить коммит, на котором остановилось перебазирование</string>
+  <string source="Abort" where="changes_page">Отменить</string>
+  <string source="Stop and put the branch back as it was" where="changes_page">Остановить и вернуть ветку в прежнее состояние</string>
+  <string source="Use Mine">Моя версия</string>
+  <string source="Resolve the selected conflicted file with your branch's version">Решить конфликт в выбранном файле версией вашей ветки</string>
+  <string source="Use Theirs">Их версия</string>
+  <string source="Resolve the selected conflicted file with the other branch's version">Решить конфликт в выбранном файле версией другой ветки</string>
+  <string source="Stage a file you resolved by hand">Проиндексировать файл, конфликт в котором решён вручную</string>
   <string source="Conflicts" where="changes_page">Конфликты</string>
   <string source="Continue once every conflict is resolved" where="changes_page">Продолжить, когда все конфликты решены</string>
   <string source="Leave out the commit that stopped" where="changes_page">Пропустить коммит, на котором произошла остановка</string>
@@ -122,4 +120,329 @@
   <string source="Ready to continue" where="code">Можно продолжить</string>
   <string source="Resolve every conflicted file first: use a version or edit it, then Mark Resolved" where="code">Сначала решите конфликт в каждом файле: возьмите одну из версий или отредактируйте файл и отметьте его как решённый</string>
   <string source="Go on with the next step" where="code">Перейти к следующему шагу</string>
+  <string source="File" where="menu,changes_page,history_page">Файл</string>
+  <string source="Open Repository..." where="menu">Открыть репозиторий...</string>
+  <string source="Open Workspace..." where="menu">Открыть рабочее пространство...</string>
+  <string source="Save Workspace..." where="menu">Сохранить рабочее пространство...</string>
+  <string source="Repositories..." where="menu">Репозитории...</string>
+  <string source="Remove from Workspace" where="menu">Убрать из рабочего пространства</string>
+  <string source="Create Repository..." where="menu">Создать репозиторий...</string>
+  <string source="Clone..." where="menu">Клонировать...</string>
+  <string source="Exit" where="menu">Выход</string>
+  <string source="Repo" where="menu">Репозиторий</string>
+  <string source="Refresh" where="menu">Обновить</string>
+  <string source="Search..." where="menu">Поиск...</string>
+  <string source="Git Identity..." where="menu">Пользователь Git...</string>
+  <string source="Open Terminal Here" where="menu">Открыть терминал здесь</string>
+  <string source="View" where="menu">Вид</string>
+  <string source="Maximize / Restore" where="menu">Развернуть / восстановить</string>
+  <string source="Overview" where="menu,overview_page">Обзор</string>
+  <string source="Changes" where="menu,changes_page">Изменения</string>
+  <string source="History" where="menu,history_page">История</string>
+  <string source="GitHub" where="menu,github_page">GitHub</string>
+  <string source="All Commits" where="menu">Все коммиты</string>
+  <string source="Reflog" where="menu">Журнал ссылок</string>
+  <string source="Worktrees" where="menu,overview_page,history_page,worktree_dialog">Рабочие деревья</string>
+  <string source="Focus Next Pane" where="menu">Следующая панель</string>
+  <string source="Next View Tab" where="menu">Следующая вкладка</string>
+  <string source="Close View" where="menu">Закрыть вид</string>
+  <string source="Show Closed Views" where="menu">Показать закрытые виды</string>
+  <string source="Move View to Next Pane" where="menu">Переместить вид на следующую панель</string>
+  <string source="Split View Left" where="menu">Разделить вид слева</string>
+  <string source="Split View Right" where="menu">Разделить вид справа</string>
+  <string source="Split View Above" where="menu">Разделить вид сверху</string>
+  <string source="Split View Below" where="menu">Разделить вид снизу</string>
+  <string source="Branch" where="menu,overview_page,history_page">Ветка</string>
+  <string source="New Branch..." where="menu,switch_branch_dialog">Новая ветка...</string>
+  <string source="Checkout..." where="menu">Переключиться...</string>
+  <string source="Merge Into Current" where="menu">Слить с текущей</string>
+  <string source="Delete..." where="menu">Удалить...</string>
+  <string source="Delete Merged Branches..." where="menu">Удалить слитые ветки...</string>
+  <string source="Rename..." where="menu">Переименовать...</string>
+  <string source="Commit" where="menu,changes_page,commit_dialog">Коммит</string>
+  <string source="Write Commit Message" where="menu">Написать сообщение коммита</string>
+  <string source="Commit Staged Files" where="menu">Закоммитить проиндексированное</string>
+  <string source="Amend Last Commit" where="menu">Исправить последний коммит</string>
+  <string source="Undo Last Commit" where="menu">Отменить последний коммит</string>
+  <string source="Stash Changes" where="menu">Спрятать изменения в стеш</string>
+  <string source="Pop Stash" where="menu">Применить стеш</string>
+  <string source="Drop Stash..." where="menu">Удалить стеш...</string>
+  <string source="Discard Changes..." where="menu">Отменить изменения...</string>
+  <string source="Files" where="menu,history_page">Файлы</string>
+  <string source="Stage" where="menu">Индексировать</string>
+  <string source="Unstage" where="menu">Убрать из индекса</string>
+  <string source="Stage All" where="menu">Индексировать всё</string>
+  <string source="Unstage All" where="menu">Убрать всё из индекса</string>
+  <string source="Reveal in File Manager" where="menu">Показать в файловом менеджере</string>
+  <string source="Discard..." where="menu">Отменить...</string>
+  <string source="Remote" where="menu">Удалённый репозиторий</string>
+  <string source="Sync Current Branch" where="menu">Синхронизировать текущую ветку</string>
+  <string source="Fetch" where="menu">Получить</string>
+  <string source="Fetch All Repositories" where="menu">Получить изменения всех репозиториев</string>
+  <string source="Pull..." where="menu">Получить с слиянием...</string>
+  <string source="Push..." where="menu">Отправить...</string>
+  <string source="Manage Remotes..." where="menu">Удалённые репозитории...</string>
+  <string source="Prune Origin" where="menu">Очистить origin</string>
+  <string source="Tag" where="menu,history_page">Тег</string>
+  <string source="Create Tag..." where="menu">Создать тег...</string>
+  <string source="Delete Tag..." where="menu">Удалить тег...</string>
+  <string source="Push Tags" where="menu">Отправить теги</string>
+  <string source="Help" where="menu">Справка</string>
+  <string source="About Git Client" where="menu">О программе Git Client</string>
+  <string source="Publish, pull, or push the current branch">Опубликовать, получить или отправить текущую ветку</string>
+  <string source="Fetch from remote">Получить изменения с сервера</string>
+  <string source="Commit staged changes">Закоммитить проиндексированные изменения</string>
+  <string source="Search repository history">Поиск по истории репозитория</string>
+  <string source="Home">Главная</string>
+  <string source="Sync">Синхронизация</string>
+  <string source="Pull">Получить</string>
+  <string source="Push">Отправить</string>
+  <string source="Commit the staged files with the message in Changes (Ctrl+Enter)">Закоммитить проиндексированные файлы с сообщением из «Изменений» (Ctrl+Enter)</string>
+  <string source="Write Message">Сообщение</string>
+  <string source="Go to the commit message in Changes (Ctrl+K)">Перейти к сообщению коммита в «Изменениях» (Ctrl+K)</string>
+  <string source="Amend Last">Исправить</string>
+  <string source="Amend the last commit">Исправить последний коммит</string>
+  <string source="Undo Last">Отменить</string>
+  <string source="Undo the last commit">Отменить последний коммит</string>
+  <string source="Discard Changes">Отменить изменения</string>
+  <string source="Reveal">Показать</string>
+  <string source="Reveal in the file manager">Показать в файловом менеджере</string>
+  <string source="Discard" where="menu">Отменить</string>
+  <string source="Discard the selected file's changes">Отменить изменения выбранного файла</string>
+  <string source="Stash" where="changes_page,history_page">Стеш</string>
+  <string source="Stash changes">Спрятать изменения в стеш</string>
+  <string source="Pop" where="menu">Применить</string>
+  <string source="Pop the stash">Применить стеш</string>
+  <string source="Drop" where="menu">Удалить</string>
+  <string source="Drop a stash">Удалить стеш</string>
+  <string source="Repository">Репозиторий</string>
+  <string source="Search" where="search_dialog">Поиск</string>
+  <string source="Terminal" where="terminal_tab,overview_page">Терминал</string>
+  <string source="Open a terminal here">Открыть терминал здесь</string>
+  <string source="Identity">Пользователь</string>
+  <string source="Git identity">Пользователь Git</string>
+  <string source="New Branch" where="new_branch_dialog">Новая ветка</string>
+  <string source="Checkout" where="menu">Переключиться</string>
+  <string source="Integrate">Интеграция</string>
+  <string source="Merge the branch selected in History into the current branch">Слить ветку, выбранную в истории, с текущей</string>
+  <string source="Manage">Управление</string>
+  <string source="Rename" where="branch_rename_dialog">Переименовать</string>
+  <string source="Delete" where="menu">Удаление</string>
+  <string source="Delete Merged">Удалить слитые</string>
+  <string source="Delete local branches already merged into the default branch">Удалить локальные ветки, уже слитые с основной</string>
+  <string source="Tags" where="history_page">Теги</string>
+  <string source="Create Tag" where="create_tag_dialog">Создание тега</string>
+  <string source="Delete Tag" where="menu">Удаление тега</string>
+  <string source="Current Branch">Текущая ветка</string>
+  <string source="Fetch All">Получить всё</string>
+  <string source="Fetch every repository in the background">Получить изменения всех репозиториев в фоне</string>
+  <string source="Remotes">Удалённые</string>
+  <string source="Manage Remotes" where="remote_dialog">Удалённые репозитории</string>
+  <string source="Prune deleted remote-tracking branches">Удалить ветки отслеживания удалённых веток</string>
+  <string source="Show">Показать</string>
+  <string source="Agent Tasks">Задачи агентов</string>
+  <string source="Split">Разделение</string>
+  <string source="Split Right">Справа</string>
+  <string source="Split Below">Снизу</string>
+  <string source="Split Left">Слева</string>
+  <string source="Split Above">Сверху</string>
+  <string source="Move to Next Pane">На следующую панель</string>
+  <string source="Views">Виды</string>
+  <string source="Next Pane">Следующая панель</string>
+  <string source="Next View">Следующий вид</string>
+  <string source="Show Closed">Закрытые виды</string>
+  <string source="Show closed views">Показать закрытые виды</string>
+  <string source="Maximize">Развернуть</string>
+  <string source="Maximize or restore the window">Развернуть или восстановить окно</string>
+  <string source="Git Client" where="main_window">Git Client</string>
+  <string source="Create new branch">Создать ветку</string>
+  <string source="Prune">Очистить</string>
+  <string source="Merged">Слитые</string>
+  <string source="List linked worktrees">Список связанных рабочих деревьев</string>
+  <string source="Repos">Репозитории</string>
+  <string source="Switch or discover repositories">Переключить или найти репозитории</string>
+  <string source="Add Repo">Добавить</string>
+  <string source="Add a repository">Добавить репозиторий</string>
+  <string source="Clone" where="clone_dialog">Клонирование</string>
+  <string source="Clone a repository">Клонировать репозиторий</string>
+  <string source="All repositories (Ctrl+0)" where="overview_page">Все репозитории (Ctrl+0)</string>
+  <string source="Close active view" where="overview_page,changes_page,history_page,github_page">Закрыть активный вид</string>
+  <string source="All|Needs attention" where="overview_page">Все|Требуют внимания</string>
+  <string source="Show every checkout, or only those with changes, conflicts or commits to sync" where="overview_page">Показать все рабочие копии или только те, где есть изменения, конфликты или коммиты для синхронизации</string>
+  <string source="Worktree" where="overview_page,history_page">Рабочее дерево</string>
+  <string source="State" where="overview_page,agents_page,history_page,github_page">Состояние</string>
+  <string source="Runs" where="overview_page">Запуск</string>
+  <string source="Launch Targets" where="overview_page">Цели запуска</string>
+  <string source="Run" where="overview_page">Запустить</string>
+  <string source="Run the selected target; click a running target's icon to stop it" where="overview_page">Запустить выбранную цель; щелчок по значку запущенной цели останавливает её</string>
+  <string source="Show or hide the output of the targets that ran" where="overview_page">Показать или скрыть вывод запущенных целей</string>
+  <string source="Save launch.xml" where="overview_page">Сохранить launch.xml</string>
+  <string source="Save the guessed targets as launch.xml at the root of the selected checkout" where="overview_page">Сохранить найденные цели как launch.xml в корне выбранной рабочей копии</string>
+  <string source="Target" where="overview_page">Цель</string>
+  <string source="Command" where="overview_page">Команда</string>
+  <string source="Diff" where="agents_page,changes_page,history_page">Различия</string>
+  <string source="Cancel" where="agent_batch_dialog,commit_dialog,new_branch_dialog,branch_rename_dialog,clone_dialog,search_dialog,create_tag_dialog,push_pull_dialog,create_repo_dialog,identity_dialog,switch_branch_dialog,worktree_dialog">Отмена</string>
+  <string source="Working tree (Ctrl+1)" where="changes_page">Рабочее дерево (Ctrl+1)</string>
+  <string source="0 changed files" where="changes_page">0 изменённых файлов</string>
+  <string source="Status" where="changes_page,history_page">Статус</string>
+  <string source="Summary (required)" where="changes_page">Заголовок (обязательно)</string>
+  <string source="Description" where="changes_page">Описание</string>
+  <string source="Commit history (Ctrl+2)" where="history_page">История коммитов (Ctrl+2)</string>
+  <string source="Branches" where="history_page">Ветки</string>
+  <string source="Updated" where="history_page">Обновлена</string>
+  <string source="Kind" where="history_page">Вид</string>
+  <string source="Date" where="history_page">Дата</string>
+  <string source="Commits" where="history_page">Коммиты</string>
+  <string source="Subject" where="history_page">Заголовок</string>
+  <string source="Author" where="history_page,github_page">Автор</string>
+  <string source="Issues and pull requests (Ctrl+3)" where="github_page">Задачи и запросы на слияние (Ctrl+3)</string>
+  <string source="Issues" where="github_page">Задачи</string>
+  <string source="No open issues to show. Git Client reads them with the GitHub CLI: install gh and sign in with gh auth login." where="github_page">Открытых задач нет. Git Client получает их через GitHub CLI: установите gh и войдите командой gh auth login.</string>
+  <string source="#" where="github_page">#</string>
+  <string source="Title" where="github_page">Название</string>
+  <string source="Opened" where="github_page">Открыта</string>
+  <string source="Pull Requests" where="github_page">Запросы на слияние</string>
+  <string source="No open pull requests to show. Git Client reads them with the GitHub CLI: install gh and sign in with gh auth login." where="github_page">Открытых запросов на слияние нет. Git Client получает их через GitHub CLI: установите gh и войдите командой gh auth login.</string>
+  <string source="Base" where="github_page">База</string>
+  <string source="Message:" where="commit_dialog">Сообщение:</string>
+  <string source="Amend last commit" where="commit_dialog">Исправить последний коммит</string>
+  <string source="Name:" where="new_branch_dialog,remote_dialog,create_tag_dialog,identity_dialog">Имя:</string>
+  <string source="From:" where="new_branch_dialog">Из:</string>
+  <string source="Checkout after creation" where="new_branch_dialog">Переключиться после создания</string>
+  <string source="Create" where="new_branch_dialog,create_tag_dialog,create_repo_dialog">Создать</string>
+  <string source="Rename Branch" where="branch_rename_dialog">Переименование ветки</string>
+  <string source="New name:" where="branch_rename_dialog">Новое имя:</string>
+  <string source="Clone Repository" where="clone_dialog">Клонирование репозитория</string>
+  <string source="URL:" where="clone_dialog,remote_dialog">Адрес:</string>
+  <string source="Path:" where="clone_dialog">Путь:</string>
+  <string source="..." where="clone_dialog">...</string>
+  <string source="Remotes:" where="remote_dialog">Удалённые:</string>
+  <string source="Add" where="remote_dialog">Добавить</string>
+  <string source="Update" where="remote_dialog">Изменить</string>
+  <string source="Remove" where="remote_dialog,repositories_dialog">Удалить</string>
+  <string source="Close" where="remote_dialog,repositories_dialog">Закрыть</string>
+  <string source="Search commits, branches, files:" where="search_dialog">Поиск по коммитам, веткам, файлам:</string>
+  <string source="Ref:" where="create_tag_dialog">Ссылка:</string>
+  <string source="Remote Operation" where="push_pull_dialog">Операция с удалённым репозиторием</string>
+  <string source="Remote:" where="push_pull_dialog">Удалённый:</string>
+  <string source="Branch:" where="push_pull_dialog,switch_branch_dialog">Ветка:</string>
+  <string source="Prune deleted remote branches" where="push_pull_dialog">Удалить ветки, удалённые на сервере</string>
+  <string source="Force push if the remote has not moved" where="push_pull_dialog">Принудительно, если удалённая ветка не изменилась</string>
+  <string source="Uses --force-with-lease: it overwrites the remote branch only when nobody has pushed since your last fetch" where="push_pull_dialog">Использует --force-with-lease: удалённая ветка перезаписывается, только если после вашего последнего получения изменений туда никто не отправлял коммиты</string>
+  <string source="OK" where="push_pull_dialog">ОК</string>
+  <string source="Repositories" where="repositories_dialog">Репозитории</string>
+  <string source="Known repositories:" where="repositories_dialog">Известные репозитории:</string>
+  <string source="Add..." where="repositories_dialog">Добавить...</string>
+  <string source="Scan Folder..." where="repositories_dialog">Найти в папке...</string>
+  <string source="Open" where="repositories_dialog">Открыть</string>
+  <string source="Create Repository" where="create_repo_dialog">Создание репозитория</string>
+  <string source="Repository folder:" where="create_repo_dialog">Папка репозитория:</string>
+  <string source="Choose..." where="create_repo_dialog">Выбрать...</string>
+  <string source="The folder will be created and initialized with branch main." where="create_repo_dialog">Папка будет создана и инициализирована с веткой main.</string>
+  <string source="Git Identity" where="identity_dialog">Пользователь Git</string>
+  <string source="Email:" where="identity_dialog">Эл. почта:</string>
+  <string source="Use for all repositories" where="identity_dialog">Для всех репозиториев</string>
+  <string source="Without it, the identity is saved for this repository only." where="identity_dialog">Без этого флажка данные сохраняются только для этого репозитория.</string>
+  <string source="Save" where="identity_dialog">Сохранить</string>
+  <string source="Switch Branch" where="switch_branch_dialog">Переключение ветки</string>
+  <string source="Find:" where="switch_branch_dialog">Найти:</string>
+  <string source="Switch" where="switch_branch_dialog,worktree_dialog">Переключить</string>
+  <string source="Switch to a worktree:" where="worktree_dialog">Переключиться на рабочее дерево:</string>
+  <string source="%d modified" where="code">Изменено: %d</string>
+  <string source="%d new" where="code">Новых: %d</string>
+  <string source="%d repositories, %d worktrees  ·  %d uncommitted  ·  %d to push  ·  %d to pull" where="code">Репозиториев: %d, рабочих деревьев: %d  ·  с изменениями: %d  ·  к отправке: %d  ·  к получению: %d</string>
+  <string source="%d staged" where="code">Проиндексировано: %d</string>
+  <string source="%d to pull" where="code">К получению: %d</string>
+  <string source="%d to push" where="code">К отправке: %d</string>
+  <string source="%d with conflicts" where="code">С конфликтами: %d</string>
+  <string source="%d worktrees" where="code">Рабочих деревьев: %d</string>
+  <string source="%s (guessed)" where="code">%s (предположительно)</string>
+  <string source="1 with conflicts" where="code">1 с конфликтами</string>
+  <string source="Add Remote" where="code">Добавление удалённого репозитория</string>
+  <string source="All (%d)" where="code">Все (%d)</string>
+  <string source="Branch creation failed." where="code">Не удалось создать ветку.</string>
+  <string source="Branch rename failed." where="code">Не удалось переименовать ветку.</string>
+  <string source="Cannot delete remote-tracking branch." where="code">Нельзя удалить ветку отслеживания удалённого репозитория.</string>
+  <string source="Cannot delete the current branch." where="code">Нельзя удалить текущую ветку.</string>
+  <string source="Commit failed." where="code">Не удалось создать коммит.</string>
+  <string source="Commit failed. Check staged files and Git identity." where="code">Не удалось создать коммит. Проверьте проиндексированные файлы и данные пользователя Git.</string>
+  <string source="Could not determine the default branch (origin/HEAD, main or master)." where="code">Не удалось определить основную ветку (origin/HEAD, main или master).</string>
+  <string source="Could not load the full commit graph." where="code">Не удалось загрузить полный граф коммитов.</string>
+  <string source="Could not read the reflog." where="code">Не удалось прочитать журнал ссылок.</string>
+  <string source="Could not save the workspace." where="code">Не удалось сохранить рабочее пространство.</string>
+  <string source="Could not switch branches." where="code">Не удалось переключить ветку.</string>
+  <string source="Could not update staged files." where="code">Не удалось обновить индекс.</string>
+  <string source="Could not write launch.xml in the selected checkout." where="code">Не удалось записать launch.xml в выбранную рабочую копию.</string>
+  <string source="Delete failed." where="code">Не удалось удалить.</string>
+  <string source="Delete tag &quot;%s&quot;?" where="code">Удалить тег «%s»?</string>
+  <string source="Deleted %d merged branches." where="code">Удалено слитых веток: %d.</string>
+  <string source="Deleted 1 merged branch." where="code">Удалена 1 слитая ветка.</string>
+  <string source="Detached HEAD" where="code">Отсоединённый HEAD</string>
+  <string source="Discard all uncommitted changes?&#10;They are kept as a stash named &quot;Discarded changes&quot;, so Pop Stash brings them back." where="code">Отменить все незакоммиченные изменения?
+Они сохранятся в стеше «Discarded changes», и их можно вернуть командой «Применить стеш».</string>
+  <string source="Discard the uncommitted changes to &quot;%s&quot;?&#10;They are kept as a stash, so Pop Stash brings them back." where="code">Отменить незакоммиченные изменения в «%s»?
+Они сохранятся в стеше, и их можно вернуть командой «Применить стеш».</string>
+  <string source="Drop %s?" where="code">Удалить %s?</string>
+  <string source="Drop Stash" where="code">Удаление стеша</string>
+  <string source="Drop a git folder, or a gitclient workspace file." where="code">Перетащите папку git или файл рабочего пространства gitclient.</string>
+  <string source="Drop failed." where="code">Не удалось удалить стеш.</string>
+  <string source="Enter a commit summary." where="code">Введите заголовок коммита.</string>
+  <string source="Failed to add remote." where="code">Не удалось добавить удалённый репозиторий.</string>
+  <string source="Failed to create tag." where="code">Не удалось создать тег.</string>
+  <string source="Failed to delete tag." where="code">Не удалось удалить тег.</string>
+  <string source="Failed to remove remote." where="code">Не удалось удалить удалённый репозиторий.</string>
+  <string source="Failed to update remote." where="code">Не удалось изменить удалённый репозиторий.</string>
+  <string source="Fetching %d repositories..." where="code">Получение изменений: репозиториев %d...</string>
+  <string source="Folder missing" where="code">Папка не найдена</string>
+  <string source="Found %d matching commits." where="code">Найдено коммитов: %d.</string>
+  <string source="Found 1 matching commit." where="code">Найден 1 коммит.</string>
+  <string source="Git Client: one view of every repository and worktree you work in, built with the Orion UI framework." where="code">Git Client: все ваши репозитории и рабочие деревья в одном окне. Создан на Orion UI.</string>
+  <string source="Loading %s..." where="code">Загрузка %s...</string>
+  <string source="Loading..." where="code">Загрузка...</string>
+  <string source="Main checkout" where="code">Основная рабочая копия</string>
+  <string source="Needs attention (%d)" where="code">Требуют внимания (%d)</string>
+  <string source="No branch selected." where="code">Ветка не выбрана.</string>
+  <string source="No commits yet" where="code">Коммитов пока нет</string>
+  <string source="No file selected." where="code">Файл не выбран.</string>
+  <string source="No repository" where="code">Нет репозитория</string>
+  <string source="No stash selected." where="code">Стеш не выбран.</string>
+  <string source="No tag selected." where="code">Тег не выбран.</string>
+  <string source="Not a valid git repository." where="code">Это не репозиторий git.</string>
+  <string source="Not published" where="code">Не опубликована</string>
+  <string source="Open Repository" where="code">Открытие репозитория</string>
+  <string source="Open Workspace" where="code">Открытие рабочего пространства</string>
+  <string source="Operation failed" where="code">Операция не выполнена</string>
+  <string source="Operation failed." where="code">Операция не выполнена.</string>
+  <string source="Please enter a branch name." where="code">Введите имя ветки.</string>
+  <string source="Please enter a commit message." where="code">Введите сообщение коммита.</string>
+  <string source="Please enter a repository URL." where="code">Введите адрес репозитория.</string>
+  <string source="Please enter a tag name." where="code">Введите имя тега.</string>
+  <string source="Please enter both name and URL." where="code">Введите имя и адрес.</string>
+  <string source="Please enter the remote URL." where="code">Введите адрес удалённого репозитория.</string>
+  <string source="Please enter the remote name." where="code">Введите имя удалённого репозитория.</string>
+  <string source="Please select a destination path." where="code">Выберите папку назначения.</string>
+  <string source="Prune failed. Add a remote first." where="code">Очистка не выполнена. Сначала добавьте удалённый репозиторий.</string>
+  <string source="Pruned stale remote-tracking branches." where="code">Устаревшие ветки отслеживания удалены.</string>
+  <string source="Refreshing..." where="code">Обновление...</string>
+  <string source="Remove Remote" where="code">Удаление удалённого репозитория</string>
+  <string source="Remove remote &quot;%s&quot;?" where="code">Удалить удалённый репозиторий «%s»?</string>
+  <string source="Save Workspace" where="code">Сохранение рабочего пространства</string>
+  <string source="Search Results" where="code">Результаты поиска</string>
+  <string source="Stage Files" where="code">Индексация файлов</string>
+  <string source="Stop" where="code">Остановить</string>
+  <string source="Sync failed. Check the remote, upstream, and working tree." where="code">Синхронизация не выполнена. Проверьте удалённый репозиторий, вышестоящую ветку и рабочее дерево.</string>
+  <string source="That file is not a gitclient workspace." where="code">Этот файл не является рабочим пространством gitclient.</string>
+  <string source="That folder is not a git repository." where="code">Эта папка не является репозиторием git.</string>
+  <string source="There are no repositories to fetch." where="code">Нет репозиториев для получения изменений.</string>
+  <string source="This folder is missing or is no longer a git repository." where="code">Папка не найдена или больше не является репозиторием git.</string>
+  <string source="Uncommitted changes" where="code">Есть незакоммиченные изменения</string>
+  <string source="Undo Commit" where="code">Отмена коммита</string>
+  <string source="Undo failed." where="code">Не удалось отменить коммит.</string>
+  <string source="Undo the last commit and keep its changes staged?" where="code">Отменить последний коммит, оставив его изменения в индексе?</string>
+  <string source="Undo the last commit and keep its changes staged?&#10;The commit may already be published." where="code">Отменить последний коммит, оставив его изменения в индексе?
+Коммит, возможно, уже опубликован.</string>
+  <string source="Up to date with %s" where="code">Совпадает с %s</string>
+  <string source="Update Remote" where="code">Изменение удалённого репозитория</string>
+  <string source="Upstream branch is gone" where="code">Вышестоящая ветка удалена</string>
+  <string source="launch.xml has errors" where="code">В launch.xml есть ошибки</string>
 </strings>

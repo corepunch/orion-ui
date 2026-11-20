@@ -692,7 +692,7 @@ int git_get_branches(git_repo_t *repo, git_branch_t *out, int max) {
   char buf[32 * 1024] = {0};
   const char *args[] = {
     "git", "for-each-ref",
-    "--format=%(HEAD)%x1f%(refname)%x1f%(objectname:short)%x1f%(committerdate:relative)",
+    "--format=%(HEAD)%1f%(refname)%1f%(objectname:short)%1f%(committerdate:relative)",   // for-each-ref spells a hex byte %1f, not %x1f
     "refs/heads", "refs/remotes",
     NULL
   };

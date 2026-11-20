@@ -220,14 +220,18 @@ static const db_checkout_t *selected_checkout(void) {
 
 void gc_overview_status(char *out, size_t n) {
   overview_counts_t c = count_rows();
-  int len = snprintf(out, n, ui_tr("%d repositories, %d worktrees | %d uncommitted | %d to push | %d to pull"),
+  int len = snprintf(out, n, ui_tr("%d repositories, %d worktrees  \u00b7  %d uncommitted  \u00b7  %d to push  \u00b7  %d to pull"),
                      c.repos, c.trees, c.dirty, c.push, c.pull);
   if (len < 0 || (size_t)len >= n) return;
-  if (c.conflicts) len += snprintf(out + len, n - (size_t)len, " | %s", ui_tr("CONFLICTS"));
+  if (c.conflicts == 1) len += snprintf(out + len, n - (size_t)len, "  \u00b7  %s", ui_tr("1 with conflicts"));
+  else if (c.conflicts) {
+    len += snprintf(out + len, n - (size_t)len, "  \u00b7  ");
+    if ((size_t)len < n) len += snprintf(out + len, n - (size_t)len, ui_tr("%d with conflicts"), c.conflicts);
+  }
   const db_target_t *target = g_gc->targets_win ? (const db_target_t *)send_message(g_gc->targets_win, tvGetSelectedRecord, 0, NULL) : NULL;
   const db_checkout_t *row = selected_checkout();
   if ((size_t)len < n && (target || row))
-    snprintf(out + len, n - (size_t)len, "   -   %s", target && target->command[0] ? target->command : row ? row->path : "");
+    snprintf(out + len, n - (size_t)len, "  \u00b7  %s", target && target->command[0] ? target->command : row ? row->path : "");
 }
 
 void gc_overview_open(const char *path) {

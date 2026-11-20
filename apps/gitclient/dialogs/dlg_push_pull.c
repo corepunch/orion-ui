@@ -40,6 +40,15 @@ static result_t ppf_dlg_proc(window_t *win, uint32_t msg,
         }
       }
       dialog_push(win, st, ppf_bindings, ARRAY_LEN(ppf_bindings));
+      {
+        // One dialog for three operations: the button names it, and each shows only its own options.
+        static const char *verbs[] = { [GIT_OP_FETCH] = "Fetch", [GIT_OP_PULL] = "Pull", [GIT_OP_PUSH] = "Push" };
+        if (st->op <= GIT_OP_PUSH && verbs[st->op]) set_window_item_text(win, ID_PUSH_PULL_DIALOG_OK, "%s", ui_tr(verbs[st->op]));
+        window_t *prune = get_window_item(win, ID_PUSH_PULL_DIALOG_PRUNE), *force = get_window_item(win, ID_PUSH_PULL_DIALOG_FORCE);
+        if (prune) show_window(prune, st->op == GIT_OP_FETCH);
+        if (force) show_window(force, st->op == GIT_OP_PUSH);
+        window_layout_sync(win);
+      }
       return true;
 
     case evCommand:
@@ -62,13 +71,12 @@ static result_t ppf_dlg_proc(window_t *win, uint32_t msg,
               break;
             case GIT_OP_PULL:
               args[ai++] = "pull";
-              if (st->force) args[ai++] = "--force";
               if (st->remote[0]) args[ai++] = st->remote;
               if (st->branch[0]) args[ai++] = st->branch;
               break;
             case GIT_OP_PUSH:
               args[ai++] = "push";
-              if (st->force) args[ai++] = "--force";
+              if (st->force) args[ai++] = "--force-with-lease";   // refuses if the remote moved since the last fetch
               if (st->remote[0]) args[ai++] = st->remote;
               if (st->branch[0]) args[ai++] = st->branch;
               break;
@@ -102,11 +110,8 @@ void gc_show_push_pull_dialog(window_t *parent, git_op_t op) {
 }
 
 void gc_show_about_dialog(window_t *parent) {
-  message_box(parent,
-    "Git Client\n"
-    "A SmartGit-style repository viewer\n"
-    "built with the Orion UI framework.",
-    "About", MB_OK);
+  message_box(parent, ui_tr("Git Client: one view of every repository and worktree you work in, built with the Orion UI framework."),
+              ui_tr("About Git Client"), MB_OK);
 }
 
 typedef struct {
@@ -143,7 +148,7 @@ static result_t wt_dlg_proc(window_t *win, uint32_t msg, uint32_t wparam, void *
 void gc_show_worktrees_dialog(window_t *parent) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->repo) {
-    message_box(parent, "Open a repository first.", "Worktrees", MB_OK);
+    message_box(parent, ui_tr("Open a repository first."), ui_tr("Worktrees"), MB_OK);
     return;
   }
   wt_dlg_state_t st = {0};
@@ -158,10 +163,10 @@ void gc_show_worktrees_dialog(window_t *parent) {
 void gc_show_reflog_dialog(window_t *parent) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->repo) {
-    message_box(parent, "Open a repository first.", "Reflog", MB_OK);
+    message_box(parent, ui_tr("Open a repository first."), ui_tr("Reflog"), MB_OK);
     return;
   }
   gc_set_view_mode(GC_TAB_HISTORY);
   if (!gc_reload_history_log("-g"))
-    message_box(parent, "Could not read the reflog.", "Reflog", MB_OK);
+    message_box(parent, ui_tr("Could not read the reflog."), ui_tr("Reflog"), MB_OK);
 }

@@ -34,6 +34,16 @@ static void notify_toggle_unified(window_t *win) {
                  win);
 }
 
+// A file header line (diff --git, index, ---, +++, mode and rename lines), past any colour codes git put first.
+static bool gc_diff_is_meta(const char *line) {
+  while (line[0] == '\x1b' && line[1] == '[') { line += 2; while (*line && *line != 'm') line++; if (*line) line++; }
+  static const char *prefixes[] = { "diff --", "index ", "--- ", "+++ ", "new file mode", "deleted file mode",
+                                     "old mode", "new mode", "similarity index", "rename from", "rename to", "Binary files" };
+  for (size_t i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); i++)
+    if (!strncmp(line, prefixes[i], strlen(prefixes[i]))) return true;
+  return false;
+}
+
 result_t gc_diff_proc(window_t *win, uint32_t msg,
                       uint32_t wparam, void *lparam) {
   switch (msg) {
@@ -214,6 +224,9 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
 
       fill_rect(ui_color("DiffView", "background"), cr);
       uint32_t ink = ui_color("DiffView", "color"), hunk = ui_color("DiffView", "--hunk-selection");
+      uint32_t meta = ui_color("DiffView", "--meta-color");
+      irect16_t full = cr;
+      cr = rect_trim_left(cr, ui_px("DiffView", "padding-left"));
       uint32_t palette[16];
       ui_ansi_palette("DiffView", palette);
 
@@ -242,8 +255,8 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
         if (st->current_hunk >= 0 && st->current_hunk + 1 < st->hunk_count)   // the selected hunk's range
           marked = line_idx >= st->hunk_offsets[st->current_hunk] && line_idx < st->hunk_offsets[st->current_hunk + 1];
         for (int h = 0; h < st->hunk_count; h++) marked |= line_idx == st->hunk_offsets[h];   // hunk headers
-        if (marked) fill_rect(hunk, R(cr.x, cr.y + row * ch, cr.w, ch));
-        int n = text_cells_from_ansi_palette(st->lines[line_idx], cells, vis_cols, ink, 0, palette);
+        if (marked) fill_rect(hunk, R(full.x, cr.y + row * ch, full.w, ch));
+        int n = text_cells_from_ansi_palette(st->lines[line_idx], cells, vis_cols, gc_diff_is_meta(st->lines[line_idx]) ? meta : ink, 0, palette);
         draw_text_cells("DiffView", cells, n, cr.x, cr.y + row * ch);
       }
       return true;
