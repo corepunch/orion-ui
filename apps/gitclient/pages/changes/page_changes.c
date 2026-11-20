@@ -212,23 +212,12 @@ bool page_changes_handle(window_t *main_win, uint32_t msg,
     return true;
   }
 
-  if (code == GC_DIFF_TOGGLE_UNIFIED) {
-    if (gc->diff_win) {
-      gc_diff_state_t *st = (gc_diff_state_t *)gc->diff_win->userdata;
-      if (st) { gc->unified_diff = st->unified_mode; gc_diff_refresh(); }
-    }
-    return true;
-  }
-
-  if (code == GC_DIFF_STAGE_HUNK) {
-    int hunk_idx = (int)(int16_t)LOWORD(wparam);
-    if (gc->diff_win) {
-      gc_diff_state_t *st = (gc_diff_state_t *)gc->diff_win->userdata;
-      if (st && st->hunk_path[0]) {
-        gc_stage_hunk(st->hunk_path, hunk_idx);
-        gc_refresh_all();
-      }
-    }
+  if (code == GC_DIFF_LINES_TOGGLED) {
+    gc_diff_state_t *st = src ? (gc_diff_state_t *)src->userdata : NULL;
+    if (st && st->hunk_path[0] && !gc_stage_lines(st->hunk_path, st))
+      message_box(main_win, ui_tr("Could not update the staged lines."), ui_tr("Stage Lines"), MB_OK);
+    gc_diff_invalidate();
+    gc_refresh_all();
     return true;
   }
 

@@ -62,7 +62,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_gc->hinstance       = hinstance;
   g_gc->selected_commit = -1;
   g_gc->selected_file   = -1;
-  g_gc->unified_diff    = true;
   gc_recent_load();
 
   // Register app-specific icons so they are found by sysicon_resolve().

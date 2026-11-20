@@ -1,6 +1,7 @@
 // Controller — business logic; database population is owned by datasource/gitclient_db.c.
 
 #include "gitclient.h"
+#include "components/diff_view.h"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Stage / unstage files
@@ -451,63 +452,94 @@ bool gc_conflict_mark_resolved(const char *path, char *err, size_t err_n) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Per-hunk staging
+// Per-line staging
 // ═══════════════════════════════════════════════════════════════════════════
 
-bool gc_stage_hunk(const char *path, int hunk_idx) {
-  gc_state_t *gc = g_gc;
-  if (!gc || !gc->repo || !path || !path[0]) return false;
+static bool hunk_header(const char *s, int *os, int *oc, int *ns, int *nc) {
+  *oc = *nc = 1;
+  if (sscanf(s, "@@ -%d,%d +", os, oc) != 2 && sscanf(s, "@@ -%d +", os) != 1) return false;
+  if (!(s = strstr(s, " +"))) return false;
+  return sscanf(s, " +%d,%d", ns, nc) == 2 || sscanf(s, " +%d", ns) == 1;
+}
 
-  char full[GC_DIFF_BUF_SIZE] = {0};
-  git_get_diff(gc->repo, path, false, full, sizeof(full));
-
-  char patch[GC_DIFF_BUF_SIZE] = {0};
-  int pi = 0;
-
-  pi += snprintf(patch + pi, sizeof(patch) - (size_t)pi,
-                 "--- a/%s\n+++ b/%s\n", path, path);
-
-  int hunk_found = -1;
-  char *p = full;
-  while (*p && hunk_found < hunk_idx) {
-    if (p[0] == '@' && strncmp(p, "@@ -", 4) == 0)
-      hunk_found++;
-    if (hunk_found < hunk_idx) {
-      char *nl = strchr(p, '\n');
-      if (!nl) break;
-      p = nl + 1;
+// A patch against HEAD that holds only the included lines, the way GitHub
+// Desktop formats one: an excluded removal stays as context, an excluded
+// addition is left out, and each hunk header is recounted.
+static int format_line_patch(const char *path, const gc_diff_state_t *st, char *out, size_t cap) {
+  size_t n = (size_t)snprintf(out, cap, "--- a/%s\n+++ b/%s\n", path, path);
+  int orig_delta = 0, delta = 0;
+  char *body = malloc(cap);
+  if (!body) return -1;
+  for (int h = 0; h < st->hunk_count && n < cap; h++) {
+    int os, oc, ns, nc;
+    if (!hunk_header(st->lines[st->hunk_offsets[h]].text, &os, &oc, &ns, &nc)) continue;
+    size_t b = 0;
+    int old_n = 0, new_n = 0, changes = 0;
+    bool kept = false;   // whether the previous line made it into the patch, for "\ No newline"
+    for (int i = st->hunk_offsets[h] + 1; i < st->line_count && b < cap; i++) {
+      const gc_diff_line_t *l = &st->lines[i];
+      if (l->kind == GC_DIFF_HUNK || l->kind == GC_DIFF_META) break;
+      char sign = 0;
+      switch (l->kind) {
+        case GC_DIFF_CONTEXT: sign = ' '; old_n++; new_n++; break;
+        case GC_DIFF_DEL:     sign = l->included ? '-' : ' '; old_n++; new_n += !l->included; changes += l->included; break;
+        case GC_DIFF_ADD:     if (l->included) { sign = '+'; new_n++; changes++; } break;
+        case GC_DIFF_NOTE:    if (kept) b += (size_t)snprintf(body + b, cap - b, "\\ %s\n", l->text); continue;
+      }
+      kept = sign != 0;
+      if (sign) b += (size_t)snprintf(body + b, cap - b, "%c%s\n", sign, l->text);
     }
+    int start = ns + delta - orig_delta + (nc == 0 && new_n > 0) - (nc > 0 && new_n == 0);
+    orig_delta += nc - oc;
+    if (!changes) continue;
+    delta += new_n - old_n;
+    n += (size_t)snprintf(out + n, cap - n, "@@ -%d,%d +%d,%d @@\n%.*s", os, old_n, start, new_n, (int)MIN(b, cap), body);
   }
-  if (hunk_found != hunk_idx) return false;
+  free(body);
+  return n < cap ? (int)n : -1;
+}
 
-  while (*p && pi < (int)sizeof(patch) - 2) {
-    patch[pi++] = *p;
-    if (*p == '\n') { p++; break; }
-    p++;
+bool gc_stage_lines(const char *path, const gc_diff_state_t *st) {
+  gc_state_t *gc = g_gc;
+  if (!gc || !gc->repo || !path || !path[0] || !st) return false;
+  int selectable = 0, included = 0;
+  for (int i = 0; i < st->line_count; i++)
+    if (st->lines[i].selectable) { selectable++; included += st->lines[i].included; }
+  if (!selectable) return false;
+  if (included == selectable) return gc_stage_file(path);
+  char out[1024] = {0};
+
+  // Start the file over from HEAD, remembering the entry to put back if the patch fails.
+  char entry[1024] = {0}, mode[16] = {0}, sha[65] = {0};
+  const char *ls_args[]    = { "git", "ls-files", "-s", "--", path, NULL };
+  const char *reset_args[] = { "git", "reset", "-q", "--", path, NULL };
+  if (git_run_sync(gc->repo, ls_args, entry, sizeof(entry))) sscanf(entry, "%15s %64s", mode, sha);
+  if (!git_run_sync(gc->repo, reset_args, out, sizeof(out))) { GC_LOG("unstage %s failed: %s", path, out); return false; }
+  if (!included) return true;
+
+  char git_dir[1024] = {0}, patch_path[1100];
+  const char *dir_args[] = { "git", "rev-parse", "--absolute-git-dir", NULL };
+  if (!git_run_sync(gc->repo, dir_args, git_dir, sizeof(git_dir))) return false;
+  git_dir[strcspn(git_dir, "\r\n")] = '\0';
+  snprintf(patch_path, sizeof(patch_path), "%s/gc_line_patch", git_dir);
+
+  char *patch = malloc(GC_DIFF_BUF_SIZE);
+  int len = patch ? format_line_patch(path, st, patch, GC_DIFF_BUF_SIZE) : -1;
+  FILE *f = len > 0 ? fopen(patch_path, "wb") : NULL;
+  bool ok = f && fwrite(patch, 1, (size_t)len, f) == (size_t)len;
+  if (f) fclose(f);
+  free(patch);
+  const char *apply_args[] = { "git", "apply", "--cached", "--whitespace=nowarn", patch_path, NULL };
+  ok = ok && git_run_sync(gc->repo, apply_args, out, sizeof(out));
+  remove(patch_path);
+  if (!ok) {
+    fprintf(stderr, "[gitclient] staging lines of %s failed: %s\n", path, out);
+    fflush(stderr);
+    char cacheinfo[700];
+    snprintf(cacheinfo, sizeof(cacheinfo), "%s,%s,%s", mode, sha, path);
+    const char *restore_args[] = { "git", "update-index", "--add", "--cacheinfo", cacheinfo, NULL };
+    if (mode[0] && sha[0]) git_run_sync(gc->repo, restore_args, out, sizeof(out));
   }
-
-  while (*p && pi < (int)sizeof(patch) - 2) {
-    if (p[0] == '@' && strncmp(p, "@@ -", 4) == 0) break;
-    patch[pi++] = *p;
-    if (*p == '\n') p++;
-    else p++;
-  }
-  patch[pi] = '\0';
-
-  // Write patch to temp file and apply via git apply --cached
-  char tmp_path[512];
-  snprintf(tmp_path, sizeof(tmp_path), "%s/.git/gc_hunk_patch", gc->repo_path);
-
-  FILE *f = fopen(tmp_path, "w");
-  if (!f) return false;
-  fwrite(patch, 1, (size_t)pi, f);
-  fclose(f);
-
-  char buf[4096] = {0};
-  const char *args[] = { "git", "apply", "--cached", tmp_path, NULL };
-  bool ok = git_run_sync(gc->repo, args, buf, sizeof(buf));
-  remove(tmp_path);
-  if (!ok) GC_LOG("gc_stage_hunk failed: %s", buf);
   return ok;
 }
 

@@ -358,8 +358,18 @@ Terminal, DiffView { font: var(--text-mono); }
    colours map onto the status roles. */
 DiffView {
   background: var(--column-view-bg); color: var(--text-normal);
-  padding-left: 8px; --meta-color: var(--text-secondary);   /* file headers (diff, index, ---, +++) step back */
-  --hunk-selection: color-mix(in srgb, var(--accent) 14%, var(--column-view-bg));
-  --ansi-black: var(--text-secondary); --ansi-red:     var(--text-error);   --ansi-green: var(--text-success); --ansi-yellow: var(--text-warning);
-  --ansi-blue:  var(--text-info);      --ansi-magenta: var(--folder-text);  --ansi-cyan:  var(--text-info);    --ansi-white:  var(--text-normal);
+  padding-right: 8px; tab-size: 4; line-height: 1.5;
+  --meta-color: var(--text-secondary);   /* hunk headers, file headers and notes step back */
+  --gutter-padding: 8px; --check-size: 12px;
+  --gutter-color:       var(--text-secondary);
+  --gutter-background:  color-mix(in srgb, var(--text-normal) 4%, var(--column-view-bg));
+  --added-background:   color-mix(in srgb, var(--text-success) 12%, var(--column-view-bg));
+  --added-gutter:       color-mix(in srgb, var(--text-success) 22%, var(--column-view-bg));
+  --added-inner:        color-mix(in srgb, var(--text-success) 34%, var(--column-view-bg));
+  --removed-background: color-mix(in srgb, var(--text-error) 12%, var(--column-view-bg));
+  --removed-gutter:     color-mix(in srgb, var(--text-error) 22%, var(--column-view-bg));
+  --removed-inner:      color-mix(in srgb, var(--text-error) 34%, var(--column-view-bg));
+  --hunk-background:    color-mix(in srgb, var(--accent) 8%, var(--column-view-bg));
+  --hunk-selection:     color-mix(in srgb, var(--accent) 18%, var(--column-view-bg));
+  --included-gutter: var(--accent); --included-color: var(--accent-text);   /* lines the commit takes */
 }

@@ -88,6 +88,15 @@ Commit Message) puts the cursor in its summary, and **Ctrl+Enter** (Commit →
 Commit Staged Files, the ribbon's large Commit button) commits the staged
 files with it. The Commit dialog remains only for Amend Last Commit.
 
+**Staging lines.** As in GitHub Desktop, the diff of a modified file shows every
+change since `HEAD`, and a check in the gutter marks each line the index holds.
+Click a line's gutter to put it in or take it out; click a hunk header, or press
+**Enter** or **Space** on the current hunk (**Up**/**Down** move between hunks),
+to toggle the whole hunk. The index is rebuilt from `HEAD` with a patch of the
+checked lines (`git apply --cached`); a removed line left unchecked stays as
+context and an added one is left out. New, deleted, renamed and conflicted
+files stage as a whole from the file list.
+
 **Discard** never deletes work outright. Discarding one file, or every change,
 runs `git stash push --include-untracked`, so the working tree ends up as
 `checkout` plus `clean` would leave it, and the changes wait in the stash list
@@ -267,7 +276,8 @@ Views are bound to database columns in `gitclient.orion`. When you call `send_me
 | `controller.c` | Business logic — `gc_load_from_git()`, stage, commit, branch |
 | `git_backend.c` | Git CLI wrapper (popen-based) |
 | `view_main.c` | Main window proc — event routing only |
-| `view_diff.c` | VGA diff viewer (custom rendering) |
+| `view_diff.c` | Chooses the diff to show and marks the lines the index holds |
+| `components/diff_view.c` | DiffView: parses a unified diff, wraps and paints it, toggles lines |
 | `view_menubar.c` | Command dispatch |
 | `dialogs/dlg_*.c` | Dialogs using generated forms |
 

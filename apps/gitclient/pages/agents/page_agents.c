@@ -86,7 +86,7 @@ static void agents_show_selection(void) {
     view->diff_loaded = diff_task && gc_agent_diff(diff_task, st->diff_buf, sizeof(st->diff_buf));
     view->diff_truncated = view->diff_loaded && strlen(st->diff_buf) >= sizeof(st->diff_buf) - 256;
     if (!view->diff_loaded) st->diff_buf[0] = 0;
-    gc_diff_set_text(diff);
+    gc_diff_set_text(diff, st->diff_buf);
   }
 
   char title[256] = "", source[384] = "";

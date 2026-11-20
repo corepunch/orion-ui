@@ -500,14 +500,14 @@ bool git_get_diff(git_repo_t *repo, const char *path,
   if (!repo || !buf || buf_sz <= 0) return false;
 
   if (staged) {
-    const char *args[] = { "git", "diff", "--color=always", "--cached", "--",
+    const char *args[] = { "git", "diff", "--no-color", "--cached", "--",
                            path ? path : "", NULL };
     git_run_sync(repo, args, buf, buf_sz);
   } else if (path && path[0]) {
-    const char *args[] = { "git", "diff", "--color=always", "--", path, NULL };
+    const char *args[] = { "git", "diff", "--no-color", "--", path, NULL };
     git_run_sync(repo, args, buf, buf_sz);
   } else {
-    const char *args[] = { "git", "diff", "--color=always", NULL };
+    const char *args[] = { "git", "diff", "--no-color", NULL };
     git_run_sync(repo, args, buf, buf_sz);
   }
   return true;

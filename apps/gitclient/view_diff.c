@@ -1,23 +1,72 @@
-// Unified diff viewer — fill content into gc_diff_state_t
+// Diff viewer content: which diff the DiffView shows, and which of its lines the index holds.
 //
-// Reads selected file/commit from DB to determine what diff to show.
-// The window proc lives in the gitclient_components plugin (diff_view.c).
+// The window proc and the parser live in the gitclient_components plugin (diff_view.c).
+// As in GitHub Desktop, a modified file shows every change since HEAD, and each
+// changed line carries a check when the index already includes it.
 
 #include "gitclient.h"
 #include "components/diff_view.h"
 
-static void parse_hunks(gc_diff_state_t *st) {
-  st->hunk_count = 0;
-  for (int i = 0; i < st->line_count && st->hunk_count < GC_DIFF_MAX_HUNKS; i++) {
-    if (st->lines[i][0] == '@' && strncmp(st->lines[i], "@@ -", 4) == 0)
-      st->hunk_offsets[st->hunk_count++] = i;
-  }
-  st->current_hunk = st->hunk_count > 0 ? 0 : -1;
-}
-
 // Forget which diff the viewer shows: the next gc_diff_refresh() re-reads it from git.
 void gc_diff_invalidate(void) {
   if (g_gc) g_gc->diff_cache_valid = false;
+}
+
+static bool diff_hunk_start(const char *s, int *old_no, int *new_no) {
+  return sscanf(s, "@@ -%d", old_no) == 1 && (s = strstr(s, " +")) && sscanf(s, " +%d", new_no) == 1;
+}
+
+// The line numbers a -U0 diff removes (sign '-', old side) or adds (sign '+', new side).
+static bool *diff_line_set(const char *diff, char sign, int *count) {
+  bool *set = NULL;
+  int cap = 0, old_no = 0, new_no = 0;
+  bool in_hunk = false;
+  *count = 0;
+  for (const char *p = diff; *p; ) {
+    const char *nl = strchr(p, '\n');
+    if (!strncmp(p, "diff ", 5)) in_hunk = false;
+    else if (p[0] == '@') in_hunk = diff_hunk_start(p, &old_no, &new_no);
+    else if (in_hunk && p[0] == sign) {
+      int n = sign == '-' ? old_no++ : new_no++;
+      if (n >= cap) {
+        int grown_cap = MAX(n + 1, cap * 2 + 64);
+        bool *grown = realloc(set, (size_t)grown_cap);
+        if (!grown) break;
+        memset(grown + cap, 0, (size_t)(grown_cap - cap));
+        set = grown; cap = grown_cap;
+      }
+      set[n] = true;
+      *count = MAX(*count, n + 1);
+    } else if (in_hunk && p[0] == '-') old_no++;
+    else if (in_hunk && p[0] == '+') new_no++;
+    if (!nl) break;
+    p = nl + 1;
+  }
+  return set;
+}
+
+static bool in_set(const bool *set, int count, int n) { return set && n >= 0 && n < count && set[n]; }
+
+// Mark each changed line of a HEAD-to-worktree diff with whether the index has it:
+// a removed line is in when the index removes it too, an added line when the
+// worktree adds nothing there over the index.
+static void diff_mark_included(gc_state_t *gc, gc_diff_state_t *st, const char *path) {
+  char *cached = malloc(GC_DIFF_BUF_SIZE), *work = malloc(GC_DIFF_BUF_SIZE);
+  if (!cached || !work) { free(cached); free(work); return; }
+  const char *cached_args[] = { "git", "diff", "--no-color", "--no-ext-diff", "-U0", "--cached", "--", path, NULL };
+  const char *work_args[]   = { "git", "diff", "--no-color", "--no-ext-diff", "-U0", "--", path, NULL };
+  cached[0] = work[0] = '\0';
+  if (git_run_sync(gc->repo, cached_args, cached, GC_DIFF_BUF_SIZE) && git_run_sync(gc->repo, work_args, work, GC_DIFF_BUF_SIZE)) {
+    int removed_n, added_n;
+    bool *removed = diff_line_set(cached, '-', &removed_n), *added = diff_line_set(work, '+', &added_n);
+    for (int i = 0; i < st->line_count; i++) {
+      gc_diff_line_t *l = &st->lines[i];
+      if (l->kind == GC_DIFF_DEL) { l->selectable = true; l->included = in_set(removed, removed_n, l->old_no); }
+      if (l->kind == GC_DIFF_ADD) { l->selectable = true; l->included = !in_set(added, added_n, l->new_no); }
+    }
+    free(removed); free(added);
+  }
+  free(cached); free(work);
 }
 
 void gc_diff_refresh(void) {
@@ -28,130 +77,73 @@ void gc_diff_refresh(void) {
   gc_diff_state_t *st = (gc_diff_state_t *)win->userdata;
   if (!st) { return; }
 
-  st->unified_mode = gc->unified_diff;
-
   if (!gc->repo || !gc->history_db) {
-    st->diff_buf[0] = '\0';
-    gc_diff_set_text(win);
+    gc_diff_set_text(win, "");
     return;
   }
 
   const char *path = NULL;
-  bool staged = false;
-  bool untracked = false;
+  char status = 0;
+  bool staged = false, untracked = false;
 
   if (gc->selected_file >= 0) {
-    db_file_t *f = (db_file_t *)(intptr_t)send_message(
-      gc->files_win, tvGetSelectedRecord, 0, NULL);
+    db_file_t *f = (db_file_t *)(intptr_t)send_message(gc->files_win, tvGetSelectedRecord, 0, NULL);
     if (f) {
       path = f->path;
       staged = f->staged;
-      if (!staged && f->status[0] == '?' && gc->selected_commit < 0)
+      status = f->status[0];
+      if (!staged && status == '?' && gc->selected_commit < 0)
         untracked = true;
     }
   }
 
-  if (gc->diff_cache_valid                           &&
-      gc->last_diff_commit    == gc->selected_commit &&
-      gc->last_diff_file      == gc->selected_file    &&
-      gc->last_diff_staged    == staged               &&
-      gc->last_diff_untracked == untracked            &&
-      gc->last_diff_unified   == st->unified_mode     &&
-      strcmp(gc->last_diff_path, path ? path : "") == 0)
+  bool same_file = gc->last_diff_commit == gc->selected_commit && strcmp(gc->last_diff_path, path ? path : "") == 0;
+  if (gc->diff_cache_valid && same_file && gc->last_diff_file == gc->selected_file &&
+      gc->last_diff_staged == staged && gc->last_diff_untracked == untracked)
     return;
 
   st->hunk_path[0] = '\0';
-
   gc->diff_cache_valid    = true;
   gc->last_diff_commit    = gc->selected_commit;
   gc->last_diff_file      = gc->selected_file;
   gc->last_diff_staged    = staged;
   gc->last_diff_untracked = untracked;
-  gc->last_diff_unified   = st->unified_mode;
-  if (path) strncpy(gc->last_diff_path, path, sizeof(gc->last_diff_path) - 1);
-  else gc->last_diff_path[0] = '\0';
+  snprintf(gc->last_diff_path, sizeof(gc->last_diff_path), "%s", path ? path : "");
+  if (path && path[0]) snprintf(st->hunk_path, sizeof(st->hunk_path), "%s", path);
 
-
+  bool ok = true, selectable = false;
   if (gc->selected_commit >= 0) {
-    db_commit_t *c = (db_commit_t *)(intptr_t)send_message(
-      gc->log_win, tvGetSelectedRecord, 0, NULL);
+    db_commit_t *c = (db_commit_t *)(intptr_t)send_message(gc->log_win, tvGetSelectedRecord, 0, NULL);
     if (c) {
-      if (path && path[0]) {
-        strncpy(st->hunk_path, path, sizeof(st->hunk_path) - 1);
-        const char *args[] = {
-          "git", "show", "--color=always", "--pretty=format:", c->hash,
-          "--", path, NULL
-        };
-        git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
-      } else {
-        const char *args[] = {
-          "git", "show", "--color=always", "--pretty=format:", c->hash, NULL
-        };
-        git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
-      }
-    }
-  } else {
-    if (path && path[0])
-      strncpy(st->hunk_path, path, sizeof(st->hunk_path) - 1);
-    if (untracked) {
-      const char *args[] = { "git", "diff", "--no-index", "--color=always",
-                             "/dev/null", path, NULL };
-      git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
-    } else if (st->unified_mode) {
-      git_get_diff(gc->repo, path, staged, st->diff_buf, sizeof(st->diff_buf));
+      const char *args[] = { "git", "show", "--no-color", "--no-ext-diff", "--pretty=format:", c->hash,
+                             path && path[0] ? "--" : NULL, path, NULL };
+      ok = git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
     } else {
-      // Word-level diff for split/enhanced mode
-      const char *args[] = { "git", "diff", "--word-diff=color", "--color=always",
-                             staged ? "--cached" : "HEAD",
-                             path && path[0] ? "--" : NULL,
-                             path && path[0] ? path : NULL, NULL };
-      git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
+      st->diff_buf[0] = '\0';
     }
+  } else if (untracked) {
+    const char *args[] = { "git", "diff", "--no-index", "--no-color", "--no-ext-diff", "/dev/null", path, NULL };
+    git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));   // exits 1 when the files differ
+  } else if (path && path[0]) {
+    const char *args[] = { "git", "diff", "--no-color", "--no-ext-diff", "HEAD", "--", path, NULL };
+    ok = git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
+    selectable = ok && status == 'M';
+    if (!ok) ok = git_get_diff(gc->repo, path, staged, st->diff_buf, sizeof(st->diff_buf));   // no HEAD yet
+  } else {
+    ok = git_get_diff(gc->repo, NULL, staged, st->diff_buf, sizeof(st->diff_buf));
   }
+  if (!ok) st->diff_buf[0] = '\0';   // the buffer holds git's error, not a diff
 
-  gc_diff_set_text(win);
+  int scroll = same_file ? (int)win->vscroll.pos : 0;   // a reload after staging keeps the place
+  gc_diff_set_text(win, st->diff_buf);
+  if (selectable) diff_mark_included(gc, st, path);
+  if (scroll) {
+    scroll_info_t si = { .fMask = SIF_POS, .nPos = scroll };
+    set_scroll_info(win, SB_VERT, &si, true);
+  }
+  invalidate_window(win);
 }
 
-// Parse a unified patch already loaded into the view's buffer.
-void gc_diff_set_text(window_t *win) {
-  gc_diff_state_t *st = win ? win->userdata : NULL;
-  if (!st) return;
-  free(st->lines);
-  st->lines = NULL;
-  st->line_count = st->scroll_y = st->hunk_count = 0;
-  st->current_hunk = -1;
-
-  int count = 0;
-  for (char *p = st->diff_buf; *p; p++)
-    if (*p == '\n') count++;
-  if (st->diff_buf[0]) count++;
-
-  st->lines = count ? malloc((size_t)count * sizeof(*st->lines)) : NULL;
-  if (count && !st->lines) {
-    fprintf(stderr, "[gitclient] diff allocation failed win=%u lines=%d\n", win->id, count);
-    fflush(stderr);
-    invalidate_window(win);
-    return;
-  }
-
-  char *p = st->diff_buf;
-  while (*p) {
-    st->lines[st->line_count++] = p;
-    char *nl = strchr(p, '\n');
-    if (!nl) break;
-    *nl = '\0';
-    p = nl + 1;
-  }
-
-  parse_hunks(st);
-
-  scroll_info_t si = {
-    .fMask = SIF_RANGE | SIF_PAGE | SIF_POS,
-    .nMin  = 0,
-    .nMax  = st->line_count,
-    .nPage = (uint32_t)MAX(1, win->frame.h / MAX(1, text_char_height("DiffView"))),
-    .nPos  = 0,
-  };
-  set_scroll_info(win, SB_VERT, &si, false);
-  invalidate_window(win);
+void gc_diff_set_text(window_t *win, const char *text) {
+  if (win) send_message(win, edSetText, 0, (void *)text);
 }

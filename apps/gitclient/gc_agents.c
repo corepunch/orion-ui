@@ -348,7 +348,7 @@ bool gc_agent_diff(int id, char *out, size_t cap) {
   gc_agent_task_t *t = agent_find(id);
   if (!t || t->phase != GC_AGENT_READY || !out || cap == 0) return false;
   git_repo_t *repo = git_repo_open(t->source);
-  const char *args[] = {"git", "diff", "--no-ext-diff", "--no-textconv", "--color=always", t->base, t->revision, "--", NULL};
+  const char *args[] = {"git", "diff", "--no-ext-diff", "--no-textconv", "--no-color", t->base, t->revision, "--", NULL};
   bool ok = git_run_sync(repo, args, out, (int)cap);
   git_repo_close(repo);
   return ok;

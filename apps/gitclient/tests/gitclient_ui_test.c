@@ -1011,7 +1011,7 @@ void test_agents_review_and_launch(void) {
     ASSERT_TRUE(window_has_state(badge, WINDOW_STATE_VISIBLE));
     gc_diff_state_t *st = diff->userdata;
     bool found = false;
-    for (int j = 0; j < st->line_count; j++) found |= strstr(st->lines[j], expected[i]) != NULL;
+    for (int j = 0; j < st->line_count; j++) found |= strstr(st->lines[j].text, expected[i]) != NULL;
     ASSERT_TRUE(found);
   }
   ASSERT_NULL(task);
@@ -1222,6 +1222,61 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
   ASSERT_FALSE(gc_rebase_onto_default(onto, sizeof(onto), err, sizeof(err)));
   ASSERT_TRUE(strstr(err, "You are on main") != NULL);
 
+  // The diff shows every change since HEAD; a click in the gutter puts one line into the index.
+  snprintf(path, sizeof(path), "%s/lines.txt", root);
+  ASSERT_TRUE(gct_write_file(path, "1\ntwo\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\nthirteen\n14\n"));
+  ASSERT_TRUE(gct_git(root, "add lines.txt && git commit -qm lines"));
+  ASSERT_TRUE(gct_write_file(path, "1\nTwo!\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\nTHIRTEEN\n14\n"));
+  gc_set_view_mode(GC_TAB_CHANGES);
+  gc_refresh_all_sync();
+  window_t *changes_files = g_test_state.changes_files_win, *diff = g_test_state.changes_diff_win;
+  send_message(changes_files, RVM_SETSELECTION, 0, NULL);
+  send_message(host, evCommand, MAKEDWORD(0, RVN_SELCHANGE), changes_files);
+  gc_diff_invalidate(); gc_diff_refresh();
+  gc_diff_state_t *st = diff->userdata;
+  ASSERT_STR_EQUAL(st->hunk_path, "lines.txt");
+  ASSERT_EQUAL(st->hunk_count, 2);
+  int del = -1, add = -1, selectable = 0;
+  for (int i = 0; i < st->line_count; i++) {
+    selectable += st->lines[i].selectable && !st->lines[i].included;
+    if (st->lines[i].kind == GC_DIFF_DEL && del < 0) del = i;
+    if (st->lines[i].kind == GC_DIFF_ADD && add < 0) add = i;
+  }
+  ASSERT_EQUAL(selectable, 4);
+  ASSERT_STR_EQUAL(st->lines[del].text, "two"); ASSERT_EQUAL(st->lines[del].old_no, 2); ASSERT_EQUAL(st->lines[del].new_no, 0);
+  ASSERT_STR_EQUAL(st->lines[add].text, "Two!"); ASSERT_EQUAL(st->lines[add].new_no, 2);
+  ASSERT_EQUAL(st->lines[add].inner_start, 0); ASSERT_EQUAL(st->lines[add].inner_len, 4);   // no common prefix or suffix
+  ASSERT_EQUAL(st->lines[del].inner_start, 0); ASSERT_EQUAL(st->lines[del].inner_len, 3);
+  send_message(diff, evPaint, 0, NULL);   // lays the lines out in rows
+  int add_row = -1;
+  for (int r = 0; r < st->row_count; r++) if (st->rows[r].line == add) add_row = r;
+  ASSERT_TRUE(add_row >= 0);
+  irect16_t content = window_scroll_content_rect(diff);
+  int row_h = text_line_height("DiffView");
+  send_message(diff, evLeftButtonDown, MAKEDWORD(content.x + 2, content.y + add_row * row_h + row_h / 2), NULL);
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
+  ASSERT_FALSE(gct_git(root, "diff --cached | grep -qx -- '-two'"));   // the removal stays out
+  ASSERT_FALSE(gct_git(root, "diff --cached | grep -q THIRTEEN"));
+  st = diff->userdata;
+  int included = 0;
+  for (int i = 0; i < st->line_count; i++) included += st->lines[i].included;
+  ASSERT_EQUAL(included, 1);   // reloaded from git: the index has exactly that line
+
+  // A click on the second hunk's header takes all of it; Enter on the current hunk toggles it back.
+  send_message(diff, evPaint, 0, NULL);
+  int hunk_row = -1;
+  for (int r = 0; r < st->row_count; r++) if (st->rows[r].line == st->hunk_offsets[1]) hunk_row = r;
+  send_message(diff, evLeftButtonDown, MAKEDWORD(content.x + 2, content.y + hunk_row * row_h + row_h / 2), NULL);
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+THIRTEEN'"));
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx -- '-thirteen'"));
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
+  st = diff->userdata;
+  st->current_hunk = 1;
+  send_message(diff, evKeyDown, AX_KEY_ENTER, NULL);
+  ASSERT_FALSE(gct_git(root, "diff --cached | grep -q THIRTEEN"));
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
+  ASSERT_TRUE(gct_git(root, "reset -q --hard"));
+
   destroy_window(host);
   fe_unload_component_plugins();
   ui_set_database(saved_db);
@@ -1353,7 +1408,7 @@ static void gc_drag_view(window_t *source, int index, window_t *target, ipoint16
 static bool history_diff_contains(const char *text) {
   gc_diff_state_t *st = g_test_state.history_diff_win->userdata;
   for (int i = 0; i < st->line_count; i++)
-    if (strstr(st->lines[i], text)) return true;
+    if (strstr(st->lines[i].text, text)) return true;
   return false;
 }
 

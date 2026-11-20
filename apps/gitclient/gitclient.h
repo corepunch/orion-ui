@@ -205,7 +205,6 @@ typedef struct {
   database_t *github_db;
   int selected_commit;
   int selected_file;
-  bool unified_diff;
   char clone_path[512];
   char recent_repos[GC_MAX_RECENT_REPOS][512];
   int recent_repo_count;
@@ -274,7 +273,6 @@ typedef struct {
   char last_diff_path[512];
   bool last_diff_staged;
   bool last_diff_untracked;
-  bool last_diff_unified;
 } gc_state_t;
 
 extern gc_state_t *g_gc;
@@ -305,7 +303,7 @@ bool gc_operation_abort(char *err, size_t err_n);
 bool gc_rename_branch(const char *old_name, const char *new_name);
 bool gc_discard_file(const char *path);
 bool gc_discard_all(void);
-bool gc_stage_hunk(const char *path, int hunk_idx);
+bool gc_stage_lines(const char *path, const struct gc_diff_state_s *diff);   // the index takes exactly the included lines
 bool gc_conflict_use_version(const char *path, bool mine, char *err, size_t err_n);
 bool gc_conflict_mark_resolved(const char *path, char *err, size_t err_n);
 bool gc_create_tag(const char *name, const char *ref);
@@ -423,7 +421,7 @@ bool gc_run_reveal(const char *checkout, const char *target);
 void gc_run_show_terminal(bool show);
 void gc_run_sync_targets(void);
 bool gc_run_handle_command(uint32_t wparam, void *lparam);
-void gc_diff_set_text(window_t *win);
+void gc_diff_set_text(window_t *win, const char *text);   // plain unified diff; the view parses it
 result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_recent_load(void);
 void gc_recent_save(void);

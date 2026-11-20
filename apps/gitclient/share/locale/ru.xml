@@ -371,6 +371,7 @@
   <string source="Could not read the reflog." where="code">Не удалось прочитать журнал ссылок.</string>
   <string source="Could not save the workspace." where="code">Не удалось сохранить рабочее пространство.</string>
   <string source="Could not switch branches." where="code">Не удалось переключить ветку.</string>
+  <string source="Could not update the staged lines." where="code">Не удалось обновить строки в индексе.</string>
   <string source="Could not update staged files." where="code">Не удалось обновить индекс.</string>
   <string source="Could not write launch.xml in the selected checkout." where="code">Не удалось записать launch.xml в выбранную рабочую копию.</string>
   <string source="Delete failed." where="code">Не удалось удалить.</string>
@@ -428,6 +429,7 @@
   <string source="Remove remote &quot;%s&quot;?" where="code">Удалить удалённый репозиторий «%s»?</string>
   <string source="Save Workspace" where="code">Сохранение рабочего пространства</string>
   <string source="Search Results" where="code">Результаты поиска</string>
+  <string source="Stage Lines" where="code">Индексация строк</string>
   <string source="Stage Files" where="code">Индексация файлов</string>
   <string source="Stop" where="code">Остановить</string>
   <string source="Sync failed. Check the remote, upstream, and working tree." where="code">Синхронизация не выполнена. Проверьте удалённый репозиторий, вышестоящую ветку и рабочее дерево.</string>
