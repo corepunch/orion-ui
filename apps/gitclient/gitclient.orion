@@ -186,6 +186,9 @@
                 <Button command="files.use_mine" icon="user" text="Use Mine" tooltip="Resolve the selected conflicted file with your branch's version" />
                 <Button command="files.use_theirs" icon="arrow-left" text="Use Theirs" tooltip="Resolve the selected conflicted file with the other branch's version" />
                 <Button command="files.mark_resolved" icon="check" text="Mark Resolved" tooltip="Stage a file you resolved by hand" />
+                <Button command="branch.continue" icon="play" text="Continue" tooltip="Continue the rebase or merge once every conflict is resolved" />
+                <Button command="branch.skip" icon="skip-next" text="Skip Commit" tooltip="Leave out the commit that stopped the rebase" />
+                <Button command="branch.abort" icon="xmark" text="Abort" tooltip="Stop and put the branch back as it was" />
             </Group>
             <Group label="Manage">
                 <Button command="branch.rename" icon="edit-pencil" text="Rename" />
@@ -214,6 +217,12 @@
             </Group>
         </Tab>
         <Tab label="View">
+            <Group label="Agent Tasks">
+                <Button command="agents.start_batch" icon="gc-nav-agents" text="Start Three Agents..." />
+                <Button command="agents.output" icon="gc-terminal-window" text="Agent Output" />
+                <Button command="agents.stop" icon="gc-stop-circle" text="Stop Agent" />
+                <Button command="agents.run_reviewed" icon="gc-play" text="Run Reviewed Revision" />
+            </Group>
             <Group label="History">
                 <Button command="view.all_commits" icon="list" text="All Commits" />
                 <Button command="view.reflog" icon="clock-rotate-right" text="Reflog" />
