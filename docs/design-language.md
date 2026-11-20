@@ -197,7 +197,7 @@ Jamsheet identify sound families, and sample cards show their names and waveform
 | Sidebar `brPanelDark` | `#EEF0F4` | `#1E2227` |
 | Text `brTextNormal` | `#13151A` | `#ABB2BF` |
 | Secondary `brTextSecondary` | `#646A75` | `#7F848E` |
-| Accent `brAccent` | `#4C5BD4` | `#568AF2` |
+| Accent `brAccent` | `#5B5FC7` | `#568AF2` |
 | Success / Warning / Error / Info | `#17855A` `#B26B00` `#D23B30` `#2F6FD6` | `#98C379` `#E5C07B` `#E06C75` `#61AFEF` |
 | Edges `brLightEdge` / `brDarkEdge` | `#D8DCE3` / `#E3E6EB` | `#3A3F4B` / `#181A1F` |
 | Assistant balloon `brInfoBackground` / `brInfoText` | `#FFFFE1` / `#303025` | `#2C313A` / `#C8CCD4` |

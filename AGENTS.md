@@ -10,6 +10,17 @@ For UI design and review, use the [`orion-ui-design`](.agents/skills/orion-ui-de
 The app shell, status badges, buttons, tables and tokens every app shares are
 defined in [docs/design-language.md](docs/design-language.md).
 
+## One control per command on screen
+
+Every command has exactly one button visible at a time. Never repeat a control
+that is already on screen in another surface: the ribbon or toolbar does not
+mirror the activity bar's page buttons, a page's own action buttons, or a
+banner's buttons, and a pane does not repeat the ribbon. Before adding a
+button, check the activity bar, the open ribbon tab, the Quick Access Toolbar,
+pane toolbars and the page itself for the same command, and put it in the one
+place it belongs. Menus, context menus and keyboard shortcuts may still name
+the command; ribbon tabs that are never shown together may each carry it.
+
 ## Comic art and coloring
 
 Use watercolor for comic illustrations and for the color readers apply.

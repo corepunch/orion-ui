@@ -1,6 +1,8 @@
 /* Porcelain: cool white surfaces and an indigo accent, after macOS Finder and
-   modern banking dashboards. Selection is a solid indigo row with white text;
-   fields are white wells with a hairline that turns indigo on focus.
+   modern banking dashboards. The indigo is the brand colour of Microsoft's
+   Fluent (Teams) ramp, #5B5FC7, so the ribbon's tab row reads as Office's.
+   Selection is a solid indigo row with white text; fields are white wells
+   with a hairline that turns indigo on focus.
 
    Porcelain Dark is the same sheet under prefers-color-scheme: dark, in the
    colours of Atom's One Dark: charcoal faces with editor-grey wells a step
@@ -23,7 +25,7 @@
   --light-edge:             #D8DCE3;
   --dark-edge:              #E3E6EB;
   --flare:                  #FFFFFF;
-  --accent:                 #4C5BD4;
+  --accent:                 #5B5FC7;
   --button-inner:           #F1F3F6;
   --button-hover:           #E6E9EE;
   --text-normal:            #13151A;
@@ -32,7 +34,7 @@
   --text-success:           #17855A;
   --border-focus:           var(--accent);
   --border-active:          #CBD0D8;
-  --folder-text:            #3D4BB8;
+  --folder-text:            #4F52B2;
   --column-view-bg:         #FFFFFF;
   --modal-overlay:          #00000040;
   --toolbar-foreground:     #3B404A;
@@ -43,7 +45,7 @@
   --text-info:              #2F6FD6;
   --text-secondary:         #646A75;
   --text-on-color:          #13151A;
-  --selection-top:          #5866DC;
+  --selection-top:          #6569CF;
   --selection-bottom:       var(--accent);
   --accent-text:            #FFFFFF;
   --tooltip-background:     #1E1F24;
@@ -143,3 +145,8 @@ TableView::header { color: var(--text-secondary); }
 
 SpeechBubble { padding: 7px 11px; }
 TextEdit { padding-left: 6px; }   /* the text clears the corner: at least 6 px */
+
+/* As in Office, a ribbon toggle that is on is a light tint of the accent with
+   ordinary ink, not a solid fill; the solid accent belongs to the tab row. */
+Ribbon::button:checked { background: color-mix(in srgb, var(--accent) 16%, var(--control-bg)); color: var(--text-normal); }
+Ribbon::button:active  { background: color-mix(in srgb, var(--accent) 26%, var(--control-bg)); color: var(--text-normal); }

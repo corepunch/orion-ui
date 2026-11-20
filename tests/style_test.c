@@ -154,7 +154,7 @@ void test_porcelain_sheet(void) {
   ASSERT_NOT_NULL(s);
   uint32_t palette[brCount];
   ASSERT_TRUE(theme_palette_from_stylesheet(s, palette));
-  ASSERT_EQUAL(palette[brAccent], WEB(0x4C5BD4));
+  ASSERT_EQUAL(palette[brAccent], WEB(0x5B5FC7));
   ASSERT_EQUAL(palette[brBorderFocus], palette[brAccent]);
   style_sheet_set_dark(s, true);
   ASSERT_TRUE(theme_palette_from_stylesheet(s, palette));
