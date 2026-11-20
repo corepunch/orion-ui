@@ -69,6 +69,31 @@ static void diff_mark_included(gc_state_t *gc, gc_diff_state_t *st, const char *
   free(cached); free(work);
 }
 
+#define GC_DIFF_SOURCE_MAX (8 * 1024 * 1024)
+
+// The shown file's new side, which context expansion copies lines from: the
+// commit's blob in History, the working file in Changes.
+static void diff_send_source(gc_state_t *gc, window_t *win, const char *path, const char *hash) {
+  char *text = malloc(GC_DIFF_SOURCE_MAX);
+  if (!text) { fprintf(stderr, "[gitclient] diff source allocation failed path=%s\n", path); fflush(stderr); return; }
+  text[0] = '\0';
+  if (hash) {
+    char spec[700];
+    snprintf(spec, sizeof(spec), "%s:%s", hash, path);
+    const char *args[] = { "git", "show", spec, NULL };
+    if (!git_run_sync(gc->repo, args, text, GC_DIFF_SOURCE_MAX)) text[0] = '\0';   // deleted in that commit
+  } else {
+    char full[1100];
+    snprintf(full, sizeof(full), "%s/%s", git_repo_path(gc->repo), path);
+    FILE *f = fopen(full, "rb");
+    size_t n = f ? fread(text, 1, GC_DIFF_SOURCE_MAX - 1, f) : 0;
+    if (f) fclose(f);
+    text[n] = '\0';
+  }
+  send_message(win, dvSetSource, 0, text);
+  free(text);
+}
+
 void gc_diff_refresh(void) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->diff_win) { return; }
@@ -112,9 +137,11 @@ void gc_diff_refresh(void) {
   if (path && path[0]) snprintf(st->hunk_path, sizeof(st->hunk_path), "%s", path);
 
   bool ok = true, selectable = false;
+  const char *hash = NULL;
   if (gc->selected_commit >= 0) {
     db_commit_t *c = (db_commit_t *)(intptr_t)send_message(gc->log_win, tvGetSelectedRecord, 0, NULL);
     if (c) {
+      hash = c->hash;
       const char *args[] = { "git", "show", "--no-color", "--no-ext-diff", "--pretty=format:", c->hash,
                              path && path[0] ? "--" : NULL, path, NULL };
       ok = git_run_sync(gc->repo, args, st->diff_buf, sizeof(st->diff_buf));
@@ -137,6 +164,7 @@ void gc_diff_refresh(void) {
   int scroll = same_file ? (int)win->vscroll.pos : 0;   // a reload after staging keeps the place
   gc_diff_set_text(win, st->diff_buf);
   if (selectable) diff_mark_included(gc, st, path);
+  if (ok && path && path[0] && !untracked && (hash || gc->selected_commit < 0)) diff_send_source(gc, win, path, hash);
   if (scroll) {
     scroll_info_t si = { .fMask = SIF_POS, .nPos = scroll };
     set_scroll_info(win, SB_VERT, &si, true);

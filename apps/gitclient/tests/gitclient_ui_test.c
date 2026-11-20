@@ -1087,6 +1087,14 @@ static bool git_rev(const char *dir, const char *rev, char *out, size_t n) {
   return ok && buf[0];
 }
 
+// The painted row that shows a diff line (line_count: the row after the last hunk), or -1.
+static int diff_row_of(window_t *diff, int line) {
+  send_message(diff, evPaint, 0, NULL);   // lays the lines out in rows
+  gc_diff_state_t *st = diff->userdata;
+  for (int r = 0; r < st->row_count; r++) if (st->rows[r].line == line) return r;
+  return -1;
+}
+
 void test_rebase_onto_main_resolve_continue_and_abort(void) {
   TEST("rebase: onto the default branch, stop on a conflict, resolve with mine, continue; abort restores; merge aborts");
   char root[256], path[600];
@@ -1224,9 +1232,13 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
 
   // The diff shows every change since HEAD; a click in the gutter puts one line into the index.
   snprintf(path, sizeof(path), "%s/lines.txt", root);
-  ASSERT_TRUE(gct_write_file(path, "1\ntwo\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\nthirteen\n14\n"));
+  char text[512] = "", *cur = text;
+  for (int i = 1; i <= 30; i++) cur += i == 2 ? sprintf(cur, "two\n") : i == 13 ? sprintf(cur, "thirteen\n") : sprintf(cur, "%d\n", i);
+  ASSERT_TRUE(gct_write_file(path, text));
   ASSERT_TRUE(gct_git(root, "add lines.txt && git commit -qm lines"));
-  ASSERT_TRUE(gct_write_file(path, "1\nTwo!\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\nTHIRTEEN\n14\n"));
+  cur = text;
+  for (int i = 1; i <= 30; i++) cur += i == 2 ? sprintf(cur, "Two!\n") : i == 13 ? sprintf(cur, "THIRTEEN\n") : sprintf(cur, "%d\n", i);
+  ASSERT_TRUE(gct_write_file(path, text));
   gc_set_view_mode(GC_TAB_CHANGES);
   gc_refresh_all_sync();
   window_t *changes_files = g_test_state.changes_files_win, *diff = g_test_state.changes_diff_win;
@@ -1235,7 +1247,8 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
   gc_diff_invalidate(); gc_diff_refresh();
   gc_diff_state_t *st = diff->userdata;
   ASSERT_STR_EQUAL(st->hunk_path, "lines.txt");
-  ASSERT_EQUAL(st->hunk_count, 2);
+  ASSERT_EQUAL(st->hunk_count, 2);   // lines 1-5 and 10-16; 6-9 and 17-30 hidden
+  ASSERT_EQUAL(st->source_count, 30);
   int del = -1, add = -1, selectable = 0;
   for (int i = 0; i < st->line_count; i++) {
     selectable += st->lines[i].selectable && !st->lines[i].included;
@@ -1247,34 +1260,44 @@ void test_rebase_onto_main_resolve_continue_and_abort(void) {
   ASSERT_STR_EQUAL(st->lines[add].text, "Two!"); ASSERT_EQUAL(st->lines[add].new_no, 2);
   ASSERT_EQUAL(st->lines[add].inner_start, 0); ASSERT_EQUAL(st->lines[add].inner_len, 4);   // no common prefix or suffix
   ASSERT_EQUAL(st->lines[del].inner_start, 0); ASSERT_EQUAL(st->lines[del].inner_len, 3);
-  send_message(diff, evPaint, 0, NULL);   // lays the lines out in rows
-  int add_row = -1;
-  for (int r = 0; r < st->row_count; r++) if (st->rows[r].line == add) add_row = r;
-  ASSERT_TRUE(add_row >= 0);
+
+  // Expanding: the short gap between the hunks opens at once and joins them; the end opens 20 lines at a time.
   irect16_t content = window_scroll_content_rect(diff);
   int row_h = text_line_height("DiffView");
-  send_message(diff, evLeftButtonDown, MAKEDWORD(content.x + 2, content.y + add_row * row_h + row_h / 2), NULL);
+  #define ROW_OF(line_index) diff_row_of(diff, (line_index))
+  #define CLICK(x, row) send_message(diff, evLeftButtonDown, MAKEDWORD((x), content.y + (row) * row_h + row_h / 2), NULL)
+  CLICK(content.x + 2, ROW_OF(st->hunk_offsets[1]));
+  ASSERT_EQUAL(st->hunk_count, 1);
+  int seven = -1;
+  for (int i = 0; i < st->line_count; i++) if (st->lines[i].new_no == 7) seven = i;
+  ASSERT_TRUE(seven >= 0); ASSERT_EQUAL(st->lines[seven].kind, GC_DIFF_CONTEXT); ASSERT_EQUAL(st->lines[seven].old_no, 7);
+  ASSERT_STR_EQUAL(st->lines[seven].text, "7");
+  CLICK(content.x + 2, ROW_OF(st->line_count));   // the row after the last hunk
+  ASSERT_EQUAL(st->lines[st->line_count - 1].new_no, 30);
+  ASSERT_EQUAL(ROW_OF(st->line_count), -1);         // nothing left below
+
+  CLICK(content.x + 2, ROW_OF(add));
   ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
   ASSERT_FALSE(gct_git(root, "diff --cached | grep -qx -- '-two'"));   // the removal stays out
   ASSERT_FALSE(gct_git(root, "diff --cached | grep -q THIRTEEN"));
   st = diff->userdata;
   int included = 0;
   for (int i = 0; i < st->line_count; i++) included += st->lines[i].included;
-  ASSERT_EQUAL(included, 1);   // reloaded from git: the index has exactly that line
+  ASSERT_EQUAL(included, 1);                        // reloaded from git: the index has exactly that line
+  ASSERT_EQUAL(st->hunk_count, 1);                  // and the expanded lines stay open
+  ASSERT_EQUAL(st->lines[st->line_count - 1].new_no, 30);
 
-  // A click on the second hunk's header takes all of it; Enter on the current hunk toggles it back.
-  send_message(diff, evPaint, 0, NULL);
-  int hunk_row = -1;
-  for (int r = 0; r < st->row_count; r++) if (st->rows[r].line == st->hunk_offsets[1]) hunk_row = r;
-  send_message(diff, evLeftButtonDown, MAKEDWORD(content.x + 2, content.y + hunk_row * row_h + row_h / 2), NULL);
+  // A click on the header's text takes the whole hunk; Enter on the current hunk toggles it back.
+  CLICK(content.x + content.w / 2, ROW_OF(st->hunk_offsets[0]));   // the band's text, clear of the scrollbar
   ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+THIRTEEN'"));
-  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx -- '-thirteen'"));
-  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
+  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx -- '-two'"));
+  ASSERT_TRUE(gct_git(root, "diff --quiet"));   // the whole file is staged
   st = diff->userdata;
-  st->current_hunk = 1;
+  st->current_hunk = 0;
   send_message(diff, evKeyDown, AX_KEY_ENTER, NULL);
-  ASSERT_FALSE(gct_git(root, "diff --cached | grep -q THIRTEEN"));
-  ASSERT_TRUE(gct_git(root, "diff --cached | grep -qx '+Two!'"));
+  ASSERT_TRUE(gct_git(root, "diff --cached --quiet"));
+  #undef ROW_OF
+  #undef CLICK
   ASSERT_TRUE(gct_git(root, "reset -q --hard"));
 
   destroy_window(host);

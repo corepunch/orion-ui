@@ -429,6 +429,10 @@
   <string source="Remove remote &quot;%s&quot;?" where="code">Удалить удалённый репозиторий «%s»?</string>
   <string source="Save Workspace" where="code">Сохранение рабочего пространства</string>
   <string source="Search Results" where="code">Результаты поиска</string>
+  <string source="Show lines above" where="code">Показать строки выше</string>
+  <string source="Show lines below" where="code">Показать строки ниже</string>
+  <string source="Show the hidden lines" where="code">Показать скрытые строки</string>
+  <string source="Include or leave out this hunk" where="code">Включить или исключить этот фрагмент</string>
   <string source="Stage Lines" where="code">Индексация строк</string>
   <string source="Stage Files" where="code">Индексация файлов</string>
   <string source="Stop" where="code">Остановить</string>

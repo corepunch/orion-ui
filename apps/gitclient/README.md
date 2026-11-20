@@ -90,9 +90,12 @@ files with it. The Commit dialog remains only for Amend Last Commit.
 
 **Staging lines.** As in GitHub Desktop, the diff of a modified file shows every
 change since `HEAD`, and a check in the gutter marks each line the index holds.
-Click a line's gutter to put it in or take it out; click a hunk header, or press
-**Enter** or **Space** on the current hunk (**Up**/**Down** move between hunks),
-to toggle the whole hunk. The index is rebuilt from `HEAD` with a patch of the
+Click a line's gutter to put it in or take it out; click a hunk header's text, or
+press **Enter** or **Space** on the current hunk (**Up**/**Down** move between
+hunks), to toggle the whole hunk. The arrows in a hunk header's gutter show 20
+more unchanged lines above it or below the hunk before, or the whole gap when it
+is short; a row after the last hunk shows the lines below. Hunks whose gap
+closes join, and the lines stay open when the diff reloads after staging. The index is rebuilt from `HEAD` with a patch of the
 checked lines (`git apply --cached`); a removed line left unchecked stays as
 context and an added one is left out. New, deleted, renamed and conflicted
 files stage as a whole from the file list.

@@ -73,6 +73,7 @@ static void parse_diff(window_t *win, gc_diff_state_t *st) {
   int count = 1;
   for (char *p = st->diff_buf; *p; p++) count += *p == '\n';
   st->lines = calloc((size_t)count, sizeof(*st->lines));
+  st->line_cap = st->lines ? count : 0;
   if (!st->lines) {
     fprintf(stderr, "[gitclient] diff allocation failed win=%u lines=%d\n", win->id, count);
     fflush(stderr);
@@ -102,6 +103,7 @@ static void parse_diff(window_t *win, gc_diff_state_t *st) {
         st->hunk_offsets[st->hunk_count++] = st->line_count - 1;
       }
       l->hunk = hunk;
+      l->old_no = oc ? os : os + 1; l->new_no = nc ? ns : ns + 1;   // git names the line before an empty side
       old_no = os; new_no = ns; old_left = oc; new_left = nc;
     } else {
       l->kind = GC_DIFF_META; l->hunk = -1;
@@ -118,6 +120,139 @@ static void parse_diff(window_t *win, gc_diff_state_t *st) {
   st->number_digits = 1;
   for (int n = max_no; n >= 10; n /= 10) st->number_digits++;
 }
+
+// ── Context expansion ────────────────────────────────────────────────────────
+// Lines between hunks come from the new side's text, as GitHub Desktop splices
+// them in: a hunk grows up or down by GC_DIFF_EXPAND_STEP lines, and two hunks
+// whose gap closes become one.
+
+typedef struct { int first, end, old_first, old_end; } hunk_span_t;   // [first, end) on each side
+
+static bool is_hunk_body(const gc_diff_line_t *l) { return l->kind != GC_DIFF_HUNK && l->kind != GC_DIFF_META; }
+
+static int hunk_last_line(const gc_diff_state_t *st, int h) {
+  int i = st->hunk_offsets[h];
+  while (i + 1 < st->line_count && is_hunk_body(&st->lines[i + 1])) i++;
+  return i;
+}
+
+static hunk_span_t hunk_span(const gc_diff_state_t *st, int h) {
+  const gc_diff_line_t *head = &st->lines[st->hunk_offsets[h]];
+  hunk_span_t s = {head->new_no, head->new_no, head->old_no, head->old_no};
+  for (int i = st->hunk_offsets[h] + 1; i < st->line_count && is_hunk_body(&st->lines[i]); i++) {
+    s.end     += st->lines[i].kind == GC_DIFF_CONTEXT || st->lines[i].kind == GC_DIFF_ADD;
+    s.old_end += st->lines[i].kind == GC_DIFF_CONTEXT || st->lines[i].kind == GC_DIFF_DEL;
+  }
+  return s;
+}
+
+// The hidden new-side lines before hunk h; h == hunk_count is the gap after the last hunk.
+static hunk_span_t gap_before(const gc_diff_state_t *st, int h) {
+  hunk_span_t g = {1, st->source_count + 1, 1, 1};
+  if (h > 0) { hunk_span_t p = hunk_span(st, h - 1); g.first = p.end; g.old_first = p.old_end; }
+  if (h < st->hunk_count) { hunk_span_t n = hunk_span(st, h); g.end = n.first; g.old_end = n.old_first; }
+  if (!st->source_count) g.end = g.first;
+  return g;
+}
+
+static bool insert_context(gc_diff_state_t *st, int at, int hunk, int first, int count, int old_offset) {
+  if (st->line_count + count > st->line_cap) {
+    int cap = MAX(st->line_count + count, st->line_cap * 2);
+    gc_diff_line_t *grown = realloc(st->lines, (size_t)cap * sizeof(*grown));
+    if (!grown) { fprintf(stderr, "[gitclient] diff expansion allocation failed lines=%d\n", cap); fflush(stderr); return false; }
+    st->lines = grown; st->line_cap = cap;
+  }
+  memmove(&st->lines[at + count], &st->lines[at], (size_t)(st->line_count - at) * sizeof(*st->lines));
+  for (int k = 0; k < count; k++)
+    st->lines[at + k] = (gc_diff_line_t){ .text = st->source_lines[first + k - 1], .kind = GC_DIFF_CONTEXT,
+                                          .old_no = first + k + old_offset, .new_no = first + k, .hunk = hunk };
+  st->line_count += count;
+  for (int h = 0; h < st->hunk_count; h++) if (st->hunk_offsets[h] >= at) st->hunk_offsets[h] += count;
+  st->wrap_cols = 0;
+  return true;
+}
+
+// Hunk h joins the one before it: its header goes, its lines move up a hunk.
+static void merge_hunk(gc_diff_state_t *st, int h) {
+  int at = st->hunk_offsets[h];
+  memmove(&st->lines[at], &st->lines[at + 1], (size_t)(st->line_count - at - 1) * sizeof(*st->lines));
+  st->line_count--;
+  for (int i = at; i < st->line_count; i++) if (st->lines[i].hunk >= h) st->lines[i].hunk--;
+  for (int k = h; k + 1 < st->hunk_count; k++) st->hunk_offsets[k] = st->hunk_offsets[k + 1] - 1;
+  st->hunk_count--;
+  if (st->current_hunk >= h) st->current_hunk = MAX(0, st->current_hunk - 1);
+  st->wrap_cols = 0;
+}
+
+// Show new-side lines [first, end) wherever they border a hunk.
+static void reveal_lines(gc_diff_state_t *st, int first, int end) {
+  for (int h = 0; h <= st->hunk_count && first < end; h++) {
+    hunk_span_t g = gap_before(st, h);
+    int a = MAX(first, g.first), b = MIN(end, g.end);
+    if (a >= b) continue;
+    if (h > 0 && a == g.first) {                 // the hunk above grows down
+      if (!insert_context(st, hunk_last_line(st, h - 1) + 1, h - 1, a, b - a, g.old_first - g.first)) return;
+    } else if (h < st->hunk_count && b == g.end) {   // this hunk grows up
+      if (!insert_context(st, st->hunk_offsets[h] + 1, h, a, b - a, g.old_end - g.end)) return;
+      gc_diff_line_t *head = &st->lines[st->hunk_offsets[h]];
+      head->new_no = a; head->old_no = a + g.old_end - g.end;
+    } else {
+      continue;
+    }
+    if (h > 0 && h < st->hunk_count && hunk_span(st, h - 1).end == hunk_span(st, h).first) { merge_hunk(st, h); h--; }
+  }
+}
+
+static void expand(gc_diff_state_t *st, int first, int end) {
+  if (first >= end) return;
+  reveal_lines(st, first, end);
+  if (st->revealed_count < GC_DIFF_MAX_REVEALED)
+    { st->revealed[st->revealed_count].first = first; st->revealed[st->revealed_count++].end = end; }
+}
+
+static void free_source(gc_diff_state_t *st) {
+  free(st->source); free(st->source_lines);
+  st->source = NULL; st->source_lines = NULL; st->source_count = 0;
+}
+
+static void set_source(window_t *win, gc_diff_state_t *st, const char *text) {
+  if (st->source) {   // lines already point into it; a new source needs a new edSetText
+    fprintf(stderr, "[gitclient] diff source set twice win=%u path=%s\n", win->id, st->hunk_path);
+    fflush(stderr);
+    return;
+  }
+  if (strcmp(st->source_path, st->hunk_path)) {
+    snprintf(st->source_path, sizeof(st->source_path), "%s", st->hunk_path);
+    st->revealed_count = 0;
+  }
+  if (!text || !text[0] || !st->hunk_path[0] || !st->hunk_count) return;
+  size_t len = strlen(text);
+  int count = 1;
+  for (const char *p = text; *p; p++) count += *p == '\n';
+  st->source = malloc(len + 1);
+  st->source_lines = malloc((size_t)count * sizeof(char *));
+  if (!st->source || !st->source_lines) {
+    fprintf(stderr, "[gitclient] diff source allocation failed win=%u bytes=%zu\n", win->id, len);
+    fflush(stderr);
+    free_source(st);
+    return;
+  }
+  memcpy(st->source, text, len + 1);
+  for (char *p = st->source; *p; ) {
+    st->source_lines[st->source_count++] = p;
+    char *nl = strchr(p, '\n');
+    if (!nl) break;
+    *nl = '\0';
+    p = nl + 1;
+  }
+  int digits = 1;
+  for (int n = st->source_count; n >= 10; n /= 10) digits++;
+  st->number_digits = MAX(st->number_digits, digits);
+  for (int r = 0; r < st->revealed_count; r++) reveal_lines(st, st->revealed[r].first, st->revealed[r].end);
+  st->wrap_cols = 0;
+}
+
+static int gap_size(const gc_diff_state_t *st, int h) { hunk_span_t g = gap_before(st, h); return MAX(0, g.end - g.first); }
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
 
@@ -156,12 +291,24 @@ static uint32_t utf8_next(const char **s) {
   return c;
 }
 
+// A hunk header as git would write it now that expansion may have grown the hunk.
+static const char *line_text(const gc_diff_state_t *st, const gc_diff_line_t *l) {
+  if (l->kind != GC_DIFF_HUNK || l->hunk < 0) return l->text;
+  static char label[512];
+  hunk_span_t s = hunk_span(st, l->hunk);
+  const char *rest = strstr(l->text + 2, "@@");
+  int oc = s.old_end - s.old_first, nc = s.end - s.first;
+  snprintf(label, sizeof(label), "@@ -%d,%d +%d,%d @@%s", oc ? s.old_first : s.old_first - 1, oc,
+           nc ? s.first : s.first - 1, nc, rest ? rest + 2 : "");
+  return label;
+}
+
 // A line as cells, tabs expanded, with the changed range given its own background.
-static int line_cells(const gc_diff_line_t *l, text_cell_t *out, int max, uint32_t ink, uint32_t inner) {
+static int line_cells(const gc_diff_state_t *st, const gc_diff_line_t *l, text_cell_t *out, int max, uint32_t ink, uint32_t inner) {
   int tab = MAX(1, (int)ui_number("DiffView", "tab-size")), n = 0;
-  const char *s = l->text;
+  const char *s = line_text(st, l);
   while (*s && n < max) {
-    int at = (int)(s - l->text);
+    int at = (int)(s - l->text);   // the inner range is set only on lines shown as they are
     uint32_t bg = l->inner_len && at >= l->inner_start && at < l->inner_start + l->inner_len ? inner : 0;
     uint32_t c = utf8_next(&s);
     if (c == '\r' && !*s) break;   // CRLF files keep their \r in the text, for patches
@@ -174,14 +321,26 @@ static int line_cells(const gc_diff_line_t *l, text_cell_t *out, int max, uint32
   return n;
 }
 
+static bool push_row(gc_diff_state_t *st, int rows, gc_diff_row_t row) {
+  if (rows == st->row_cap) {
+    int cap = MAX(256, st->row_cap * 2);
+    gc_diff_row_t *grown = realloc(st->rows, (size_t)cap * sizeof(*grown));
+    if (!grown) { fprintf(stderr, "[gitclient] diff row allocation failed rows=%d\n", cap); fflush(stderr); return false; }
+    st->rows = grown; st->row_cap = cap;
+  }
+  st->rows[rows] = row;
+  return true;
+}
+
 // Wrap every line to cols columns, breaking after the last space that fits.
-// Returns the row count; rows are stored only when store is set.
+// A last row, line == line_count, holds the button that shows the lines after
+// the last hunk. Returns the row count; rows are stored only when store is set.
 static int layout_rows(gc_diff_state_t *st, int cols, bool store) {
   static text_cell_t cells[DIFF_MAX_CELLS];
   int rows = 0;
   for (int i = 0; i < st->line_count; i++) {
     if (line_hidden(st, &st->lines[i])) continue;
-    int n = line_cells(&st->lines[i], cells, DIFF_MAX_CELLS, 0, 0), start = 0;
+    int n = line_cells(st, &st->lines[i], cells, DIFF_MAX_CELLS, 0, 0), start = 0;
     do {
       int len = MIN(cols, n - start);
       if (start + len < n) {
@@ -189,18 +348,14 @@ static int layout_rows(gc_diff_state_t *st, int cols, bool store) {
         while (brk > 0 && cells[start + brk - 1].codepoint != ' ') brk--;
         if (brk > 0) len = brk;
       }
-      if (store) {
-        if (rows == st->row_cap) {
-          int cap = MAX(256, st->row_cap * 2);
-          gc_diff_row_t *grown = realloc(st->rows, (size_t)cap * sizeof(*grown));
-          if (!grown) { fprintf(stderr, "[gitclient] diff row allocation failed rows=%d\n", cap); fflush(stderr); return rows; }
-          st->rows = grown; st->row_cap = cap;
-        }
-        st->rows[rows] = (gc_diff_row_t){i, start, len};
-      }
+      if (store && !push_row(st, rows, (gc_diff_row_t){i, start, len})) return rows;
       rows++;
       start += len;
     } while (start < n);
+  }
+  if (st->hunk_count && gap_size(st, st->hunk_count) > 0) {
+    if (store && !push_row(st, rows, (gc_diff_row_t){st->line_count, 0, 0})) return rows;
+    rows++;
   }
   return rows;
 }
@@ -259,6 +414,40 @@ static void scroll_by(window_t *win, int dy) {
   invalidate_window(win);
 }
 
+typedef enum { HIT_NONE, HIT_LINE, HIT_HUNK, HIT_UP, HIT_DOWN, HIT_ALL, HIT_BELOW } diff_hit_t;
+
+// What a content-space point is over, and its line (line_count for the last row).
+// A hunk header's gutter holds its expand buttons: one when the gap above is
+// short or the hunk is the first, else lines below the hunk above on the left
+// and lines above this hunk on the right.
+static diff_hit_t hit_test(window_t *win, gc_diff_state_t *st, uint32_t wparam, int *line) {
+  if (!st->line_count) return HIT_NONE;
+  ensure_rows(win, st);
+  irect16_t content = window_scroll_content_rect(win);
+  diff_metrics_t m = diff_metrics(st);
+  int x = (int16_t)LOWORD(wparam) - content.x, y = (int16_t)HIWORD(wparam) - content.y, r = y / m.lh;
+  if (y < 0 || r >= st->row_count) return HIT_NONE;
+  *line = st->rows[r].line;
+  bool gutter = x < m.text_x - m.marker - m.pad / 2;
+  if (*line == st->line_count) return HIT_BELOW;
+  gc_diff_line_t *l = &st->lines[*line];
+  if (l->kind == GC_DIFF_HUNK && l->hunk >= 0) {
+    if (!gutter) return HIT_HUNK;
+    int gap = gap_size(st, l->hunk);
+    if (!gap) return HIT_NONE;
+    if (l->hunk == 0) return HIT_UP;
+    if (gap <= GC_DIFF_EXPAND_STEP) return HIT_ALL;
+    return x < m.check + m.number ? HIT_DOWN : HIT_UP;
+  }
+  return gutter && l->selectable ? HIT_LINE : HIT_NONE;
+}
+
+static bool hunk_selectable(const gc_diff_state_t *st, int h) {
+  for (int i = st->hunk_offsets[h] + 1; i < st->line_count && is_hunk_body(&st->lines[i]); i++)
+    if (st->lines[i].selectable) return true;
+  return false;
+}
+
 // ── Painting ─────────────────────────────────────────────────────────────────
 
 static void draw_number(int n, int right, int y, uint32_t col) {
@@ -268,6 +457,11 @@ static void draw_number(int n, int right, int y, uint32_t col) {
   text_cell_t cells[16];
   for (int i = 0; i < len; i++) cells[i] = (text_cell_t){(uint32_t)buf[i], col, 0};
   draw_text_cells("DiffView", cells, len, right - len * text_cell_width("DiffView"), y);
+}
+
+static void draw_expander(const char *icon, irect16_t r, uint32_t col) {
+  int size = ui_px("DiffView", "--expand-size");
+  draw_sysicon(icon, r.x + (r.w - size) / 2, r.y + (r.h - size) / 2, size, col);
 }
 
 static void paint(window_t *win, gc_diff_state_t *st) {
@@ -296,6 +490,11 @@ static void paint(window_t *win, gc_diff_state_t *st) {
     irect16_t row = window_scroll_rect_to_client(win, row_rect(win, r));
     if (row.y >= client.y + client.h) break;
     const gc_diff_row_t *vr = &st->rows[r];
+    if (vr->line == st->line_count) {   // the button for the lines after the last hunk
+      fill_rect(ui_color("DiffView", "--hunk-background"), row);
+      draw_expander("gc-arrow-line-down", rect_split_left(row, m.text_x - m.marker - m.pad / 2), gutter_ink);
+      continue;
+    }
     gc_diff_line_t *l = &st->lines[vr->line];
     const char *bg_key = NULL, *gutter_key = NULL, *inner_key = NULL, *marker = NULL;
     switch (l->kind) {
@@ -310,7 +509,13 @@ static void paint(window_t *win, gc_diff_state_t *st) {
     fill_rect(gutter_key ? ui_color("DiffView", gutter_key) : gutter_bg, gutter);
     if (bg_key) fill_rect(ui_color("DiffView", bg_key), body);
     int ty = row.y + (m.lh - m.ch) / 2;
-    if (vr->start == 0) {
+    if (vr->start == 0 && l->kind == GC_DIFF_HUNK && l->hunk >= 0) {
+      int gap = gap_size(st, l->hunk);
+      irect16_t down = rect_split_left(gutter, m.check + m.number), up = rect_trim_left(gutter, down.w);
+      if (gap && l->hunk == 0)               draw_expander("gc-arrow-line-up", gutter, gutter_ink);
+      else if (gap && gap <= GC_DIFF_EXPAND_STEP) draw_expander("gc-arrows-out-line-vertical", gutter, gutter_ink);
+      else if (gap) { draw_expander("gc-arrow-line-down", down, gutter_ink); draw_expander("gc-arrow-line-up", up, gutter_ink); }
+    } else if (vr->start == 0) {
       uint32_t numbers = l->selectable && l->included ? check : gutter_ink;
       if (l->selectable && l->included)
         draw_sysicon("gc-check", row.x + m.pad / 2, row.y + (m.lh - check_size) / 2, check_size, check);
@@ -320,7 +525,7 @@ static void paint(window_t *win, gc_diff_state_t *st) {
     }
     if (vr->line != cells_line) {
       uint32_t text_ink = l->kind == GC_DIFF_HUNK || l->kind == GC_DIFF_META || l->kind == GC_DIFF_NOTE ? meta : ink;
-      n = line_cells(l, cells, DIFF_MAX_CELLS, text_ink, inner_key ? ui_color("DiffView", inner_key) : 0);
+      n = line_cells(st, l, cells, DIFF_MAX_CELLS, text_ink, inner_key ? ui_color("DiffView", inner_key) : 0);
       cells_line = vr->line;
     }
     if (vr->start < n)
@@ -342,13 +547,14 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
 
     case evDestroy:
-      if (st) { free(st->lines); free(st->rows); free(st); win->userdata = NULL; }
+      if (st) { free_source(st); free(st->lines); free(st->rows); free(st); win->userdata = NULL; }
       return false;
 
     case edSetText: {   // lparam: plain unified diff text; the view keeps a copy and parses it
       if (!st) return false;
       const char *text = lparam ? (const char *)lparam : "";
       if (text != st->diff_buf) snprintf(st->diff_buf, sizeof(st->diff_buf), "%s", text);
+      free_source(st);
       parse_diff(win, st);
       scroll_info_t si = { .fMask = SIF_POS, .nPos = 0 };
       set_scroll_info(win, SB_VERT, &si, false);
@@ -356,6 +562,13 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       invalidate_window(win);
       return true;
     }
+
+    case dvSetSource:
+      if (!st) return false;
+      set_source(win, st, (const char *)lparam);
+      window_sync_scroll_content(win);
+      invalidate_window(win);
+      return true;
 
     case edSetPlaceholder:
       if (!st) return false;
@@ -386,22 +599,41 @@ result_t gc_diff_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 
     case evLeftButtonDown: {
       set_focus(win);
-      if (!st || !st->line_count) return true;
-      ensure_rows(win, st);
-      irect16_t content = window_scroll_content_rect(win);
-      diff_metrics_t m = diff_metrics(st);
-      int x = (int16_t)LOWORD(wparam) - content.x, y = (int16_t)HIWORD(wparam) - content.y;
-      int r = y / m.lh;
-      if (y < 0 || r >= st->row_count) return true;
-      gc_diff_line_t *l = &st->lines[st->rows[r].line];
-      if (l->hunk >= 0) st->current_hunk = l->hunk;
+      if (!st) return true;
+      int line = -1;
+      diff_hit_t hit = hit_test(win, st, wparam, &line);
+      int h = line >= 0 && line < st->line_count ? st->lines[line].hunk : st->hunk_count;
+      if (h >= 0 && h < st->hunk_count) st->current_hunk = h;
+      hunk_span_t g = h >= 0 ? gap_before(st, h) : (hunk_span_t){0};
       bool toggled = false;
-      if (x < m.text_x - m.marker) {
-        if (l->kind == GC_DIFF_HUNK) toggled = toggle_hunk(st, l->hunk);
-        else if (l->selectable)      { l->included = !l->included; toggled = true; }
+      switch (hit) {
+        case HIT_LINE:  st->lines[line].included = !st->lines[line].included; toggled = true; break;
+        case HIT_HUNK:  toggled = toggle_hunk(st, h); break;
+        case HIT_UP:    expand(st, MAX(g.first, g.end - GC_DIFF_EXPAND_STEP), g.end); break;
+        case HIT_DOWN:
+        case HIT_BELOW: expand(st, g.first, MIN(g.end, g.first + GC_DIFF_EXPAND_STEP)); break;
+        case HIT_ALL:   expand(st, g.first, g.end); break;
+        case HIT_NONE:  break;
       }
+      if (hit >= HIT_UP) window_sync_scroll_content(win);
       invalidate_window(win);
       if (toggled) notify_toggled(win);
+      return true;
+    }
+
+    case evGetTooltipText: {
+      int line = -1;
+      const char *tip = NULL;
+      switch (st && lparam ? hit_test(win, st, wparam, &line) : HIT_NONE) {
+        case HIT_UP:    tip = ui_tr("Show lines above"); break;
+        case HIT_DOWN:
+        case HIT_BELOW: tip = ui_tr("Show lines below"); break;
+        case HIT_ALL:   tip = ui_tr("Show the hidden lines"); break;
+        case HIT_HUNK:  if (hunk_selectable(st, st->lines[line].hunk)) tip = ui_tr("Include or leave out this hunk"); break;
+        default: break;
+      }
+      if (!tip) return false;
+      snprintf((char *)lparam, 256, "%s", tip);
       return true;
     }
 

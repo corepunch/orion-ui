@@ -455,24 +455,17 @@ bool gc_conflict_mark_resolved(const char *path, char *err, size_t err_n) {
 // Per-line staging
 // ═══════════════════════════════════════════════════════════════════════════
 
-static bool hunk_header(const char *s, int *os, int *oc, int *ns, int *nc) {
-  *oc = *nc = 1;
-  if (sscanf(s, "@@ -%d,%d +", os, oc) != 2 && sscanf(s, "@@ -%d +", os) != 1) return false;
-  if (!(s = strstr(s, " +"))) return false;
-  return sscanf(s, " +%d,%d", ns, nc) == 2 || sscanf(s, " +%d", ns) == 1;
-}
-
 // A patch against HEAD that holds only the included lines, the way GitHub
 // Desktop formats one: an excluded removal stays as context, an excluded
-// addition is left out, and each hunk header is recounted.
+// addition is left out, and each hunk header is recounted. Hunks may have grown
+// by expanded context, so their headers come from the parsed lines, not git's text.
 static int format_line_patch(const char *path, const gc_diff_state_t *st, char *out, size_t cap) {
   size_t n = (size_t)snprintf(out, cap, "--- a/%s\n+++ b/%s\n", path, path);
-  int orig_delta = 0, delta = 0;
+  int delta = 0;
   char *body = malloc(cap);
   if (!body) return -1;
   for (int h = 0; h < st->hunk_count && n < cap; h++) {
-    int os, oc, ns, nc;
-    if (!hunk_header(st->lines[st->hunk_offsets[h]].text, &os, &oc, &ns, &nc)) continue;
+    int old_first = st->lines[st->hunk_offsets[h]].old_no;   // the first old line the hunk covers
     size_t b = 0;
     int old_n = 0, new_n = 0, changes = 0;
     bool kept = false;   // whether the previous line made it into the patch, for "\ No newline"
@@ -489,11 +482,11 @@ static int format_line_patch(const char *path, const gc_diff_state_t *st, char *
       kept = sign != 0;
       if (sign) b += (size_t)snprintf(body + b, cap - b, "%c%s\n", sign, l->text);
     }
-    int start = ns + delta - orig_delta + (nc == 0 && new_n > 0) - (nc > 0 && new_n == 0);
-    orig_delta += nc - oc;
     if (!changes) continue;
+    int start = old_first + delta;   // the index starts as HEAD, so new lines follow the old ones shifted by earlier hunks
     delta += new_n - old_n;
-    n += (size_t)snprintf(out + n, cap - n, "@@ -%d,%d +%d,%d @@\n%.*s", os, old_n, start, new_n, (int)MIN(b, cap), body);
+    n += (size_t)snprintf(out + n, cap - n, "@@ -%d,%d +%d,%d @@\n%.*s", old_n ? old_first : old_first - 1, old_n,
+                          new_n ? start : start - 1, new_n, (int)MIN(b, cap), body);
   }
   free(body);
   return n < cap ? (int)n : -1;

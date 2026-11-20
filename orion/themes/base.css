@@ -360,7 +360,7 @@ DiffView {
   background: var(--column-view-bg); color: var(--text-normal);
   padding-right: 8px; tab-size: 4; line-height: 1.5;
   --meta-color: var(--text-secondary);   /* hunk headers, file headers and notes step back */
-  --gutter-padding: 8px; --check-size: 12px;
+  --gutter-padding: 8px; --check-size: 12px; --expand-size: 16px;
   --gutter-color:       var(--text-secondary);
   --gutter-background:  color-mix(in srgb, var(--text-normal) 4%, var(--column-view-bg));
   --added-background:   color-mix(in srgb, var(--text-success) 12%, var(--column-view-bg));
