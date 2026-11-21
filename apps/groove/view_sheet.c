@@ -244,21 +244,21 @@ static void resize_clip(window_t *win, int mx) {
   sync_clips(win);
 }
 
-static void paint_ruler(window_t *win, int cur_bar) {
+static void paint_ruler(window_t *win, int cur_bar, uint32_t playhead) {
   irect16_t ruler = rect_split_top(get_client_rect(win), RULER_H);
   uint32_t ink = get_sys_color(brTextNormal), tick = get_sys_color(brTextSecondary);
-  fill_rect(get_sys_color(get_theme()->appearance.dark ? brPanelDark : brWorkspaceBg), ruler);
+  fill_rect(groove_color(win, "--groove-ruler", brWorkspaceBg), ruler);
   for (int b = 0; b < GR_BARS; b++) {
     char num[8];
     snprintf(num, sizeof(num), "%d", b + 1);
     int x = bar_x(win, b);
-    if (b == cur_bar) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), R(x, 0, BAR_W, RULER_H));
+    if (b == cur_bar) fill_rect(color_with_alpha(playhead, 0x50), R(x, 0, BAR_W, RULER_H));
     fill_rect(color_with_alpha(tick, b % 4 ? 0x60 : 0x90), R(x, b % 4 ? RULER_H - 6 : 2, 1, b % 4 ? 6 : RULER_H - 2));
     draw_text("Text", num, x + 5, 3, ink);
     for (int step = GR_SNAP_TICKS; step < GR_TICKS_BAR; step += GR_SNAP_TICKS)
       fill_rect(color_with_alpha(tick, 0x40), R(position_x(win, b * GR_TICKS_BAR + step), RULER_H - 4, 1, 4));
   }
-  fill_rect(get_sys_color(brDarkEdge), rect_split_bottom(ruler, 1));
+  fill_rect(groove_color(win, "--groove-rule", brDarkEdge), rect_split_bottom(ruler, 1));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
 }
 
@@ -268,21 +268,23 @@ static void paint_sheet(window_t *win) {
   const drag_t *d = &g_app->drag;
   int bar = bar_frames_for_bpm(s->bpm);
   sync_clips(win);
-  fill_rect(get_sys_color(brWorkspaceBg), cr);
+  uint32_t lane_bg = groove_color(win, "--groove-lane", brWindowDarkBg);
+  uint32_t alternate_bg = groove_color(win, "--groove-lane-alternate", brWindowDarkBg);
+  uint32_t rule = groove_color(win, "--groove-rule", brDarkEdge);
+  uint32_t grid_ink = groove_color(win, "--groove-grid", brLightEdge);
+  uint32_t playhead = groove_color(win, "--groove-playhead", brAccent);
+  fill_rect(lane_bg, cr);
   set_clip_rect(win, grid);
-  uint32_t lane_bg = get_sys_color(brWindowDarkBg), ink = get_sys_color(brTextNormal);
-  bool dark = get_theme()->appearance.dark;
-  uint32_t alternate_bg = dark ? lane_bg : color_mix(lane_bg, ink, 0x18);
   for (int t = 0; t < GR_TRACKS; t++) {
     irect16_t lane = R(grid.x, track_y(win, t), grid.w, row_h(win));
     fill_rect(t % 2 ? alternate_bg : lane_bg, lane);
-    if (dark && t % 2) fill_rect(color_with_alpha(ink, 0x08), lane);
-    if (t == g_app->selected_track) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x18), lane);
+    if (t == g_app->selected_track) fill_rect(color_with_alpha(playhead, 0x18), lane);
+    fill_rect(rule, rect_split_bottom(lane, 1));
   }
   sheet_paint_branding(win, grid);
   for (int position = 0; position <= GR_BARS * GR_TICKS_BAR; position += GR_SNAP_TICKS) {
     int alpha = position % GR_TICKS_BAR ? 0x0a : position % (4 * GR_TICKS_BAR) ? 0x14 : 0x38;
-    fill_rect(color_with_alpha(get_sys_color(brLightEdge), alpha), R(position_x(win, position), grid.y, 1, grid.h));
+    fill_rect(color_with_alpha(grid_ink, alpha), R(position_x(win, position), grid.y, 1, grid.h));
   }
   float saved[16];
   memcpy(saved, get_sprite_matrix(), sizeof saved);
@@ -298,10 +300,10 @@ static void paint_sheet(window_t *win) {
                         clip_rect(win, d->track, d->position, drag_span(d)), ui_radius("Card"), 2);
   }
   int px = (int)((double)s->pos / bar * BAR_W) - hpos(win);
-  fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));
+  fill_rect(playhead, R(px - 1, RULER_H, 2, grid.h));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
-  paint_ruler(win, (int)(s->pos / bar));
-  fill_rect(get_sys_color(brAccent), R(px - 1, 0, 2, RULER_H));
+  paint_ruler(win, (int)(s->pos / bar), playhead);
+  fill_rect(playhead, R(px - 1, 0, 2, RULER_H));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
 }
 

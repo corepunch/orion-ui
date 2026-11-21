@@ -30,13 +30,32 @@ const char *const kGenreName[GENRE_COUNT] = { "Dance", "Hip Hop", "Rave", "Techn
 
 uint32_t family_color(family_t family) {
   static const uint32_t col[FAMILY_COUNT] = {
-    WEB(0x1285ce), WEB(0x158da2), WEB(0xa047d8), WEB(0xe8555c), WEB(0xd5a329), WEB(0x54a85e),
-    WEB(0xe68039), WEB(0x1fa78d), WEB(0x768be0), WEB(0x6c5cda), WEB(0x9975b7),
+    [FAMILY_LOOP]    = WEB(0x789BAE),
+    [FAMILY_DRUM]    = WEB(0x76A59F),
+    [FAMILY_BASS]    = WEB(0xAA8DB7),
+    [FAMILY_GUITAR]  = WEB(0xC48B80),
+    [FAMILY_SYNTH]   = WEB(0xB8A775),
+    [FAMILY_PAD]     = WEB(0x8BAC88),
+    [FAMILY_STAB]    = WEB(0xC79B70),
+    [FAMILY_VOX]     = WEB(0x77ABA2),
+    [FAMILY_SCRATCH] = WEB(0x899CBE),
+    [FAMILY_FX]      = WEB(0x9E95C0),
+    [FAMILY_SAMPLES] = WEB(0xBB97A8),
   };
   return col[family >= 0 && family < FAMILY_COUNT ? family : FAMILY_LOOP];
 }
 
-uint32_t category_color(category_t cat) { return family_color(block_family(cat)); }
+uint32_t category_color(category_t cat) {
+  switch (cat) {
+    case CAT_KICK:   return WEB(0x8DA78C);
+    case CAT_SNARE:  return WEB(0xB6817A);
+    case CAT_HAT:    return WEB(0xB4A577);
+    case CAT_CLAP:   return WEB(0xAA91B0);
+    case CAT_CYMBAL: return WEB(0xA6B0BB);
+    case CAT_PERC:   return WEB(0xA0AA7D);
+    default:         return family_color(block_family(cat));
+  }
+}
 
 int bar_frames_for_bpm(int bpm) {
   bpm = bpm < GR_BPM_MIN ? GR_BPM_MIN : bpm > GR_BPM_MAX ? GR_BPM_MAX : bpm;

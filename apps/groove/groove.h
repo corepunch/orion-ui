@@ -40,6 +40,11 @@
 #define GR_BPM_MAX      180
 #define GR_BPM_DEFAULT  140
 
+static inline uint32_t groove_color(const window_t *win, const char *property, sys_color_idx_t fallback) {
+  return ui_has_instance_stylesheet(win->hinstance) ? ui_color(ui_selector(win, "GroovePalette"), property)
+                                                   : get_sys_color(fallback);
+}
+
 // ── Block library ────────────────────────────────────────────────────────
 // A block has one instrument family and any number of genre tags; the
 // library filters on both. Families follow the roles in apps/groove/docs/dance-ejay-pxd.md.

@@ -3,7 +3,7 @@
     version="1"
     name="groove"
     title="Jamsheet"
-    root="apps/groove">
+    root="apps/groove" stylesheet="groove.css">
 
     <plugins>
       <plugin name="groove_components" />

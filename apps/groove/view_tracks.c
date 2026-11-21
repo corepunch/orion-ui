@@ -93,10 +93,10 @@ static result_t win_track_header(window_t *win, uint32_t msg, uint32_t wparam, v
     case evPaint: {
       if (!tr || !g_app) return true;
       irect16_t r = get_client_rect(win);
-      fill_rect(get_sys_color(brPanelDarker), r);
+      fill_rect(groove_color(win, "--groove-chrome", brPanelDarker), r);
       bool suggested = g_app->selected_track == tr->track;
-      if (suggested) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), r);
-      fill_rect(get_sys_color(brDarkEdge), R(0, r.h - 1, r.w, 1));
+      if (suggested) fill_rect(color_with_alpha(groove_color(win, "--groove-playhead", brAccent), 0x50), r);
+      fill_rect(groove_color(win, "--groove-rule", brDarkEdge), rect_split_bottom(r, 1));
       fill_rect(track_color(tr->track), R(0, 2, 3, r.h - 5));
       if (tr->mute) tr->mute->value = g_app->song.mute[tr->track];
       if (tr->solo) tr->solo->value = g_app->song.solo[tr->track];
@@ -156,8 +156,8 @@ result_t win_tracks(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     case evResize: if (g_app && g_app->sheet) tracks_layout(win); return false;
     case evPaint: {
       irect16_t r = get_client_rect(win);
-      fill_rect(get_sys_color(brPanelDarker), r);
-      fill_rect(get_sys_color(brPanelDark), R(0, 0, r.w, GR_RULER_H));
+      fill_rect(groove_color(win, "--groove-chrome", brPanelDarker), r);
+      fill_rect(groove_color(win, "--groove-ruler", brPanelDark), rect_split_top(r, GR_RULER_H));
       for (window_t *c = win->children; c; c = c->next)
         if (window_has_state(c, WINDOW_STATE_VISIBLE)) send_message(c, evPaint, 0, NULL);
       return true;

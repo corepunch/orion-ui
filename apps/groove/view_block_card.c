@@ -91,14 +91,16 @@ static int sheet_card_index(window_t *win) {
 }
 
 // period > 0 draws the source waveform at its own scale, repeating when the clip is longer.
-static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period, bool locked) {
-  uint32_t panel = get_sys_color(brButtonInner);
+static void paint_block_card(window_t *win, int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period, bool locked) {
+  uint32_t panel = groove_color(win, "--groove-clip-base", brButtonInner);
   uint32_t body = color_mix(panel, color, 48);
-  uint32_t header = color_mix(panel, color, 100);
+  uint32_t header = color_mix(panel, color, 116);
   uint32_t label_ink = get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brTextNormal);
-  theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = body});
+  ui_style_vars_t surface = {0};
+  ui_style_vars_set_color(&surface, "--surface", body);
+  theme_draw_with(win, &surface, THEME_PART_CARD_PLASTIC, r, state);
   int source_width = period > 0 ? period : r.w, source_x = r.x;
-  r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
+  r = rect_inset_edges(r, theme_content_insets_in(win, THEME_PART_CARD_PLASTIC, state));
   if (r.w <= 0 || r.h <= 0) return;
   int radius = MAX(0, ui_radius("Card") - ui_px("Card", "--ring-width"));
   irect16_t title = rect_split_top(r, MIN(r.h, text_char_height(CARD_LABEL_FONT) + 5));
@@ -189,7 +191,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       if (win->parent && card_on_screen(win)) app_block_peaks(st->block); // a stale overview stays up until the new one is ready
       bool locked = win->parent != g_app->sheet && !groove_store_can_add(st->block);
-      paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state, period, locked);
+      paint_block_card(win, st->block, b, r, visible_width, category_color(b->cat), state, period, locked);
       return true;
     }
     case grCardSetBlock:

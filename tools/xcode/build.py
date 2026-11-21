@@ -112,8 +112,10 @@ def forms(root, output):
             '-std=c11', '-O2', '-I' + str(root),
             '-isysroot', sdk, '-I' + sdk + '/usr/include/libxml2', source, '-lxml2', '-o', tool)
     form = root / 'apps/groove/groove.orion'
+    stylesheet = form.with_suffix('.css')
     header = output / 'include/build/generated/apps/groove/groove.h'
-    if not header.exists() or max(form.stat().st_mtime, tool.stat().st_mtime) > header.stat().st_mtime:
+    form_inputs = [form, tool] + ([stylesheet] if stylesheet.is_file() else [])
+    if not header.exists() or any(p.stat().st_mtime > header.stat().st_mtime for p in form_inputs):
         header.parent.mkdir(parents=True, exist_ok=True)
         run(tool, '--input', form, '--output', header, '--prefix', 'groove')
     app_icon(root, output)

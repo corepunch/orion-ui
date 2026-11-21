@@ -1,0 +1,38 @@
+:root {
+  --groove-chrome: var(--panel-darker);
+  --groove-ruler: var(--workspace-bg);
+  --groove-lane: var(--window-dark-bg);
+  --groove-lane-alternate: color-mix(in srgb, var(--groove-lane), var(--text-normal) 7%);
+  --groove-rule: var(--dark-edge);
+  --groove-grid: var(--light-edge);
+  --groove-clip-base: var(--button-inner);
+  --groove-playhead: var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --groove-chrome: #374650;
+    --groove-ruler: #25323C;
+    --groove-lane: #283741;
+    --groove-lane-alternate: #2E3E49;
+    --groove-rule: #202D36;
+    --groove-grid: #8A9DA9;
+    --groove-clip-base: #2D3B45;
+    --groove-playhead: #B7CF72;
+    --groove-amber: #DDA568;
+    --groove-amber-ink: #271E15;
+  }
+
+  Toolbar, Window::title-toolbar { background: var(--groove-chrome); }
+  Toolbar::button:hover { background: #51616B; }
+  Toolbar::button:active, Toolbar::button:checked, Toolbar::button:default,
+  SegmentedControl#families::segment:checked {
+    background: var(--groove-amber);
+    color: var(--groove-amber-ink);
+  }
+  SegmentedControl#families { background: var(--groove-ruler); border-color: var(--groove-rule); }
+  Scrollbar::track { background: var(--groove-ruler); }
+  Scrollbar::thumb { background: #566875; }
+  Scrollbar::thumb:hover, Scrollbar::thumb:active { background: #708391; }
+  Card::plastic:checked { border-color: var(--groove-amber); }
+}
