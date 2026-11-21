@@ -3,8 +3,6 @@
 
 #define CARD_SLOP 5
 #define CARD_LABEL_PADDING 4
-#define CARD_TAG_INSET 2
-#define CARD_REPEAT_OVERLAY 0x54000000u
 #define CARD_LABEL_FONT "Caption"
 
 typedef struct {
@@ -31,22 +29,32 @@ static bool card_on_screen(const window_t *win) {
   return frame.x < view.w && frame.x + frame.w > 0 && frame.y < view.h && frame.y + frame.h > 0;
 }
 
-static void paint_card_label(const block_t *b, irect16_t r, int visible_right, int text_x, uint32_t ink) {
-  int text_w = MAX(0, MIN(r.x + r.w, visible_right) - text_x);
-  if (text_w) draw_text_ellipsized(CARD_LABEL_FONT, b->display_name, text_x, r.y + CARD_TAG_INSET, text_w, ink);
-}
+static void paint_card_title(const block_t *b, irect16_t title, int visible_right, int radius, uint32_t ink, bool locked) {
+  title.w = MIN(title.w, visible_right - title.x);
+  irect16_t label = rect_inset_xy(title, MAX(radius, CARD_LABEL_PADDING), 0);
+  int text_h = text_char_height(CARD_LABEL_FONT);
+  int icon_size = MIN(title.h, text_h);
+  if (label.w < icon_size || title.h < text_h) return;
 
-static void paint_card_tag(const block_t *b, irect16_t r, int visible_width, bool locked) {
-  if (!locked && !b->variant) return;
-  char variant[8];
-  snprintf(variant, sizeof(variant), "%u", b->variant);
-  const char *text = locked ? ui_tr("Preview") : variant;
-  int h = text_char_height("Caption") + 1, w = MAX(h, text_strwidth("Caption", text) + 2 * CARD_LABEL_PADDING);
-  r.w = MIN(r.w, visible_width);
-  irect16_t area = rect_inset(r, CARD_TAG_INSET);
-  if (w > area.w || h > area.h) return;
-  irect16_t badge = rect_split_right(rect_split_bottom(area, h), w);
-  draw_badge_ex("Caption", text, badge, get_sys_color(brTextNormal), get_sys_color(brPanelDark));
+  const char *icon_name = "phosphor-waveform";
+  if (locked) icon_name = "phosphor-headphones-fill";
+  else if (b->cat == CAT_RECORDING) icon_name = "phosphor-microphone";
+  irect16_t icon = rect_center(rect_split_left(label, icon_size), icon_size, icon_size);
+  draw_sysicon(icon_name, icon.x, icon.y, icon_size, ink);
+  label = rect_trim_left(label, icon_size + CARD_LABEL_PADDING);
+  if (locked || b->variant) {
+    char variant[8];
+    snprintf(variant, sizeof(variant), "%u", b->variant);
+    const char *tag = locked ? ui_tr("Preview") : variant;
+    int tag_w = MAX(text_h, text_strwidth(CARD_LABEL_FONT, tag) + 2 * CARD_LABEL_PADDING);
+    if (label.w >= tag_w + 3 * text_h) {
+      irect16_t badge = rect_center(rect_split_right(label, tag_w), tag_w, text_h);
+      draw_badge_ex(CARD_LABEL_FONT, tag, badge, ink, get_sys_color(brPanelDark));
+      label = rect_trim_right(label, tag_w + CARD_LABEL_PADDING);
+    }
+  }
+  label = rect_center(label, label.w, text_h);
+  if (label.w > 0) draw_text_ellipsized(CARD_LABEL_FONT, b->display_name, label.x, label.y, label.w, ink);
 }
 
 static int sheet_card_index(window_t *win) {
@@ -58,27 +66,31 @@ static int sheet_card_index(window_t *win) {
 
 // period > 0 draws the source waveform at its own scale, repeating when the clip is longer.
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period, bool locked) {
-  theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
+  uint32_t panel = get_sys_color(brButtonInner);
+  uint32_t body = color_mix(panel, color, 48);
+  uint32_t header = color_mix(panel, color, 100);
+  uint32_t label_ink = get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brTextNormal);
+  theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = body});
   int source_width = period > 0 ? period : r.w, source_x = r.x;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
+  if (r.w <= 0 || r.h <= 0) return;
   int radius = MAX(0, ui_radius("Card") - ui_px("Card", "--ring-width"));
-  irect16_t wave = rect_trim_top(r, MIN(r.h, text_char_height(CARD_LABEL_FONT) + 3));
-  uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
+  irect16_t title = rect_split_top(r, MIN(r.h, text_char_height(CARD_LABEL_FONT) + 5));
+  fill_gradient_rounded_top_rect(header, header, title, radius);
+  paint_card_title(b, title, source_x + visible_width, radius, label_ink, locked);
+
+  irect16_t wave = rect_inset_xy(rect_trim_top(r, title.h), 0, 1);
+  uint32_t ink = color_mix(label_ink, color, 65);
   if (wave.w > 0 && wave.h > 0) {
     int offset = wave.x - source_x;
     if (period > 0) {
       draw_waveform(b, wave, source_width, offset, radius, ink);
+      fill_rounded_rect_bands(color_with_alpha(get_sys_color(brPanelDark), 72), wave, radius, source_width, offset);
     } else {
       uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius, source_width, offset);
       if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
     }
   }
-  int label_x = wave.x + waveform_first_bar_offset(source_width, wave.x - source_x);
-  uint32_t label_ink = color_with_alpha(get_sys_color(brTextOnColor), color >> 24);
-  paint_card_label(b, r, source_x + visible_width, label_x, label_ink);
-  paint_card_tag(b, r, visible_width, locked);
-  if (period > 0 && r.w > 0 && r.h > 0)
-    fill_rounded_rect_bands(CARD_REPEAT_OVERLAY, r, radius, source_width, r.x - source_x);
 }
 
 result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

@@ -317,7 +317,6 @@ void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
 uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius, int period, int offset);
-int waveform_first_bar_offset(int period, int offset);
 void draw_waveform(const block_t *b, irect16_t wave, int period, int offset, int radius, uint32_t color);
 void waveform_cache_free(groove_t *app);
 // Moves a card window. A visual drag keeps the painted copy still: the frame

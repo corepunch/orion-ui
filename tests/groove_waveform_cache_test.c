@@ -171,19 +171,6 @@ static void test_card_inset_keeps_timing(void) {
   PASS();
 }
 
-static void test_label_alignment(void) {
-  TEST("the label starts at the first visible waveform bar, including cropped and repeated edges");
-  cache_blocks[0] = (block_t){ .audio = { .npeaks = 2, .peaks = {255, 255} } };
-  for (int period = 1; period <= 24; period++) for (int offset = 0; offset < period * 2; offset++) {
-    int first = waveform_first_bar_offset(period, offset);
-    ASSERT_TRUE(first >= 0 && first < period);
-    ASSERT_TRUE(waveform_bar(&cache_blocks[0], first, 32, 32, period, offset, 0).w);
-    for (int x = 0; x < first; x++)
-      ASSERT_EQUAL(waveform_bar(&cache_blocks[0], x, 32, 32, period, offset, 0).w, 0);
-  }
-  PASS();
-}
-
 static void test_card_margin(void) {
   TEST("plastic card content uses the theme's halved shadow margin and keeps its grid bounds");
   for (int theme = THEME_CLASSIC; theme <= THEME_MODERN; theme++) {
@@ -206,7 +193,6 @@ int main(void) {
   test_failed_refresh();
   test_grid_viewport();
   test_card_inset_keeps_timing();
-  test_label_alignment();
   test_card_margin();
   free(uploaded_mask);
   TEST_END();

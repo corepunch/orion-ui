@@ -3,12 +3,6 @@
 #define WAVEFORM_STEP 4
 #define WAVEFORM_WIDTH 2
 
-int waveform_first_bar_offset(int period, int offset) {
-  if (period <= 0 || offset < 0) return 0;
-  int src = offset % period, phase = src % WAVEFORM_STEP;
-  return phase < WAVEFORM_WIDTH ? 0 : MIN(WAVEFORM_STEP - phase, period - src);
-}
-
 static int waveform_bottom(int x, int w, int h, int radius) {
   if (radius <= 0) return h - 1;
   float px = x + 0.5f, dx = 0;
