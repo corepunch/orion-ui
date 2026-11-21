@@ -90,13 +90,13 @@ content changes; a theme change or a new size repaints it too.
 `animate_window(win, from, flags, curve)` is `AnimateWindow` with
 `DrawAnimatedRects`' zoom, made asynchronous:
 
-- `AW_ZOOM` grows the window out of `from` into its frame. The content fills the
+- `ORION_AW_ZOOM` grows the window out of `from` into its frame. The content fills the
   growing rectangle like a photo fills a frame: scaled to cover it, centred and
   cropped. A landscape reader growing out of a portrait cover therefore never
   stretches.
-- `AW_BLEND` fades the window in over the first part of the way, so the
+- `ORION_AW_BLEND` fades the window in over the first part of the way, so the
   thumbnail under `from` hands over to it.
-- `AW_HIDE` runs the same motion backwards and hides the window at the end.
+- `ORION_AW_HIDE` runs the same motion backwards and hides the window at the end.
 
 The window is shown at the start and takes no input until the end. Then its
 parent receives `evCommand` with `MAKEDWORD(win->id, awnFinished)` and
@@ -115,9 +115,9 @@ box, later children paint above earlier ones and take the pointer first.
   springs back on `UI_CURVE_RELEASE`, and sends `btnClicked` when it is back
   up, so even a quick tap shows the bounce before the book opens.
 - **Opening and closing.** The reader is a `ComicStage` over the shelf in an
-  `OverlayView`. Opening calls `animate_window(stage, cover, AW_ZOOM | AW_BLEND,
+  `OverlayView`. Opening calls `animate_window(stage, cover, ORION_AW_ZOOM | ORION_AW_BLEND,
   UI_CURVE_ZOOM)` with the cover's book rectangle mapped into the stage. Closing
-  adds `AW_HIDE`. A book whose cover is not in view zooms from the middle.
+  adds `ORION_AW_HIDE`. A book whose cover is not in view zooms from the middle.
 - **Paging.** The stage follows a horizontal pan with the next spread beside the
   current one, and rubber-bands at either end. On release it projects the
   finger's momentum 150 ms ahead (as UIKit pages) and springs to the nearer

@@ -97,15 +97,23 @@ jobs:
       - name: Build release packages
         if: inputs.version != ''
         run: sh scripts/package-release.sh "${{ inputs.version }}" "${{ matrix.platform }}" dist
-      - name: Build and run tests
-        if: inputs.version != '' && runner.os != 'Windows'
+      - name: Build and run tests (Linux)
+        if: inputs.version != '' && runner.os == 'Linux'
         run: make test
+      - name: Check Git Client and Ledger (macOS)
+        if: inputs.version != '' && runner.os == 'macOS'
+        timeout-minutes: 8
+        run: |
+          tests=(build/bin/test_gitclient_{backend,ui}_test
+                 build/bin/test_ledger{,_addons,_assistant,_automation,_executor,_runtime_forms}_test)
+          make -j4 xcode-check "${tests[@]}"
+          for test_bin in "${tests[@]}"; do "$test_bin"; done
       # Manual runs only: Windows releases are still built untested until this has run green.
       - name: Build and run tests (Windows)
         if: inputs.version == '' && runner.os == 'Windows'
         run: make test
       - name: Check macOS keyboard input and MDI regressions
-        if: runner.os == 'macOS' && inputs.version == ''
+        if: runner.os == 'macOS'
         run: |
           make build/bin/test_edit_test build/bin/test_owned_window_test build/bin/test_event_loop_test
           build/bin/test_edit_test

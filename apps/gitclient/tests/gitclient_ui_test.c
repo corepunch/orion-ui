@@ -888,7 +888,7 @@ static void agent_test_pump(void) {
   // macOS platform timers are scheduled on the native run loop.
   CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, false);
 #else
-  axWaitMessage(10);
+  axSleep(10);  // Headless X11 returns immediately from axWaitMessage().
 #endif
   ui_event_t event;
   while (axPeekMessage(&event)) dispatch_message(&event);
