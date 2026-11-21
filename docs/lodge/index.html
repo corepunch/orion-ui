@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orion Lodge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Orion Lodge: the front desk of a small hotel, guesthouse or inn. Arrivals, the room calendar, walk-ins, payments, the night audit and an assistant that understands plain requests. Local, offline, free.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a guesthouse front desk. Pine-green key-board bands alternate with a pale
+   wall; the hero's figure is the room calendar itself, the desk's own instrument. */
+:root {
+  --wall: #f1f4f0;
+  --card: #ffffff;
+  --ink: #1b2622;
+  --muted: #56635e;
+  --rule: #d5ddd7;
+  --pine: #1f3d34;
+  --pine-ink: #eef3ef;
+  --pine-muted: #a9bdb4;
+  --brass: #b9852b;
+  --brass-soft: #f3e4c4;
+  --stay: #2f6b55;
+  --booked: #3c5a8a;
+  --block: #9a4a3a;
+  --shadow: 0 1px 2px rgb(16 30 25 / .08), 0 18px 40px -20px rgb(16 30 25 / .35);
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --wrap: 1140px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wall: #111816; --card: #18211e; --ink: #e8eee9; --muted: #9fb0a8; --rule: #2b3833;
+    --pine: #0b1512; --pine-ink: #eef3ef; --pine-muted: #93a89f; --brass: #d9a64a; --brass-soft: #3d3220;
+    --stay: #5fb08f; --booked: #7f9fd4; --block: #d78672;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 18px 40px -20px rgb(0 0 0 / .8);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --wall: #111816; --card: #18211e; --ink: #e8eee9; --muted: #9fb0a8; --rule: #2b3833;
+  --pine: #0b1512; --pine-ink: #eef3ef; --pine-muted: #93a89f; --brass: #d9a64a; --brass-soft: #3d3220;
+  --stay: #5fb08f; --booked: #7f9fd4; --block: #d78672;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 18px 40px -20px rgb(0 0 0 / .8);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body { margin: 0; background: var(--wall); color: var(--ink); font: 400 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.015em; }
+h1 { font-size: clamp(2.2rem, 1.3rem + 3.8vw, 4rem); line-height: 1.02; font-weight: 800; }
+h2 { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.3rem); line-height: 1.1; font-weight: 700; }
+h3 { font-size: 1.1rem; line-height: 1.3; font-weight: 700; }
+p { margin: 0; }
+code, kbd, .mono { font-family: var(--mono); font-size: .86em; }
+kbd { padding: .1em .45em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 5px; background: var(--card); white-space: nowrap; }
+.wrap { max-width: var(--wrap); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.eyebrow { font: 500 .74rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.12rem; color: var(--muted); max-width: 60ch; }
+
+/* top bar */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--pine); }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--pine); color: var(--pine-ink); }
+.top .wrap { display: flex; align-items: center; gap: 24px; padding-block: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font: 800 1.15rem/1 var(--display); text-decoration: none; }
+.key { width: 30px; height: 30px; border-radius: 50% 50% 50% 8px; background: var(--brass); color: var(--pine); display: grid; place-items: center; font: 600 .72rem/1 var(--mono); }
+.top nav { display: flex; gap: 18px; margin-left: auto; flex-wrap: wrap; font-size: .92rem; }
+.top nav a { text-decoration: none; color: var(--pine-muted); }
+.top nav a:hover { color: var(--pine-ink); }
+
+/* hero */
+.hero { background: var(--pine); color: var(--pine-ink); padding-block: 56px 0; overflow: hidden; }
+.hero .eyebrow { color: var(--pine-muted); }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 48px; align-items: center; }
+.hero h1 em { font-style: normal; color: var(--brass); }
+.hero .lead { color: var(--pine-muted); margin-top: 20px; }
+.hero-copy { display: grid; gap: 12px; min-width: 0; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; font-weight: 600; text-decoration: none; border: 1px solid transparent; }
+.btn-brass { background: var(--brass); color: #1b1408; }
+.btn-ghost { border-color: color-mix(in srgb, var(--pine-ink) 30%, transparent); color: var(--pine-ink); }
+.btn:hover { filter: brightness(1.06); }
+
+/* the tape chart figure */
+.chart { background: var(--card); color: var(--ink); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; min-width: 0; }
+.chart-cap { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--rule); font: 500 .78rem/1.2 var(--mono); color: var(--muted); }
+.chart-scroll { overflow-x: auto; }
+.chart table { border-collapse: collapse; width: 100%; min-width: 520px; font: 400 .82rem/1 var(--body); font-variant-numeric: tabular-nums; }
+.chart th, .chart td { padding: 9px 8px; border-bottom: 1px solid var(--rule); border-left: 1px solid var(--rule); text-align: left; white-space: nowrap; }
+.chart th { font: 500 .72rem/1 var(--mono); color: var(--muted); font-weight: 500; }
+.chart th:first-child, .chart td:first-child { border-left: 0; font: 500 .8rem/1 var(--mono); color: var(--muted); }
+.chart th.today { color: var(--brass); }
+.chart .in { color: var(--stay); font-weight: 600; }
+.chart .bk { color: var(--booked); }
+.chart .oos { color: var(--block); }
+.chart tr:last-child td { border-bottom: 0; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--rule); font-size: .8rem; color: var(--muted); }
+.hero-shot { margin-top: 48px; border-radius: 12px 12px 0 0; overflow: hidden; box-shadow: var(--shadow); border: 1px solid color-mix(in srgb, var(--pine-ink) 12%, transparent); border-bottom: 0; }
+
+/* facts */
+.facts { border-bottom: 1px solid var(--rule); background: var(--card); }
+.facts .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fact { padding-block: 22px; padding-right: 16px; display: grid; gap: 4px; }
+.fact + .fact { border-left: 1px solid var(--rule); padding-left: 20px; }
+.fact b { font: 800 1.6rem/1 var(--display); }
+.fact span { font-size: .88rem; color: var(--muted); }
+
+/* sections */
+.band { padding-block: 80px; }
+.band.alt { background: var(--card); border-block: 1px solid var(--rule); }
+.head { display: grid; gap: 12px; margin-bottom: 40px; max-width: 70ch; }
+.feature { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 48px; align-items: center; }
+.feature + .feature { margin-top: 72px; }
+.feature.flip .copy { order: 2; }
+.feature .copy { display: grid; gap: 14px; min-width: 0; }
+.feature .copy p { color: var(--muted); }
+.shot { border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--rule); background: var(--card); min-width: 0; }
+.ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ticks li { padding-left: 26px; position: relative; }
+.ticks li::before { content: ""; position: absolute; left: 2px; top: .55em; width: 12px; height: 7px; border-left: 2px solid var(--stay); border-bottom: 2px solid var(--stay); transform: rotate(-45deg); }
+
+/* assistant demo */
+.demo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 40px; align-items: start; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 .88rem/1 var(--body); padding: 9px 13px; border-radius: 999px; border: 1px solid var(--rule); background: var(--wall); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--pine); color: var(--pine-ink); border-color: var(--pine); }
+.chip:hover { border-color: var(--brass); }
+.lang { font: 500 .7rem/1 var(--mono); color: var(--muted); margin-left: 4px; }
+.balloon { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow); padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.ask { display: flex; gap: 8px; }
+.ask output { flex: 1; min-width: 0; border: 1px solid var(--rule); border-radius: 8px; padding: 9px 12px; font-family: var(--mono); font-size: .9rem; background: var(--wall); overflow-wrap: anywhere; }
+.ask span { background: var(--pine); color: var(--pine-ink); border-radius: 8px; padding: 9px 14px; font-weight: 600; font-size: .9rem; }
+.reply { font-size: .95rem; }
+.rows { border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.rows .sec { font: 500 .72rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 12px 6px; }
+.row { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 9px 12px; border-top: 1px solid var(--rule); }
+.row:first-of-type { background: color-mix(in srgb, var(--brass) 12%, transparent); }
+.row i { width: 10px; height: 10px; border-radius: 50%; margin-top: .4em; background: var(--booked); }
+.row i.act { background: var(--stay); } .row i.money { background: var(--brass); } .row i.warn { background: var(--block); }
+.row b { font-weight: 600; font-size: .93rem; display: block; }
+.row small { color: var(--muted); font-size: .8rem; }
+.hint { font: 400 .78rem/1.4 var(--mono); color: var(--muted); }
+
+/* ribbon + shortcuts */
+.ribbon { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; background: var(--card); }
+.group { padding: 16px; display: grid; gap: 8px; align-content: start; }
+.group + .group { border-left: 1px solid var(--rule); }
+.group h3 { font-size: .95rem; }
+.group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .9rem; }
+.group li { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; font-size: .9rem; color: var(--muted); }
+.tabs span { border: 1px dashed var(--rule); border-radius: 6px; padding: 4px 10px; }
+
+/* complaints */
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); }
+.fix { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .95rem; }
+.fix th, .fix td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.fix th { font: 500 .74rem/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fix td:first-child { color: var(--muted); width: 42%; }
+.fix tr:last-child td { border-bottom: 0; }
+
+/* get */
+.get { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+pre.code { margin: 0; background: var(--pine); color: var(--pine-ink); border-radius: 12px; padding: 18px; overflow-x: auto; font: 400 .86rem/1.7 var(--mono); }
+pre.code .c { color: var(--pine-muted); }
+.docs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 40px; }
+.docs a { display: grid; gap: 4px; padding: 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); text-decoration: none; }
+.docs a:hover { border-color: var(--brass); }
+.docs small { color: var(--muted); font-size: .85rem; }
+footer { background: var(--pine); color: var(--pine-muted); font-size: .88rem; }
+footer .wrap { padding-block: 28px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+  .hero-grid, .feature, .demo, .get { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .feature.flip .copy { order: 0; }
+  .facts .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fact:nth-child(3) { border-left: 0; padding-left: 0; }
+  .ribbon { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .group + .group { border-left: 0; }
+  .group { border-top: 1px solid var(--rule); }
+  .docs { grid-template-columns: minmax(0, 1fr); }
+  .band { padding-block: 56px; }
+}
+@media (max-width: 520px) {
+  .top nav { margin-left: 0; }
+  .ribbon { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="key" aria-hidden="true">101</span>Orion Lodge</a>
+    <nav aria-label="Sections">
+      <a href="#desk">The desk</a>
+      <a href="#assistant">Assistant</a>
+      <a href="#ribbon">Shortcuts</a>
+      <a href="#why">Why</a>
+      <a href="#get">Get Lodge</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="eyebrow">Front desk software · 5 to 40 rooms · Windows, macOS, Linux</div>
+        <h1>The front desk for a <em>small hotel</em>, on your own computer</h1>
+        <p class="lead">Arrivals, departures, the room calendar, walk-ins, payments and the night audit in one window. No subscription, no per-booking fee, and it keeps working when the Internet doesn't.</p>
+        <div class="cta">
+          <a class="btn btn-brass" href="#get">Get Lodge</a>
+          <a class="btn btn-ghost" href="#assistant">Try the assistant</a>
+        </div>
+      </div>
+      <figure class="chart" aria-label="Room calendar: nine rooms over seven nights, with guests in house, bookings and a room out of service" style="margin:0">
+        <div class="chart-cap"><span>Room calendar · Sample Lakeside Inn</span><span>tonight 5 of 9 free</span></div>
+        <div class="chart-scroll">
+          <table>
+            <thead><tr><th>Room</th><th class="today">Sat 21</th><th>Sun 22</th><th>Mon 23</th><th>Tue 24</th><th>Wed 25</th><th>Thu 26</th><th>Fri 27</th></tr></thead>
+            <tbody>
+              <tr><td>101</td><td class="in">• Example</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>104</td><td class="bk">› Weber</td><td class="bk">› Weber</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>105</td><td></td><td class="bk">› O'Brien</td><td class="bk">› O'Brien</td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>201</td><td class="bk">› Morgan</td><td class="bk">› Morgan</td><td class="bk">› Morgan</td><td class="bk">› Morgan</td><td></td><td></td><td></td></tr>
+              <tr><td>202</td><td class="in">• Novak</td><td class="in">• Novak</td><td class="in">• Novak</td><td></td><td></td><td></td><td></td></tr>
+              <tr><td>203</td><td></td><td></td><td class="bk">› Petrova</td><td class="bk">› Petrova</td><td class="bk">› Petrova</td><td></td><td></td></tr>
+              <tr><td>204</td><td></td><td></td><td></td><td></td><td></td><td class="oos">× Repair</td><td class="oos">× Repair</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption class="legend"><span><b class="in" style="color:var(--stay)">•</b> in house</span><span><b style="color:var(--booked)">›</b> booked</span><span><b style="color:var(--block)">×</b> out of service</span><span>Double-click a room to book its first free night</span></figcaption>
+      </figure>
+    </div>
+    <div class="hero-shot">
+      <img src="images/today.jpg" width="1240" height="900" alt="Lodge's Today page: the ribbon with Home and Today tabs, Needs attention, arrivals with Room ready and Room not ready badges, guests in house and departures">
+    </div>
+  </div>
+</section>
+
+<div class="facts">
+  <div class="wrap">
+    <div class="fact"><b>5 actions</b><span>for a walk-in, from about 14 over three pages before</span></div>
+    <div class="fact"><b>2 actions</b><span>to check a guest in from Today</span></div>
+    <div class="fact"><b>0 €</b><span>a month, per room or per booking</span></div>
+    <div class="fact"><b>3 languages</b><span>English, German and Russian, assistant included</span></div>
+  </div>
+</div>
+
+<section class="band" id="desk">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">The desk</div>
+      <h2>Every page answers one question the shift asks</h2>
+      <p class="lead">Who arrives, who leaves, who still owes, which rooms are ready, can we close the day. The sidebar switches pages; the ribbon holds the commands.</p>
+    </div>
+
+    <div class="feature">
+      <div class="copy">
+        <div class="eyebrow">Reservations</div>
+        <h3>Book a guest without leaving the form</h3>
+        <p>Choose a room and dates, pick a guest on file or type a new guest's name, and save with <kbd>Ctrl+S</kbd>. Every booking shows its total, what's paid and the balance.</p>
+        <ul class="ticks">
+          <li>Overlapping stays and rooms out of service are refused before saving</li>
+          <li>Find any booking by guest, room, phone or reservation number</li>
+          <li>Extend, shorten, cancel or mark a no-show from the ribbon</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="images/reservations.jpg" width="1240" height="900" alt="The Reservations page with its contextual ribbon tab, the booking editor with an Or new guest field, and the booking list with status badges, totals, payments and balances" loading="lazy"></div>
+    </div>
+
+    <div class="feature flip">
+      <div class="copy">
+        <div class="eyebrow">Walk-in guest</div>
+        <h3>A guest at the desk without a booking, in one window</h3>
+        <p>Name, nights and guests. Lodge lists the rooms free from tonight, ready rooms first. <b>Check in now</b> creates the guest, the stay, the check-in and the payment together, or nothing at all.</p>
+        <ul class="ticks">
+          <li>A room that isn't clean can't be checked into</li>
+          <li>A guest already on file is found again by name</li>
+        </ul>
+      </div>
+      <div class="shot"><img src="images/walk-in.jpg" width="1240" height="900" alt="The Walk-in guest window over Today: guest name, phone, nights and guests, the rooms free from tonight with cleaning status and prices, and what the guest pays now" loading="lazy"></div>
+    </div>
+
+    <div class="feature">
+      <div class="copy">
+        <div class="eyebrow">Night audit</div>
+        <h3>Close the day from a checklist</h3>
+        <p>Every arrival handled, every departure checked out, bills settled, empty rooms clean, and today's money by payment method. <b>Close today</b> unlocks once nothing red is left; a closed day can't be changed.</p>
+      </div>
+      <div class="shot"><img src="images/night-audit.jpg" width="1240" height="900" alt="The night audit checklist with red items for arrivals and departures still open, warnings for unsettled bills and rooms to clean, and today's payments" loading="lazy"></div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="assistant">
+  <div class="wrap">
+    <div class="demo">
+      <div class="copy" style="display:grid;gap:16px;min-width:0">
+        <div class="eyebrow">Assistant · Ctrl+K</div>
+        <h2>Ask in your own words</h2>
+        <p class="lead">Type what you need the way you'd say it to a colleague. Enter shows what Lodge would do; Enter again does it. It runs inside Lodge, with no network, and follows the same rules as the buttons.</p>
+        <div class="chips" role="group" aria-label="Example requests">
+          <button class="chip" type="button" id="ex-checkin" data-ex="checkin" aria-pressed="true">check in Morgan</button>
+          <button class="chip" type="button" id="ex-free" data-ex="free" aria-pressed="false">free rooms tomorrow 2 nights for 2</button>
+          <button class="chip" type="button" id="ex-pay" data-ex="pay" aria-pressed="false">Taylor paid 50 cash</button>
+          <button class="chip" type="button" id="ex-owes" data-ex="owes" aria-pressed="false">wer schuldet <span class="lang">DE</span></button>
+          <button class="chip" type="button" id="ex-clean" data-ex="clean" aria-pressed="false">отметь 104 чистый <span class="lang">RU</span></button>
+        </div>
+      </div>
+      <div class="balloon" aria-live="polite">
+        <div class="eyebrow">What would you like to do?</div>
+        <div class="ask"><output id="ask-text">check in Morgan</output><span aria-hidden="true">Ask</span></div>
+        <p class="reply" id="ask-reply">Press Enter again to check in Alex Morgan to room 201.</p>
+        <div class="rows" id="ask-rows"></div>
+        <p class="hint">Enter asks · Enter again does it · Up and Down choose a row</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="ribbon">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Ribbon and shortcuts</div>
+      <h2>The everyday commands, one keystroke away</h2>
+      <p class="lead">Home holds what the desk does every hour, in the order of a stay, and acts on the page that shows. Commands a page can't run are greyed out instead of failing.</p>
+    </div>
+    <div class="ribbon">
+      <div class="group"><h3>New</h3><ul><li>New reservation <kbd>Ctrl+N</kbd></li><li>Walk-in guest <kbd>Ctrl+Shift+N</kbd></li><li>Group booking</li></ul></div>
+      <div class="group"><h3>Arrive and leave</h3><ul><li>Check in <kbd>Ctrl+I</kbd></li><li>Check out <kbd>Ctrl+O</kbd></li><li>Extend stay <kbd>Ctrl+E</kbd></li><li>No-show</li></ul></div>
+      <div class="group"><h3>Money</h3><ul><li>Payment <kbd>Ctrl+M</kbd></li><li>Guest bill <kbd>Ctrl+B</kbd></li></ul></div>
+      <div class="group"><h3>Documents</h3><ul><li>Registration form</li><li>Confirmation</li></ul></div>
+      <div class="group"><h3>Help</h3><ul><li>Assistant <kbd>Ctrl+K</kbd></li></ul></div>
+    </div>
+    <div class="tabs" aria-label="Contextual tabs"><b>Each page adds its own tab:</b><span>Today</span><span>Calendar</span><span>Reservation</span><span>Housekeeping</span><span>Reports</span><span>Night audit</span><span>Setup</span></div>
+  </div>
+</section>
+
+<section class="band alt" id="why">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Why it looks like this</div>
+      <h2>Built from what small hotels complain about</h2>
+      <p class="lead">Before the redesign we read what owners and front-desk staff of small hotels say about their software. Each complaint became a decision.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="fix">
+        <thead><tr><th>What staff say</th><th>What Lodge does</th></tr></thead>
+        <tbody>
+          <tr><td>Too many clicks and stacked windows; new staff need weeks to feel confident.</td><td>Daily work starts from Today; check-in in two actions; walk-in in one window; shortcuts for every daily command.</td></tr>
+          <tr><td>No picture of the house, only search results.</td><td>A two-week room calendar with real dates; double-click a room to book it.</td></tr>
+          <tr><td>Per-booking fees, add-ons and contracts that renew themselves.</td><td>Free and open source. No account, no per-room or per-booking charge.</td></tr>
+          <tr><td>When the Internet drops, the desk stops.</td><td>Everything runs locally. Nothing at the desk needs a network.</td></tr>
+          <tr><td>Data is hard to get out when you leave.</td><td>The hotel owns its data file, and reservations, guests and payments export to CSV in one click.</td></tr>
+          <tr><td>Guests sent to rooms that weren't ready.</td><td>Room status on Today and in the calendar; check-in refuses a room that isn't clean; a printed cleaning list.</td></tr>
+          <tr><td>The night audit is a chore done by hand.</td><td>One checklist; the day closes when nothing red is left.</td></tr>
+          <tr><td>Support is slow to answer.</td><td>Refusals say what to do next, and the assistant answers how-to requests on the spot.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="get">
+  <div class="wrap">
+    <div class="get">
+      <div style="display:grid;gap:14px;min-width:0">
+        <div class="eyebrow">Get Lodge</div>
+        <h2>Build it, open Setup, add the sample hotel</h2>
+        <p class="lead">Lodge is part of Orion UI. Build it from source on Linux, macOS or Windows. In Setup, choose the country and currency, then <b>Add sample hotel</b> to try every page with nine rooms and a few guests dated around today.</p>
+        <p class="lead">Pre-built downloads will be listed on the <a href="https://github.com/corepunch/orion-ui/releases">releases page</a>.</p>
+      </div>
+      <pre class="code" aria-label="Build and run commands"><span class="c"># build</span>
+git clone --recursive https://github.com/corepunch/orion-ui
+cd orion-ui
+make share build/bin/lodge
+
+<span class="c"># run, with the hotel's data in its own folder</span>
+build/bin/lodge --data ~/hotel --lang de</pre>
+    </div>
+    <div class="docs">
+      <a href="https://github.com/corepunch/orion-ui/blob/main/apps/lodge/README.md"><b>Lodge README</b><small>Pages, rules and how the data is kept</small></a>
+      <a href="https://github.com/corepunch/orion-ui/blob/main/docs/lodge/user-stories.md"><b>Personas and user stories</b><small>Who Lodge is for, what's done and what's next</small></a>
+      <a href="https://github.com/corepunch/orion-ui/blob/main/docs/lodge/research-hotel-software-complaints.md"><b>The research</b><small>What small hotels say about their software</small></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Orion Lodge · part of Orion UI · GPL-3</span>
+    <span>Operational bills and confirmations, not statutory tax invoices.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var answers = {
+    checkin: { text: "check in Morgan", reply: "Press Enter again to check in Alex Morgan to room 201.",
+      section: "Check in", rows: [["act", "Alex Morgan · room 201", "21.11 – 25.11 · Reserved · balance 520.00"]] },
+    free: { text: "free rooms tomorrow 2 nights for 2", reply: "3 rooms are free from 22.11 for 2 nights, cheapest first. Choose one to book it.",
+      section: "Free rooms", rows: [["", "Room 101 · Double · up to 2", "110.00 a night · 220.00 for the stay · Clean"],
+        ["", "Room 103 · Double · up to 2", "110.00 a night · 220.00 for the stay · Clean"],
+        ["", "Room 204 · Double · up to 2", "120.00 a night · 240.00 for the stay · Dirty"]] },
+    pay: { text: "Taylor paid 50 cash", reply: "Press Enter again to record 50.00 from Sam Taylor.",
+      section: "Record a payment", rows: [["money", "Sam Taylor pays 50.00 Cash", "18.11 – 21.11 · Checked in · balance 0.00"]] },
+    owes: { text: "wer schuldet", reply: "5 Gäste schulden insgesamt 1.520,00. Wählen Sie einen, um eine Zahlung zu erfassen.",
+      section: "Offene Beträge", rows: [["money", "Marta Kowalska · Zimmer 103", "20.11.2026 – 21.11.2026 · Eingecheckt · offen 60,00"],
+        ["money", "Ada Example · Zimmer 101", "19.11.2026 – 22.11.2026 · Eingecheckt · offen 110,00"],
+        ["money", "Petr Novak · Zimmer 202", "17.11.2026 – 24.11.2026 · Eingecheckt · offen 620,00"]] },
+    clean: { text: "отметь 104 чистый", reply: "Нажмите Enter ещё раз, чтобы отметить номер 104: чистый.",
+      section: "Уборка", rows: [["act", "Отметить номер 104: Чистый", "Грязный"]] }
+  };
+  var text = document.getElementById("ask-text"), reply = document.getElementById("ask-reply"), rows = document.getElementById("ask-rows");
+  var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  function show(key) {
+    var a = answers[key];
+    text.textContent = a.text; reply.textContent = a.reply;
+    rows.textContent = "";
+    var sec = document.createElement("div"); sec.className = "sec"; sec.textContent = a.section; rows.appendChild(sec);
+    a.rows.forEach(function (r) {
+      var row = document.createElement("div"); row.className = "row";
+      var dot = document.createElement("i"); if (r[0]) dot.className = r[0];
+      var body = document.createElement("div");
+      var b = document.createElement("b"); b.textContent = r[1];
+      var s = document.createElement("small"); s.textContent = r[2];
+      body.appendChild(b); body.appendChild(s); row.appendChild(dot); row.appendChild(body); rows.appendChild(row);
+    });
+    chips.forEach(function (c) { c.setAttribute("aria-pressed", String(c.getAttribute("data-ex") === key)); });
+  }
+  chips.forEach(function (c) { c.addEventListener("click", function () { show(c.getAttribute("data-ex")); }); });
+  show("checkin");
+})();
+</script>
+</body>
+</html>
