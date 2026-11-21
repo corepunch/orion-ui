@@ -227,7 +227,8 @@ def notarized_export(archive, destination):
             return
         message = result.stdout + result.stderr
         known_pending = re.search(r"not yet notarized|has(?: not|n't) been notarized|no notarized app|"
-                                  r"notarization.*(?:pending|in progress)",
+                                  r"notarization.*(?:pending|in progress)|"
+                                  r"processing and not ready for distribution",
                                   message, re.IGNORECASE)
         require(known_pending and time.monotonic() < deadline, message.strip())
         print(f'Waiting for Apple to notarize {archive.stem}…', flush=True)
