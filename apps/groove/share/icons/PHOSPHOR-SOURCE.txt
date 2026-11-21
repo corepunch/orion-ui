@@ -12,3 +12,4 @@ Track headers: assets/{regular,fill}/{waveform,guitar,piano-keys,microphone,viny
 
 Toolbar: assets/regular/{file-plus,folder-open,floppy-disk,trash,repeat,arrow-square-out,dots-three}.svg and assets/fill/repeat-fill.svg, same revision; upstream geometry and viewBox preserved.
 New song: assets/regular/plus.svg, same revision; upstream asset preserved.
+Clip categories: assets/{regular,fill}/{speaker-high,crosshair,music-notes-simple,hands-clapping,bell-ringing,timer,wave-sawtooth,speaker-hifi,sliders,wave-sine,squares-four,lightning,record}[-fill].svg and assets/regular/lock-simple.svg, same revision. The other category icons reuse the track-header assets. Upstream paths and viewBox preserved; fill uses currentColor.

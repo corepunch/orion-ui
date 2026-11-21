@@ -5,6 +5,30 @@
 #define CARD_LABEL_PADDING 4
 #define CARD_LABEL_FONT "Caption"
 
+#define CLIP_ICON(name) { "phosphor-" name, "phosphor-" name "-fill" }
+static const char *const kClipIcons[CAT_COUNT][2] = {
+  [CAT_DRUMS]     = CLIP_ICON("waveform"),
+  [CAT_KICK]      = CLIP_ICON("speaker-high"),
+  [CAT_SNARE]     = CLIP_ICON("crosshair"),
+  [CAT_HAT]       = CLIP_ICON("music-notes-simple"),
+  [CAT_CLAP]      = CLIP_ICON("hands-clapping"),
+  [CAT_CYMBAL]    = CLIP_ICON("bell-ringing"),
+  [CAT_PERC]      = CLIP_ICON("timer"),
+  [CAT_FILL]      = CLIP_ICON("wave-sawtooth"),
+  [CAT_BASS]      = CLIP_ICON("speaker-hifi"),
+  [CAT_KEYS]      = CLIP_ICON("piano-keys"),
+  [CAT_ORGAN]     = CLIP_ICON("sliders"),
+  [CAT_GUITAR]    = CLIP_ICON("guitar"),
+  [CAT_SYNTH]     = CLIP_ICON("wave-sine"),
+  [CAT_PAD]       = CLIP_ICON("squares-four"),
+  [CAT_STAB]      = CLIP_ICON("lightning"),
+  [CAT_VOX]       = CLIP_ICON("microphone"),
+  [CAT_SCRATCH]   = CLIP_ICON("vinyl-record"),
+  [CAT_FX]        = CLIP_ICON("sparkle"),
+  [CAT_RECORDING] = CLIP_ICON("record"),
+};
+#undef CLIP_ICON
+
 typedef struct {
   int block;
   ctrl_state_t state;
@@ -29,18 +53,16 @@ static bool card_on_screen(const window_t *win) {
   return frame.x < view.w && frame.x + frame.w > 0 && frame.y < view.h && frame.y + frame.h > 0;
 }
 
-static void paint_card_title(const block_t *b, irect16_t title, int visible_right, int radius, uint32_t ink, bool locked) {
+static void paint_card_title(const block_t *b, irect16_t title, int visible_right, int radius, uint32_t ink, bool locked, bool selected) {
   title.w = MIN(title.w, visible_right - title.x);
   irect16_t label = rect_inset_xy(title, MAX(radius, CARD_LABEL_PADDING), 0);
   int text_h = text_char_height(CARD_LABEL_FONT);
   int icon_size = MIN(title.h, text_h);
   if (label.w < icon_size || title.h < text_h) return;
 
-  const char *icon_name = "phosphor-waveform";
-  if (locked) icon_name = "phosphor-headphones-fill";
-  else if (b->cat == CAT_RECORDING) icon_name = "phosphor-microphone";
+  category_t category = b->cat >= 0 && b->cat < CAT_COUNT ? b->cat : CAT_DRUMS;
   irect16_t icon = rect_center(rect_split_left(label, icon_size), icon_size, icon_size);
-  draw_sysicon(icon_name, icon.x, icon.y, icon_size, ink);
+  draw_sysicon(kClipIcons[category][selected], icon.x, icon.y, icon_size, ink);
   label = rect_trim_left(label, icon_size + CARD_LABEL_PADDING);
   if (locked || b->variant) {
     char variant[8];
@@ -51,6 +73,10 @@ static void paint_card_title(const block_t *b, irect16_t title, int visible_righ
       irect16_t badge = rect_center(rect_split_right(label, tag_w), tag_w, text_h);
       draw_badge_ex(CARD_LABEL_FONT, tag, badge, ink, get_sys_color(brPanelDark));
       label = rect_trim_right(label, tag_w + CARD_LABEL_PADDING);
+    } else if (locked && label.w >= 2 * icon_size + CARD_LABEL_PADDING) {
+      irect16_t lock = rect_center(rect_split_right(label, icon_size), icon_size, icon_size);
+      draw_sysicon("phosphor-lock-simple", lock.x, lock.y, icon_size, ink);
+      label = rect_trim_right(label, icon_size + CARD_LABEL_PADDING);
     }
   }
   label = rect_center(label, label.w, text_h);
@@ -77,7 +103,7 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
   int radius = MAX(0, ui_radius("Card") - ui_px("Card", "--ring-width"));
   irect16_t title = rect_split_top(r, MIN(r.h, text_char_height(CARD_LABEL_FONT) + 5));
   fill_gradient_rounded_top_rect(header, header, title, radius);
-  paint_card_title(b, title, source_x + visible_width, radius, label_ink, locked);
+  paint_card_title(b, title, source_x + visible_width, radius, label_ink, locked, (state & CTRL_SELECTED) != 0);
 
   irect16_t wave = rect_inset_xy(rect_trim_top(r, title.h), 0, 1);
   uint32_t ink = color_mix(label_ink, color, 65);
