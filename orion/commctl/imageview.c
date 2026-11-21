@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct { bitmap_t *bitmap; char *path; char icon[64]; uint32_t background; } image_view_t;
+typedef struct { bitmap_t *bitmap; char *path; char icon[64]; uint32_t background; bool fit_width; } image_view_t;
 result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   image_view_t *state = win->userdata;
   switch (msg) {
@@ -40,6 +40,34 @@ result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       state->bitmap = bitmap; state->path = copy;
       invalidate_window(win);
       return !*path || bitmap != NULL;
+    }
+    case imageSetData: {
+      const image_view_data_t *data = lparam;
+      bitmap_t *bitmap = state && data ? bitmap_load_memory(data->bytes, data->size) : NULL;
+      if (!bitmap) {
+        fprintf(stderr, "[ImageView] window=%u cannot decode image data (%zu bytes)\n", win->id, data ? data->size : 0);
+        fflush(stderr);
+        return false;
+      }
+      bitmap_free(state->bitmap);
+      free(state->path);
+      state->bitmap = bitmap;
+      state->path = NULL;
+      invalidate_window(win);
+      return true;
+    }
+    case imageSetFitWidth:
+      if (!state) return false;
+      state->fit_width = wparam != 0;
+      invalidate_window(win);
+      return true;
+    case evMeasure: {
+      layout_measure_t *m = lparam;
+      if (!m || !state || !state->fit_width || !state->bitmap) return false;
+      isize16_t size = bitmap_size(state->bitmap);
+      m->desired_w = m->avail_w > 0 ? MIN(m->avail_w, size.w) : size.w;
+      m->desired_h = MAX(1, (int)lround((double)m->desired_w * size.h / size.w));
+      return true;
     }
     case evPaint:
       if (!(win->flags & WINDOW_NOFILL))

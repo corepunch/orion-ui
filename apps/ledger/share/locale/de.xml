@@ -680,4 +680,15 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
+  <string source="Help Topics" where="menu">Hilfethemen</string>
+  <string source="Tutorial: Review the Journal" where="menu">Lernprogramm: Belegjournal prüfen</string>
+  <string source="Tutorial: Read the Trial Balance" where="menu">Lernprogramm: Summen- und Saldenliste lesen</string>
+  <string source="Tutorials" where="labels">Lernprogramme</string>
+  <string source="Review the Journal" where="labels">Belegjournal prüfen</string>
+  <string source="Read the Trial Balance" where="labels">Summen- und Saldenliste lesen</string>
+  <string source="Choose a document in the journal. The row shows its date, type and whether it is posted." where="labels">Wählen Sie einen Beleg im Journal aus. Die Zeile zeigt das Datum, die Belegart und den Buchungsstatus.</string>
+  <string source="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits." where="labels">Im unteren Bereich sehen Sie die Details zum ausgewählten Beleg. Unter „Positionen“ stehen die Artikel und unter „Buchungen“ die Soll- und Habenbuchungen.</string>
+  <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." where="labels">Wählen Sie „Bearbeiten“, um den Beleg zu öffnen, oder „Soll/Haben“, um zu den Buchungen zu wechseln. Ein Entwurf hat keine Buchungen.</string>
+  <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." where="labels">Wählen Sie in der Berichtsliste die Summen- und Saldenliste. Legen Sie den Zeitraum über „Einstellungen“ (Strg+R) fest.</string>
+  <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." where="labels">Lesen Sie von links nach rechts: Anfangssaldo, Soll- und Habenumsatz und dann den Schlusssaldo. Vergleichen Sie die Soll- und Habenumsätze in der Summenzeile.</string>
 </strings>

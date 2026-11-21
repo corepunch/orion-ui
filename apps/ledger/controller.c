@@ -758,6 +758,23 @@ static void ledger_ui_language(lua_State *L) { select_language(); }
 static void ledger_ui_import(lua_State *L) { import_from_1c(); }
 static void ledger_ui_addon(lua_State *L) { ledger_open_addon(); }
 static void ledger_ui_assistant(lua_State *L) { ledger_open_assistant(); }
+static void ledger_ui_help(lua_State *L) {
+  char path[LEDGER_PATH_MAX + 32];
+  snprintf(path, sizeof(path), "%s/ledger.ohlp", g_ledger->share_dir);
+  help_open(g_ledger->main_win, path, NULL);
+}
+static void ledger_ui_tutorial(lua_State *L, const char *name) {
+  int page = !strcmp(name, "journal") ? ID_VIEW_JOURNAL : !strcmp(name, "reports") ? ID_VIEW_REPORTS : 0;
+  if (!page) { luaL_error(L, "unknown tutorial '%s'", name); return; }
+  if (!page_host_select(g_ledger->main_win, page)) return;
+  if (page == ID_VIEW_JOURNAL) {
+    send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 0, NULL);
+    tutorial_start(g_ledger->main_win, &ledger_review_journal_tutorial);
+  } else if (page == ID_VIEW_REPORTS) {
+    send_message(view(ID_REPORTS_PAGE_REPORT_TABS), tcSetSelection, 0, NULL);
+    tutorial_start(g_ledger->main_win, &ledger_read_balance_tutorial);
+  }
+}
 static void ledger_ui_account_card(lua_State *L) { show_account_card(); }
 static void ledger_ui_print_reports(lua_State *L) {
   char report[2048]; bool ok = ledger_print_reports(report, sizeof(report));

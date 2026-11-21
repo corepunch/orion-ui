@@ -120,6 +120,19 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
   }
 }
 
+static void stack_arrange(window_t *win, bool measure_scroll) {
+  if ((win->flags & WINDOW_VSCROLL) && !layout_is_horizontal(win)) {
+    if (measure_scroll)
+      window_set_scroll_content(win, 0, 0, layout_padding_for(win), (irect16_t){0});
+    irect16_t viewport = get_client_rect(win);
+    viewport.h = MAX(viewport.h, win->vscroll.max_val);
+    viewport = window_scroll_rect_to_client(win, viewport);
+    layout_stack_arrange_window(win, &viewport);
+    return;
+  }
+  layout_stack_arrange_window(win, NULL);
+}
+
 void layout_flow_horizontal(window_t *first, int start_x, int gap) {
   int cur_x = start_x;
   bool placed_child = false;
@@ -184,22 +197,42 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (m->desired_h < 1) m->desired_h = 1;
       return MAKEDWORD((uint16_t)m->desired_w, (uint16_t)m->desired_h);
     }
+    case evMeasureScrollContent: {
+      layout_measure_t *m = lparam;
+      if (!m || layout_is_horizontal(win)) return false;
+      irect16_t pad = layout_padding_for(win);
+      layout_measure_t full = {MAX(1, m->avail_w + pad.x + pad.w), 1, 0, 0};
+      layout_stack_measure_window(win, &full);
+      m->desired_w = 0;
+      m->desired_h = MAX(0, full.desired_h - pad.y - pad.h);
+      return true;
+    }
     case evArrange: {
       layout_arrange_t *a = (layout_arrange_t *)lparam;
       if (a) {
         win->frame = a->rect;
-        irect16_t cr = get_client_rect(win);
-        layout_stack_arrange_window(win, &cr);
+        stack_arrange(win, true);
       }
       return MAKEDWORD((uint16_t)MAX(1, win->frame.w),
                        (uint16_t)MAX(1, win->frame.h));
     }
     case evResize:
-      {
-        irect16_t cr = get_client_rect(win);
-        layout_stack_arrange_window(win, &cr);
-      }
+      stack_arrange(win, true);
       return true;
+    case evVScroll:
+      if (!(win->flags & WINDOW_VSCROLL) || layout_is_horizontal(win)) return false;
+      stack_arrange(win, false);
+      invalidate_window(win);
+      return true;
+    case evKeyDown:
+      if (!win->vscroll.visible || layout_is_horizontal(win) || ui_get_mod_state()) return false;
+      switch (wparam) {
+        case AX_KEY_PGUP:     send_message(win, evVScroll, MAX(0, win->vscroll.pos - win->vscroll.page), NULL); return true;
+        case AX_KEY_PGDN:     send_message(win, evVScroll, win->vscroll.pos + win->vscroll.page, NULL); return true;
+        case AX_KEY_HOME:     send_message(win, evVScroll, 0, NULL); return true;
+        case AX_KEY_END:      send_message(win, evVScroll, win->vscroll.max_val, NULL); return true;
+      }
+      return false;
     case evPaint:
       layout_paint(win, THEME_PART_STACK_VIEW);
       return true;

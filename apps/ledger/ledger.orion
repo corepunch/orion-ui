@@ -115,6 +115,10 @@
       <item name="tile" label="Tile Documents" />
     </menu>
     <menu name="help" label="Help">
+      <item name="topics" label="Help Topics" shortcut="F1" />
+      <item name="tutorial_journal" label="Tutorial: Review the Journal" />
+      <item name="tutorial_balance" label="Tutorial: Read the Trial Balance" />
+      <Separator />
       <item name="find_command" label="Find a Command..." shortcut="Ctrl+Shift+K" />
       <item name="assistant" label="Show Office Assistant" shortcut="Ctrl+Shift+A" />
       <Separator />
@@ -248,6 +252,13 @@
       </Group>
     </Tab>
     <Tab label="Help">
+      <Group label="Help">
+        <Button command="help.topics" text="Help Topics" size="large" />
+      </Group>
+      <Group label="Tutorials">
+        <Button command="help.tutorial_journal" text="Review the Journal" />
+        <Button command="help.tutorial_balance" text="Read the Trial Balance" />
+      </Group>
       <Group label="Assistance">
         <Button command="help.find_command" icon="search" text="Find a Command" size="large" />
         <Button command="help.assistant" icon="ledger-tip" text="Office Assistant" size="large" />
@@ -1104,6 +1115,18 @@
       </table>
     </database>
   </databases>
+
+  <tutorials>
+    <tutorial name="review_journal" form="journal_page" title="Review the Journal">
+      <step control="documents" text="Choose a document in the journal. The row shows its date, type and whether it is posted." />
+      <step control="details" text="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits." />
+      <step control="command_bar" text="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." />
+    </tutorial>
+    <tutorial name="read_balance" form="reports_page" title="Read the Trial Balance">
+      <step control="report_tabs" text="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." />
+      <step control="balances" text="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." />
+    </tutorial>
+  </tutorials>
 
   <forms>
     <form name="main_window" title="Ledger" width="1200" height="700"

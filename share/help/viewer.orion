@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion version="1" name="help">
+  <forms>
+    <form name="help_viewer" title="Help Topics" width="900" height="640" spacing="0"
+          flags="WINDOW_TOOLWINDOW,WINDOW_NOTRAYBUTTON,WINDOW_HIDDEN">
+      <StackView name="navigation" orientation="horizontal" padding="10 8" spacing="6" flags="WINDOW_NOTABSTOP">
+        <Button name="back" text="Back" />
+        <Button name="forward" text="Forward" />
+      </StackView>
+      <Separator name="navigation_rule" />
+      <SplitView name="reader" split-ratio="0.28" flags="flexspace,WINDOW_NOTABSTOP">
+        <StackView name="sidebar" padding="10" spacing="8" flags="WINDOW_NOTABSTOP">
+          <Label name="contents" text="Contents" font="heading" />
+          <TextEdit name="search" placeholder="Search topics" />
+          <ReportView name="topics" flags="flexspace,vscroll" />
+          <Label name="no_results" text="No matching topics." color="text-secondary" flags="WINDOW_NOACTIVATE" />
+        </StackView>
+        <StackView name="article" class="help-article" flags="flexspace,vscroll" padding="20" spacing="10" />
+      </SplitView>
+    </form>
+  </forms>
+</orion>

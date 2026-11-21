@@ -482,7 +482,17 @@ $(PLATFORM_LIB): $(PLATFORM_SRCS) | $(LIB_DIR)
 	@$(MAKE) -B -s -C $(PLATFORM_DIR) OUTDIR=$(abspath $(LIB_DIR)) ARCH="$(ARCH)"
 
 # ── Shared assets ────────────────────────────────────────────────────────
-share: | $(SHARE_DIR)
+HELP_APPS = $(notdir $(patsubst %/help/,%,$(dir $(wildcard $(APPS)/*/help/book.xml))))
+HELP_BOOKS = $(foreach app,$(HELP_APPS),$(SHARE_DIR)/$(app)/$(app).ohlp)
+
+define help_book
+$(SHARE_DIR)/$(1)/$(1).ohlp: $$(wildcard $(APPS)/$(1)/help/*) $(APPS)/$(1)/help tools/pack_help.py
+	@mkdir -p $$(@D)
+	python3 tools/pack_help.py $(APPS)/$(1)/help/book.xml $$@
+endef
+$(foreach app,$(HELP_APPS),$(eval $(call help_book,$(app))))
+
+share: $(HELP_BOOKS) | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp -R share/. $(SHARE_DIR)/orion/
 	@rm -f $(SHARE_DIR)/orion/fonts/NotoSans-Regular.ttf $(SHARE_DIR)/orion/fonts/NotoSans-Medium.ttf $(SHARE_DIR)/orion/fonts/NotoSans-OFL.txt

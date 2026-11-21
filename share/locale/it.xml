@@ -42,4 +42,12 @@
   <string source="Done">Fine</string>
   <string source="Skip">Salta</string>
   <string source="Step %d of %d">Passaggio %d di %d</string>
+  <string source="Help Topics" where="help_viewer">Argomenti della guida</string>
+  <string source="Back" where="help_viewer">Indietro</string>
+  <string source="Forward" where="help_viewer">Avanti</string>
+  <string source="Contents" where="help_viewer">Sommario</string>
+  <string source="Search topics" where="help_viewer">Cerca argomenti</string>
+  <string source="No matching topics." where="help_viewer">Nessun argomento trovato.</string>
+  <string source="The help book could not be opened." where="code">Impossibile aprire la guida.</string>
+  <string source="Screenshot unavailable." where="code">Schermata non disponibile.</string>
 </strings>

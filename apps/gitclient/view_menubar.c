@@ -498,6 +498,24 @@ void gc_handle_command_impl(uint16_t id) {
         message_box(gc->main_win, ui_tr("Prune failed. Add a remote first."), ui_tr("Prune"), MB_OK);
       }
       break;
+    case ID_HELP_TOPICS: {
+      char path[4096];
+      int n = snprintf(path, sizeof(path), "%s/../share/gitclient/gitclient.ohlp", ui_get_exe_dir());
+      if (n > 0 && (size_t)n < sizeof(path)) help_open(gc->main_win, path, NULL);
+      break;
+    }
+    case ID_HELP_TUTORIAL_CHANGES:
+    case ID_HELP_TUTORIAL_HISTORY:
+      if (!gc->repo) {
+        message_box(gc->main_win, ui_tr("Open a repository to start this tutorial."), ui_tr("Tutorials"), MB_OK);
+      } else if (id == ID_HELP_TUTORIAL_CHANGES) {
+        gc_set_view_mode(GC_TAB_CHANGES);
+        tutorial_start(gc->main_win, &gitclient_review_changes_tutorial);
+      } else {
+        gc_set_view_mode(GC_TAB_HISTORY);
+        tutorial_start(gc->main_win, &gitclient_explore_history_tutorial);
+      }
+      break;
     case ID_HELP_ABOUT:
       gc_show_about_dialog(gc->main_win);
       break;

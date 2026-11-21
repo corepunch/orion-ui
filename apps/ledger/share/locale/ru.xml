@@ -680,4 +680,15 @@
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
+  <string source="Help Topics" where="menu">Содержание справки</string>
+  <string source="Tutorial: Review the Journal" where="menu">Урок: просмотр журнала</string>
+  <string source="Tutorial: Read the Trial Balance" where="menu">Урок: чтение оборотно-сальдовой ведомости</string>
+  <string source="Tutorials" where="labels">Уроки</string>
+  <string source="Review the Journal" where="labels">Просмотр журнала</string>
+  <string source="Read the Trial Balance" where="labels">Чтение оборотно-сальдовой ведомости</string>
+  <string source="Choose a document in the journal. The row shows its date, type and whether it is posted." where="labels">Выберите документ в журнале. В строке указаны дата, вид и признак проведения.</string>
+  <string source="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits." where="labels">В нижней панели показаны сведения о выбранном документе. На вкладке «Строки» видны позиции, на вкладке «Проводки» — дебет и кредит.</string>
+  <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." where="labels">Нажмите «Изменить», чтобы открыть документ, или «Дт/Кт», чтобы перейти к проводкам. У непроведённого документа проводок нет.</string>
+  <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." where="labels">Выберите «Оборотно-сальдовая ведомость» в списке отчётов. Задайте период через «Настройки» (Ctrl+R).</string>
+  <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." where="labels">Читайте слева направо: начальное сальдо, обороты по дебету и кредиту и конечное сальдо. Сравните итоговые обороты по дебету и кредиту в строке «Итого».</string>
 </strings>

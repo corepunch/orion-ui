@@ -355,6 +355,9 @@ typedef struct database_s database_t;
 
 // Register all common controls with the window system.
 #define imageSetPath (evUser + 211)
+#define imageSetData (evUser + 212)      // lparam = const image_view_data_t*, copied by decoding now
+#define imageSetFitWidth (evUser + 213)  // wparam = true to measure to the image's aspect ratio
+typedef struct { const void *bytes; size_t size; } image_view_data_t;
 result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void register_commctl_classes(void);
 

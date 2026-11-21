@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help version="1" title="Git Client Help">
+  <topic id="start" title="Get started with Git Client" keywords="navigation activity sidebar overview workspace repository">
+    <p>Use Overview to choose a checkout, Changes to review and commit your work, and History to see what has already been committed. Each view is available from the activity bar at the left.</p>
+    <image src="overview.jpg" caption="Overview lists the repositories and worktrees in your workspace." />
+    <heading>Open or clone a repository</heading>
+    <p>Choose File → Open Repository and select an existing checkout folder. To make a local copy of a remote repository, choose File → Clone and enter its URL and a destination. Double-click a checkout in Overview to work in it.</p>
+    <heading>Try a guided tutorial</heading>
+    <p>With a repository open, choose Help → Review and Stage Changes or Help → Explore Commit History. Use Next to follow the highlights in the live application.</p>
+  </topic>
+
+  <topic id="commit" title="Review, stage and commit" keywords="changes staging unstaged diff index summary commit message">
+    <p>Open Changes (Ctrl+1). Select a file to see its diff. Review additions and removals, then check the files you want to include in the next commit. Clear a checkbox to unstage a file while keeping its edits.</p>
+    <image src="changes.jpg" caption="A file's checkbox shows its staging status. Selecting a file opens its diff." />
+    <heading>Make a commit</heading>
+    <p>Enter a short summary and, if useful, a longer description. Read the Commit button to check how many files will be committed and on which branch, then click it or press Ctrl+Enter.</p>
+    <image src="commit-form.jpg" caption="The message fields and Commit button are below the changed files." />
+    <p>Check History for the new commit. Any remaining unstaged edits stay in Changes. To send the commit to a remote, use Push separately.</p>
+  </topic>
+
+  <topic id="history" title="Read history and inspect a diff" keywords="commit log graph revision author hash compare search files">
+    <p>Open History (Ctrl+2). The commit list shows summaries, authors and dates. Use Search (Ctrl+Shift+F) to find a commit or show All Commits to include other branches.</p>
+    <image src="history.jpg" caption="Select a commit, then a changed file, to read that file's diff." />
+    <p>Select a commit and choose a file from its Files pane. Diff shows what that commit changed in the file. The Side-by-Side Diff command switches the comparison layout.</p>
+    <p>Use branch and tag labels in the history to find where a change landed. Selecting commits to inspect keeps your current checkout in place.</p>
+  </topic>
+
+  <topic id="branches" title="Create and switch branches" keywords="checkout branch new rename merge stash worktrees">
+    <p>Check the current branch in the title or in History. Choose Branch → New Branch (Ctrl+N), enter a name and confirm the starting point. Use Checkout (Ctrl+P) to switch to an existing branch.</p>
+    <p>If Git refuses to switch because local edits would be overwritten, review Changes. Commit edits that belong on the current branch or use Stash Changes to set them aside temporarily. Use Pop Stash to reapply a saved stash when you are ready.</p>
+    <p>To work on two branches at once, use separate worktrees. Overview shows each checkout's path, branch and working state. Opening a worktree switches the working context for Changes and History.</p>
+  </topic>
+
+  <topic id="remote" title="Fetch, pull and push" keywords="sync publish remote origin upstream ahead behind">
+    <p>Use Fetch to update your view of the remote branches. After fetching, check the current branch's ahead or behind status before choosing how to reconcile it.</p>
+    <p>Use Pull to bring the remote changes into the current branch. Use Push to send your local commits to the selected remote branch. Check the remote and branch in the operation dialog before confirming.</p>
+    <p>Sync Current Branch chooses an action from the branch's upstream and ahead or behind state. Use Fetch, Pull and Push individually when you want to control each step.</p>
+  </topic>
+
+  <topic id="conflicts" title="Resolve a merge or rebase" keywords="conflict continue abort use my version use their version mark resolved">
+    <p>If a merge or rebase stops for conflicts, open Changes. Select a conflicted file and review the diff. Edit the file to combine the changes, or choose Use My Version or Use Their Version if the whole file should come from one side.</p>
+    <p>After editing, choose Mark Resolved for the selected file. Repeat for each conflict, then choose Continue from the operation bar. During a rebase, Git may stop again on a later commit.</p>
+    <p>Use Abort if you need to cancel the operation. Read the confirmation before continuing.</p>
+  </topic>
+
+  <topic id="workspace" title="Organize a workspace" keywords="gitworkspace save repository checkout overview launch targets">
+    <p>Use File → Open Repository to add checkouts to your workspace. Overview lists their branches and status. Select a checkout to see its summary and any launch targets.</p>
+    <p>Choose File → Save Workspace to save the repository list as a .gitworkspace file. Open it later with File → Open Workspace (Ctrl+O). File → Remove from Workspace removes a checkout from the list while keeping its folder on disk.</p>
+  </topic>
+</help>

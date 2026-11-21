@@ -55,6 +55,10 @@
     <function name="import" lua="true" export="import" />
     <function name="addon" lua="true" export="addon" />
     <function name="assistant" lua="true" export="assistant" />
+    <function name="help" lua="true" export="help" />
+    <function name="tutorial" lua="true" export="tutorial">
+      <arg name="name" type="string" />
+    </function>
     <function name="account_card" lua="true" export="account_card" />
     <function name="print_reports" lua="true" export="print_reports" />
     <function name="dirty" lua="true">

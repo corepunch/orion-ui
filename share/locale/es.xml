@@ -42,4 +42,12 @@
   <string source="Done">Listo</string>
   <string source="Skip">Omitir</string>
   <string source="Step %d of %d">Paso %d de %d</string>
+  <string source="Help Topics" where="help_viewer">Temas de ayuda</string>
+  <string source="Back" where="help_viewer">Atrás</string>
+  <string source="Forward" where="help_viewer">Adelante</string>
+  <string source="Contents" where="help_viewer">Contenido</string>
+  <string source="Search topics" where="help_viewer">Buscar temas</string>
+  <string source="No matching topics." where="help_viewer">No se encontraron temas.</string>
+  <string source="The help book could not be opened." where="code">No se pudo abrir la ayuda.</string>
+  <string source="Screenshot unavailable." where="code">Captura de pantalla no disponible.</string>
 </strings>

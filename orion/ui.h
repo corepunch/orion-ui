@@ -26,6 +26,7 @@
 
 // Common controls subsystem
 #include <orion/commctl/commctl.h>
+#include <orion/commctl/help.h>
 
 // Common dialogs subsystem
 #include <orion/commdlg/commdlg.h>

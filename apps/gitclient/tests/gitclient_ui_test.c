@@ -594,7 +594,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 74);
+    ASSERT_EQUAL(gitclient_action_meta_count, 77);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -625,15 +625,19 @@ void test_action_metadata_and_accelerators(void) {
     for (int i = 0; i < gitclient_default_accel_count; i++)
         ASSERT_TRUE(gc_meta_has(gitclient_default_accels[i].cmd));
 
-    // Spot-check the documented defaults: F5 → refresh, Ctrl+K → commit.
+    // Spot-check the documented defaults.
     const accel_t *refresh = gc_find_accel(ID_REPO_REFRESH);
     const accel_t *commit  = gc_find_accel(ID_COMMIT_COMMIT);
+    const accel_t *help    = gc_find_accel(ID_HELP_TOPICS);
     ASSERT_NOT_NULL(refresh);
     ASSERT_NOT_NULL(commit);
+    ASSERT_NOT_NULL(help);
     ASSERT_EQUAL(refresh->key, AX_KEY_F5);
     ASSERT_EQUAL(refresh->fVirt & FCONTROL, 0);
     ASSERT_EQUAL(commit->key, AX_KEY_K);
     ASSERT_TRUE((commit->fVirt & FCONTROL) != 0);
+    ASSERT_EQUAL(help->key, AX_KEY_F1);
+    ASSERT_EQUAL(help->fVirt, FVIRTKEY);
     PASS();
 }
 

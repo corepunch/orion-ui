@@ -44,4 +44,12 @@
   <string source="Done">Готово</string>
   <string source="Skip">Пропустить</string>
   <string source="Step %d of %d">Шаг %d из %d</string>
+  <string source="Help Topics" where="help_viewer">Содержание справки</string>
+  <string source="Back" where="help_viewer">Назад</string>
+  <string source="Forward" where="help_viewer">Вперёд</string>
+  <string source="Contents" where="help_viewer">Содержание</string>
+  <string source="Search topics" where="help_viewer">Поиск по темам</string>
+  <string source="No matching topics." where="help_viewer">Темы не найдены.</string>
+  <string source="The help book could not be opened." where="code">Не удалось открыть справку.</string>
+  <string source="Screenshot unavailable." where="code">Снимок экрана недоступен.</string>
 </strings>

@@ -42,4 +42,12 @@
   <string source="Done">Terminé</string>
   <string source="Skip">Passer</string>
   <string source="Step %d of %d">Étape %d sur %d</string>
+  <string source="Help Topics" where="help_viewer">Rubriques d’aide</string>
+  <string source="Back" where="help_viewer">Précédent</string>
+  <string source="Forward" where="help_viewer">Suivant</string>
+  <string source="Contents" where="help_viewer">Sommaire</string>
+  <string source="Search topics" where="help_viewer">Rechercher des rubriques</string>
+  <string source="No matching topics." where="help_viewer">Aucune rubrique trouvée.</string>
+  <string source="The help book could not be opened." where="code">Impossible d’ouvrir l’aide.</string>
+  <string source="Screenshot unavailable." where="code">Capture d’écran indisponible.</string>
 </strings>

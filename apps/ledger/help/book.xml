@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help version="1" title="Ledger Help">
+  <topic id="start" title="Get started with Ledger" keywords="home navigation organization demo infobase configuration">
+    <p>Ledger records business activity in documents and turns posted documents into debit and credit entries. Use the sidebar to move between the journal, catalogs, accounts and reports.</p>
+    <image src="home.jpg" caption="Home in the German demo books. Needs attention and Latest documents open the records they describe." />
+    <heading>Check which books are open</heading>
+    <p>The organization appears below the page title. File → Organization Details opens its settings. File → Select Configuration chooses the set of accounts and document types to use on the next start. Each configuration has its own books.</p>
+    <heading>Try a guided tutorial</heading>
+    <p>Open Help → Review the Journal or Help → Read the Trial Balance. Use Next to follow the highlights in the live application.</p>
+  </topic>
+
+  <topic id="journal" title="Review the document journal" keywords="posted draft dates ledger entries dr cr posting history">
+    <p>Choose Journal in the sidebar. Each row represents one document. Use the date, type, number and counterparty to identify it. The seal beside the date marks a posted document. The dashed sheet marks a draft.</p>
+    <image src="journal.jpg" caption="Select a document in the upper table to see its details below." />
+    <heading>Trace the document</heading>
+    <p>Select a row and choose Lines to review the items or Entries to inspect the debits and credits. Dr/Cr opens the Entries tab directly. Double-click a row or choose Edit to open the document.</p>
+    <p>Use the Posting History tab to see recorded posting snapshots. Select a snapshot to inspect the entries stored at that point. Reports → All Posting History also includes snapshots retained for deleted documents.</p>
+  </topic>
+
+  <topic id="post" title="Create and post a document" keywords="sale purchase transaction receipt invoice draft save post validate goods">
+    <p>In Journal, choose Create or press Ctrl+N, then choose the document type. Ledger uses the type to determine which fields, posting rules and print forms are available.</p>
+    <image src="document.jpg" caption="A Ledger document keeps its commands above the header and the lines in the lower half." />
+    <heading>Enter and check the details</heading>
+    <p>Set the date and counterparty. In Lines, choose Add and fill in the item, quantity, price and tax details where applicable. Review the totals and the posting preview before posting.</p>
+    <heading>Save or post</heading>
+    <p>Choose Write to save a draft and finish it later. Choose Post (F9) to write entries and keep the form open, or Post and Close (Ctrl+Enter) to return to the journal. If Ledger rejects posting, correct the issue it names and try again.</p>
+    <p>Select the posted row and choose Dr/Cr to verify the entries. Choose Print to see the forms available for that type.</p>
+  </topic>
+
+  <topic id="catalogs" title="Set up counterparties and items" keywords="customer supplier contact tax id product service currency warehouse">
+    <p>Use Counterparties for the customers and suppliers you select on documents. Open the Counterparties page and choose New Counterparty. Enter its legal name and the identifiers needed by your configuration, then save.</p>
+    <p>Use Items for the products or services you add to document lines. Open the Items page and choose New Item. Set a name, unit and any defaults available for that item. Check the actual values on each document before posting it.</p>
+    <p>Double-click a catalog row to update it. Contracts and bank accounts are also available on the Counterparties page. Warehouses are available on the Items page.</p>
+  </topic>
+
+  <topic id="reports" title="Read the trial balance" keywords="reports account card debit credit opening closing turnover totals period">
+    <p>Open Reports, then Trial Balance. Choose Settings (Ctrl+R) and set the start and end dates of the period you want to examine.</p>
+    <image src="reports.jpg" caption="Trial Balance shows opening amounts, period turnover and closing amounts side by side." />
+    <heading>Follow one account</heading>
+    <p>Opening Dr and Opening Cr show the balance before the period. Turnover Dr and Turnover Cr show activity within it. Closing Dr and Closing Cr show the resulting balance. Use the Totals row to compare debit and credit turnover.</p>
+    <p>To investigate an account, choose Account Card in the report list and set the account in Settings. Review the entries and use the document number to trace the source.</p>
+  </topic>
+
+  <topic id="corrections" title="Correct a posted document" keywords="reverse reversal cancel posting unpost audit corrections locked period">
+    <p>Open Journal, select the posted document and inspect its entries before choosing a correction. For documents that support it, Cancel Posting removes their posted entries and returns them to draft. To correct protected postings, use Reverse when the command is available.</p>
+    <p>In the reversal dialog, choose a date in an open period and give the reason. Ledger creates a linked accounting operation that reverses the original entries. Check the new row and its entries in the journal.</p>
+    <p>Use Posting History to review earlier snapshots. The original document number on a reversal identifies the source record.</p>
+  </topic>
+
+  <topic id="periods" title="Close a month and protect a period" keywords="month end lock close accounting period depreciation revaluation closing history">
+    <heading>Prepare the month</heading>
+    <p>Use Home → Needs attention to find drafts and other checks for the books. Review the reporting period in Reports and inspect entries that need correction.</p>
+    <heading>Run month-end closing</heading>
+    <p>Open Close Month (Ctrl+E). Confirm the month-end date, review the entries proposed by the active configuration and post the closing document. Reopen Reports to review the resulting balances.</p>
+    <heading>Protect a completed period</heading>
+    <p>Close Accounting Period advances the date through which Ledger protects postings. Review that date before confirming. Ledger saves the close, and you can inspect recorded closes under Reports → Period Close History.</p>
+  </topic>
+</help>

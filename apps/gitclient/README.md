@@ -2,6 +2,11 @@
 
 A SmartGit-style repository viewer built with the Orion UI framework.
 
+**Help → Help Topics** (F1) opens the illustrated Git Client guide. With a
+repository open, the Help tab offers **Review and Stage Changes** and
+**Explore Commit History** as guided tutorials. See
+[Orion Help](../../docs/help.md) for the book format.
+
 ## Menu tree as the application map
 
 `gitclient.orion` treats the menu tree as the complete map of user-facing Git

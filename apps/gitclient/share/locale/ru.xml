@@ -454,4 +454,17 @@
   <string source="Side-by-Side Diff" where="menu">Изменения рядом</string>
   <string source="Side by Side">Рядом</string>
   <string source="Show the old and new file next to each other">Показать старую и новую версии файла рядом</string>
+  <string source="Help Topics" where="menu">Содержание справки</string>
+  <string source="Tutorial: Review and Stage Changes" where="menu">Урок: просмотр и подготовка изменений</string>
+  <string source="Tutorial: Explore Commit History" where="menu">Урок: просмотр истории коммитов</string>
+  <string source="Tutorials" where="labels">Уроки</string>
+  <string source="Review and Stage Changes" where="labels">Просмотр и подготовка изменений</string>
+  <string source="Explore Commit History" where="labels">Просмотр истории коммитов</string>
+  <string source="Select a changed file to review it. Its checkbox controls whether the file is staged for the next commit." where="labels">Выберите изменённый файл, чтобы просмотреть его. Флажок показывает, добавлен ли файл в индекс для следующего коммита.</string>
+  <string source="Read the diff. For a partially staged file, the staged and unstaged sections show which changes will go into the commit." where="labels">Просмотрите различия. Если файл добавлен в индекс частично, отдельные разделы показывают, какие изменения попадут в коммит.</string>
+  <string source="Write a short summary of the staged changes. The Description field is optional. When you are ready, choose Commit." where="labels">Кратко опишите изменения, добавленные в индекс. Подробное описание необязательно. Когда всё будет готово, нажмите кнопку коммита.</string>
+  <string source="Select a commit to see what it changed. The log shows the summary, the author and the date." where="labels">Выберите коммит, чтобы увидеть его изменения. В журнале указаны краткое описание, автор и дата.</string>
+  <string source="Select a file from the commit. This list contains only the paths touched by the selected commit." where="labels">Выберите файл из коммита. В списке видны только файлы, затронутые выбранным коммитом.</string>
+  <string source="This pane shows the selected file as it changed in that commit. You can browse earlier work while keeping your current branch and working files." where="labels">В этой панели показаны изменения выбранного файла в коммите. При просмотре истории текущая ветка и рабочие файлы сохраняются.</string>
+  <string source="Open a repository to start this tutorial." where="code">Откройте репозиторий, чтобы начать урок.</string>
 </strings>

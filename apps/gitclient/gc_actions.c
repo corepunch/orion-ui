@@ -33,7 +33,7 @@ static bool gc_action_has_handler(uint16_t id) {
     case ID_REMOTE_SYNC: case ID_REMOTE_FETCH: case ID_REMOTE_FETCH_ALL: case ID_REMOTE_PULL:
     case ID_REMOTE_PUSH: case ID_REMOTE_MANAGE: case ID_REMOTE_PRUNE:
     case ID_TAG_CREATE: case ID_TAG_DELETE: case ID_TAG_PUSH:
-    case ID_HELP_ABOUT:
+    case ID_HELP_TOPICS: case ID_HELP_TUTORIAL_CHANGES: case ID_HELP_TUTORIAL_HISTORY: case ID_HELP_ABOUT:
       return true;
     default:
       return false;
