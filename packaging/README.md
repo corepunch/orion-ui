@@ -222,9 +222,11 @@ portable archive that runs without installation:
 
 The names carry no version, so a page can link to
 `https://github.com/corepunch/orion-ui/releases/latest/download/ledger-windows-x86_64.zip`
-and always get the newest release. Builds are not notarized or code-signed:
-macOS asks for a right-click → Open the first time, and Windows SmartScreen
-may ask for confirmation.
+and always get the newest release. The macOS bundles are ad-hoc signed.
+If macOS blocks the first launch, see [Apple's instructions](https://support.apple.com/en-us/102445).
+Signing for public distribution requires a Developer ID Application certificate
+and [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+Windows SmartScreen may ask for confirmation.
 
 Build them locally for the current platform after `make`:
 

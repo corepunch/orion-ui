@@ -119,17 +119,39 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          mkdir -p "$RUNNER_TEMP/try" && tar -C "$RUNNER_TEMP/try" -xzf dist/ledger-linux-x86_64.tar.gz
-          cd "$RUNNER_TEMP/try"
-          HOME="$RUNNER_TEMP/try" xvfb-run -a ./ledger/bin/ledger --screenshot "$RUNNER_TEMP/try/ledger.png"
-          test -s "$RUNNER_TEMP/try/ledger.png"
+          for app in gitclient ledger; do
+            target="$RUNNER_TEMP/try-$app"
+            mkdir -p "$target"
+            tar -C "$target" -xzf "dist/$app-linux-x86_64.tar.gz"
+            (
+              cd "$target"
+              HOME="$target" xvfb-run -a "./$app/bin/$app" --screenshot "$target/$app.jpg"
+            )
+            test -s "$target/$app.jpg"
+          done
+          test -f "$RUNNER_TEMP/try-gitclient/gitclient/lib/gitclient_components.so"
+          test -f "$RUNNER_TEMP/try-gitclient/gitclient/lib/terminal_components.so"
       - name: Check the Windows download carries its DLLs
         if: runner.os == 'Windows'
         run: |
           mkdir -p try-windows && cd try-windows
-          unzip -q ../dist/ledger-windows-x86_64.zip
-          test -f ledger/bin/ledger.exe && test -f ledger/bin/libkernel.dll && test -d ledger/share/orion
-          ! PATH=/usr/bin ldd ledger/bin/ledger.exe | grep -i "not found"
+          for app in gitclient ledger; do
+            unzip -q "../dist/$app-windows-x86_64.zip"
+            test -f "$app/bin/$app.exe"
+            test -f "$app/bin/libkernel.dll"
+            test -d "$app/share/orion"
+            dependencies=$(PATH=/usr/bin ldd "$app/bin/$app.exe")
+            if grep -i "not found" <<< "$dependencies"; then exit 1; fi
+          done
+          test -f gitclient/lib/gitclient_components.dll
+          test -f gitclient/lib/terminal_components.dll
+      - name: Verify the macOS downloads
+        if: runner.os == 'macOS'
+        run: |
+          ditto -x -k dist/gitclient-macos-arm64.zip "$RUNNER_TEMP/try-macos"
+          ditto -x -k dist/ledger-macos-arm64.zip "$RUNNER_TEMP/try-macos"
+          codesign --verify --deep --strict "$RUNNER_TEMP/try-macos/Git Client.app"
+          codesign --verify --deep --strict "$RUNNER_TEMP/try-macos/Ledger.app"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version != '' && 'packages' || 'downloads' }}-${{ matrix.platform }}

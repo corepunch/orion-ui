@@ -79,10 +79,12 @@ section.more{padding:120px 0;border-top:1px solid var(--line)}
 .two figcaption b{color:var(--text)}
 
 .end{padding:140px 0;text-align:center;position:relative}
+.end[id]{scroll-margin-top:70px}
 .end::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 320px at 50% 70%,rgba(123,108,255,.25),transparent 70%)}
 .end>*{position:relative}
 .end h2{font-size:clamp(40px,6vw,76px);letter-spacing:-.045em;font-weight:800;line-height:1}
 .end p{color:var(--muted);margin:18px auto 34px;max-width:520px}
+.end p a{text-decoration:underline}
 .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .btn{padding:14px 22px;border-radius:12px;font-weight:600;font-size:15px}
 .btn.p{background:linear-gradient(135deg,#7b6cff,#5b8def);color:#fff;box-shadow:0 10px 30px -8px rgba(123,108,255,.7)}
@@ -103,7 +105,7 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
 </head>
 <body>
 <div class="progress" id="prog"></div>
-<div class="top"><div class="wrap"><img src="shots/icon.png" alt=""><b>Git Client</b><a class="dl" href="https://github.com/corepunch/orion-ui/releases">Download</a></div></div>
+<div class="top"><div class="wrap"><img src="shots/icon.png" alt=""><b>Git Client</b><a class="dl" href="#download">Download</a></div></div>
 
 <header class="intro"><div class="wrap">
   <div class="time">08:57 · Tuesday · eight repositories, thirteen worktrees</div>
@@ -205,12 +207,21 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
   </div>
 </div></section>
 
-<div class="end">
+<section class="end" id="download">
   <img src="shots/icon.png" alt="" style="width:92px;margin:0 auto 26px;border-radius:21px">
-  <h2>Have a calmer morning.</h2>
-  <p>Native on macOS and Linux, written in C on Orion UI.</p>
-  <div class="btns"><a class="btn p" href="https://github.com/corepunch/orion-ui/releases">Download Git Client</a><a class="btn g" href="https://github.com/corepunch/orion-ui/tree/main/apps/gitclient">Source</a></div>
-</div>
+  <h2>Download Git Client</h2>
+  <p>Install Git, then unpack the archive and run Git Client.</p>
+  <div class="wrap btns">
+    <a class="btn p" href="https://github.com/corepunch/orion-ui/releases/latest/download/gitclient-windows-x86_64.zip">Windows (x64)</a>
+    <a class="btn p" href="https://github.com/corepunch/orion-ui/releases/latest/download/gitclient-macos-arm64.zip">macOS (Apple silicon)</a>
+    <a class="btn p" href="https://github.com/corepunch/orion-ui/releases/latest/download/gitclient-linux-x86_64.tar.gz">Linux (x86-64)</a>
+  </div>
+  <p>The macOS build is ad-hoc signed. If macOS blocks the first launch, see <a href="https://support.apple.com/en-us/102445">Apple’s instructions</a>.</p>
+  <div class="btns">
+    <a class="btn g" href="https://github.com/corepunch/orion-ui/releases/latest">Release notes and checksums</a>
+    <a class="btn g" href="https://github.com/corepunch/orion-ui/tree/main/apps/gitclient">Source</a>
+  </div>
+</section>
 <footer><div class="wrap"><span>Git Client · Orion UI</span><span>Icons: Phosphor</span></div></footer>
 
 <script>

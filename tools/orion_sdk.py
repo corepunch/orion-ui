@@ -29,7 +29,8 @@ def files(root):
         if path.is_file():
             relative = path.relative_to(root)
             name = relative.as_posix()
-            if (path.suffix not in ALLOWED or any(p.startswith(".") for p in relative.parts) or
+            if ((path.suffix not in ALLOWED and path.name != "PHOSPHOR-LICENSE") or
+                    any(p.startswith(".") for p in relative.parts) or
                     "\\" in name or ":" in name):
                 raise ValueError(f"unexpected package file: {path}; use a clean source directory")
             contract.portable_path(name, paths)
