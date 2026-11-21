@@ -57,12 +57,17 @@ stage_tree() {
   for s in $src $deps; do
     [ -d "$prefix/share/$s" ] && cp -R "$prefix/share/$s" "$dir/share/"
   done
-  # Windows looks for DLLs next to the executable.
+  # Windows looks for linked runtime DLLs next to the executable. Component
+  # plugins are loaded explicitly from ../lib on every platform.
   if [ $os = windows ]; then libdir="$dir/bin"; else libdir="$dir/lib"; fi
   mkdir -p "$libdir"
   for l in $core_libs; do cp "$prefix/lib/$l.$lib_ext" "$libdir/"; done
-  plugin="$prefix/lib/${src}_components.$lib_ext"
-  [ -f "$plugin" ] && cp "$plugin" "$libdir/"
+  for s in $src $deps; do
+    plugin="$prefix/lib/${s}_components.$lib_ext"
+    [ -f "$plugin" ] || continue
+    mkdir -p "$dir/lib"
+    cp "$plugin" "$dir/lib/"
+  done
   for d in $deps; do
     [ -f "$prefix/lib/orion/gems/$d.gem" ] || continue
     mkdir -p "$dir/lib/orion/gems"
@@ -87,7 +92,14 @@ bundle_windows() {
   dir="$stage/out/$app"
   stage_tree "$dir"
   # Copy every MinGW runtime DLL the executable and its plugins resolve.
-  PATH="$dir/bin:$PATH" ldd "$dir/bin/$app.exe" | awk '$3 ~ /^\/mingw64\// { print $3 }' | sort -u | while read -r l; do
+  (
+    export PATH="$dir/bin:$PATH"
+    ldd "$dir/bin/$app.exe"
+    for plugin in "$dir/lib/"*.$lib_ext; do
+      [ -f "$plugin" ] || continue
+      ldd "$plugin"
+    done
+  ) | awk '$3 ~ /^\/mingw64\// { print $3 }' | sort -u | while read -r l; do
     cp "$l" "$dir/bin/"
   done
   printf '%s %s for Windows x64\r\n\r\nRun bin\\%s.exe\r\n' "$app" "$version" "$app" > "$dir/README.txt"

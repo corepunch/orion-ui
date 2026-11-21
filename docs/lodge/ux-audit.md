@@ -31,7 +31,7 @@ acceptance criteria.
 | 14 | Help meant the README. | Medium | The **assistant**: plain-language requests in English, German and Russian, the day's suggestions, examples, and Enter-again to act. See [assistant](assistant.md). | Help and documentation (theme 4) |
 | 15 | Notices and errors used the same plain text. | Low | Success notices in the success colour, errors in the error colour; both collapse when empty, so pages do not reserve blank lines. | Feedback |
 | 16 | Secondary windows (payment, prices, groups) opened at the screen's top-left corner. | Low | Windows open centred over the main window; the assistant along its right edge; opening the assistant again brings it forward. | Spatial consistency |
-| 17 | Shutting the application down freed hosted pages before the host window that still messaged them (a use-after-free found with AddressSanitizer; the Lodge test crashed with "corrupted size vs. prev_size"). | Critical | The host window is destroyed first. | Reliability |
+| 17 | Shutting the application down freed hosted pages before the host window that still messaged them (a use-after-free found with AddressSanitizer; the Lodge test crashed with "corrupted size vs. prev_size"). | Critical | Each page's window is destroyed before its page is closed (fixed on `main` in parallel; the Lodge suite now passes under AddressSanitizer). | Reliability |
 
 ## Task cost, before and after
 

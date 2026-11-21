@@ -673,7 +673,7 @@ $(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: tools/app_sources.mk $(CORE_LIB
 # ── Tests ────────────────────────────────────────────────────────────────
 include apps/doom-ed/build.mk
 
-test: share $(TEST_BINS) lua-docs-check launch-check xcode-check
+test: share $(TEST_BINS) lua-docs-check launch-check $(if $(filter Darwin,$(UNAME_S)),xcode-check)
 	@echo "Running tests..."
 	python3 apps/ledger/tests/test_1cd_extract.py
 	python3 apps/ledger/tests/test_1cd_stage.py

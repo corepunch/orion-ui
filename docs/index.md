@@ -76,6 +76,9 @@ shows desktop-style custom controls and process-backed state.
 
 [Explore all applications →](examples)
 
+[Download Git Client](gitclient/), [Ledger in Russian](ledger/), or
+[Ledger in German](ledger/de/).
+
 ## Declarative Database Forms
 
 A field path identifies its database, table, and column:

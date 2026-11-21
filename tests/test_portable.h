@@ -30,7 +30,8 @@ static inline int test_make_temp(char *tmpl, int suffix_len, int dir) {
   }
   return -1;
 }
-static inline char *mkdtemp(char *tmpl)                  { return test_make_temp(tmpl, 0, 1) == 0 ? tmpl : NULL; }
+static inline char *test_mkdtemp(char *tmpl)             { return test_make_temp(tmpl, 0, 1) == 0 ? tmpl : NULL; }
+#define mkdtemp test_mkdtemp
 static inline int   mkstemps(char *tmpl, int suffix_len) { return test_make_temp(tmpl, suffix_len, 0); }
 static inline int   setenv(const char *name, const char *value, int overwrite) {
   if (!overwrite && getenv(name)) return 0;

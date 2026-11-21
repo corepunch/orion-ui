@@ -109,16 +109,16 @@ void window_cache_validate(window_t *win);         // framework: the surface was
 
 // ── AnimateWindow ──────────────────────────────────────────────────────────
 // ≈ AnimateWindow(hwnd, time, AW_*) with DrawAnimatedRects(IDANI_CAPTION)'s zoom from a rectangle,
-// but asynchronous. AW_ZOOM grows the window out of `from` (its own coordinates) into its frame, its
-// content aspect-filled and cropped to the growing rectangle; AW_BLEND fades it in as it leaves `from`
-// (without AW_ZOOM, over the whole animation).
-// With AW_HIDE it runs backwards into `from` and hides the window at the end. The window is shown at
+// but asynchronous. ORION_AW_ZOOM grows the window out of `from` (its own coordinates) into its frame, its
+// content aspect-filled and cropped to the growing rectangle; ORION_AW_BLEND fades it in as it leaves `from`
+// (without ORION_AW_ZOOM, over the whole animation).
+// With ORION_AW_HIDE it runs backwards into `from` and hides the window at the end. The window is shown at
 // the start and takes no input until it ends. When it ends (or is replaced by another animate_window
 // call) the parent receives evCommand MAKEDWORD(win->id, awnFinished) with lparam = win.
 enum {
-  AW_ZOOM  = 1 << 0,
-  AW_BLEND = 1 << 1,
-  AW_HIDE  = 1 << 2,
+  ORION_AW_ZOOM  = 1 << 0,
+  ORION_AW_BLEND = 1 << 1,
+  ORION_AW_HIDE  = 1 << 2,
 };
 bool animate_window(window_t *win, irect16_t from, uint32_t flags, ui_curve_t curve);
 bool window_is_animating(const window_t *win);

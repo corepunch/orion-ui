@@ -200,13 +200,13 @@ static window_visual_t window_animation_visual(const window_t *win, const window
   window_visual_t v = {.opacity = 1};
   v.rect = (frect_t){anim_lerp(wa->from.x, 0, p), anim_lerp(wa->from.y, 0, p),
                      anim_lerp(wa->from.w, w, p), anim_lerp(wa->from.h, h, p)};
-  if (!(wa->flags & AW_ZOOM)) v.rect = (frect_t){0, 0, w, h};
+  if (!(wa->flags & ORION_AW_ZOOM)) v.rect = (frect_t){0, 0, w, h};
   float scale = fmaxf(fmaxf(v.rect.w / w, v.rect.h / h), 1e-3f);
   float sw = fminf(w, v.rect.w / scale), sh = fminf(h, v.rect.h / scale);
   v.source = (frect_t){(w - sw) / 2, (h - sh) / 2, sw, sh};
   // Zooming, it is opaque within the first part of the way out of `from`, so the thumbnail below
   // hands over to it; a plain blend fades over the whole animation.
-  if (wa->flags & AW_BLEND) v.opacity = fminf(1, fmaxf(0, (wa->flags & AW_ZOOM) ? p / .35f : p));
+  if (wa->flags & ORION_AW_BLEND) v.opacity = fminf(1, fmaxf(0, (wa->flags & ORION_AW_ZOOM) ? p / .35f : p));
   return v;
 }
 
@@ -215,14 +215,14 @@ static void window_animation_finish(window_animation_t *wa) {
   uint32_t flags = wa->flags;
   *wa = g_window_anims[--g_window_anim_count];
   window_set_visual(win, NULL);
-  if (flags & AW_HIDE) show_window(win, false);
+  if (flags & ORION_AW_HIDE) show_window(win, false);
   invalidate_window(win);
   if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, awnFinished), win);
 }
 
 bool animate_window(window_t *win, irect16_t from, uint32_t flags, ui_curve_t curve) {
   if (!win || !is_window(win) || !win->parent || from.w <= 0 || from.h <= 0 ||
-      (flags & ~(AW_ZOOM | AW_BLEND | AW_HIDE)) || !(flags & (AW_ZOOM | AW_BLEND)) || !anim_curve_valid(curve)) {
+      (flags & ~(ORION_AW_ZOOM | ORION_AW_BLEND | ORION_AW_HIDE)) || !(flags & (ORION_AW_ZOOM | ORION_AW_BLEND)) || !anim_curve_valid(curve)) {
     fprintf(stderr, "[anim] animate_window rejected win=%u parent=%u from=%d,%d,%d,%d flags=0x%x kind=%d time=%g\n",
             win ? win->id : 0, win && win->parent ? win->parent->id : 0, from.x, from.y, from.w, from.h,
             flags, (int)curve.kind, curve.time);
@@ -248,7 +248,7 @@ bool animate_window(window_t *win, irect16_t from, uint32_t flags, ui_curve_t cu
   }
   wa = &g_window_anims[g_window_anim_count++];
   *wa = (window_animation_t){win, win->id, flags, from};
-  bool hide = flags & AW_HIDE;
+  bool hide = flags & ORION_AW_HIDE;
   ui_anim_start(&wa->progress, hide ? 1 : 0, hide ? 0 : 1, 0, curve);
   window_visual_t visual = window_animation_visual(win, wa, hide ? 1 : 0);
   window_set_visual(win, &visual);

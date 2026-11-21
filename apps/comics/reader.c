@@ -161,7 +161,7 @@ static void comics_present(window_t *win, comics_reader_t *st, bool open) {
   comics_transition_t transition = open ? COMICS_OPENING : COMICS_CLOSING;
   st->transition = transition;
   comics_refresh(win, st);
-  uint32_t flags = AW_ZOOM | AW_BLEND | (open ? 0 : AW_HIDE);
+  uint32_t flags = ORION_AW_ZOOM | ORION_AW_BLEND | (open ? 0 : ORION_AW_HIDE);
   bool started = animate_window(st->stage, comics_cover_rect(win, st), flags, UI_CURVE_ZOOM);
   // A transition this one replaced has just reported its end; this one is still running.
   if (started && st->transition == transition) return;

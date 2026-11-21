@@ -96,7 +96,7 @@ static void test_animate_window(void) {
   window_t *child = create_window("Child", WINDOW_NOTITLE | WINDOW_HIDDEN, MAKERECT(0, 0, 400, 300), root, plain_proc, 0, NULL);
   show_window(root, true);
   finished_count = 0;
-  ASSERT_TRUE(animate_window(child, R(100, 50, 40, 60), AW_ZOOM | AW_BLEND, UI_CURVE_ZOOM));
+  ASSERT_TRUE(animate_window(child, R(100, 50, 40, 60), ORION_AW_ZOOM | ORION_AW_BLEND, UI_CURVE_ZOOM));
   ASSERT_TRUE(window_is_visible(child));
   ASSERT_TRUE(window_is_animating(child));
   window_visual_t v;
@@ -114,11 +114,11 @@ static void test_animate_window(void) {
   ASSERT_EQUAL(finished_count, 1);
   ASSERT_TRUE(finished_source == child);
 
-  ASSERT_TRUE(animate_window(child, R(100, 50, 40, 60), AW_ZOOM | AW_HIDE, UI_CURVE_ZOOM));
+  ASSERT_TRUE(animate_window(child, R(100, 50, 40, 60), ORION_AW_ZOOM | ORION_AW_HIDE, UI_CURVE_ZOOM));
   for (int i = 0; i < 200 && window_is_animating(child); i++) step_frame();
   ASSERT_FALSE(window_is_visible(child));
   ASSERT_EQUAL(finished_count, 2);
-  ASSERT_FALSE(animate_window(child, R(0, 0, 0, 0), AW_ZOOM, UI_CURVE_ZOOM));
+  ASSERT_FALSE(animate_window(child, R(0, 0, 0, 0), ORION_AW_ZOOM, UI_CURVE_ZOOM));
   destroy_window(root);
   test_env_shutdown();
   PASS();

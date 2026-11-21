@@ -188,13 +188,16 @@ Linux, macOS and Windows builds are defined once, in
 pull request and keeps the app downloads as workflow artifacts for a week.
 `release.yml` runs it for a `v*` tag (or a manual run with a version), which
 must match the `VERSION` file. It then also builds the package-manager
-archives and runs the tests on Linux and macOS, creates the GitHub Release and
-attaches every file:
+archives, runs the full test suite on Linux and checks Git Client, Ledger and
+platform regressions on macOS, then publishes the GitHub Release with every file:
 
 | Asset | For |
 |---|---|
 | `orion-<package>-<version>-<platform>.tar.gz`, `packages-<platform>.tsv` | the `orion` package manager |
 | `<app>-<platform>.zip` / `.tar.gz`, `SHA256SUMS-<platform>.txt` | people downloading one app |
+
+For a Git Client or Ledger release, the manual workflow can run the app,
+database and scripting checks on Linux instead of the full suite.
 
 `docs.yml` publishes `docs/` to GitHub Pages for the same tags; it can also be
 started by hand from the Actions tab.
@@ -222,9 +225,11 @@ portable archive that runs without installation:
 
 The names carry no version, so a page can link to
 `https://github.com/corepunch/orion-ui/releases/latest/download/ledger-windows-x86_64.zip`
-and always get the newest release. Builds are not notarized or code-signed:
-macOS asks for a right-click → Open the first time, and Windows SmartScreen
-may ask for confirmation.
+and always get the newest release. The macOS bundles are ad-hoc signed.
+If macOS blocks the first launch, see [Apple's instructions](https://support.apple.com/en-us/102445).
+Signing for public distribution requires a Developer ID Application certificate
+and [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+Windows SmartScreen may ask for confirmation.
 
 Build them locally for the current platform after `make`:
 
