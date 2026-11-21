@@ -12,12 +12,21 @@ on:
         description: Run the Git Client and Ledger checks in place of the full Linux suite
         type: boolean
         default: false
+      publish_run:
+        description: Completed Release Packages build run ID, after make mac-notarize
+        type: string
+        required: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}
+  cancel-in-progress: false
 
 jobs:
   version:
+    if: github.event_name == 'push' || inputs.publish_run == ''
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -49,9 +58,11 @@ jobs:
   # packages-<platform>.tsv for the package manager, plus version-free
   # <app>-<platform>.{zip,tar.gz} downloads and SHA256SUMS-<platform>.txt;
   # android.yml adds <app>-android-<version>.apk.
-  release:
+  draft:
     needs: [version, package, android]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -73,13 +84,40 @@ jobs:
             test -s "$app-windows-x86_64.zip"
           done
           sha256sum --check SHA256SUMS-{linux-x86_64,macos-arm64,windows-x86_64}.txt
-      - name: Publish release
+      - name: Stage draft and signing inputs
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          tag="v${{ needs.version.outputs.version }}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" release/* --clobber
-          else
-            gh release create "$tag" release/* --target "$GITHUB_SHA" --title "Orion ${tag#v}" --generate-notes
-          fi
+          python3 packaging/macos/notarize.py stage --repo "$GITHUB_REPOSITORY" \
+            --version "$VERSION" --release release --handoff notary-inputs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-notarization-inputs
+          path: notary-inputs/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_run != ''
+    runs-on: macos-15
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-notarization-inputs
+          path: ${{ runner.temp }}/notary-inputs
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.publish_run }}
+      - name: Verify notarized ZIPs and publish draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAC_NOTARY_TEAM: ${{ vars.MAC_NOTARY_TEAM }}
+          VERSION: ${{ inputs.version }}
+          BUILD_RUN: ${{ inputs.publish_run }}
+        run: |
+          python3 packaging/macos/notarize.py publish --repo "$GITHUB_REPOSITORY" \
+            --version "$VERSION" --run "$BUILD_RUN" --handoff "$RUNNER_TEMP/notary-inputs"

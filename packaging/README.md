@@ -184,12 +184,11 @@ it takes precedence over `ORION_RELEASE` and `ORION_REPOSITORY`.
 ## Building Release Packages
 
 Linux, macOS and Windows builds are defined once, in
-`.github/workflows/platform-builds.yml`. `build.yml` runs it on every push and
-pull request and keeps the app downloads as workflow artifacts for a week.
-`release.yml` runs it for a `v*` tag (or a manual run with a version), which
-must match the `VERSION` file. It then also builds the package-manager
-archives, runs the full test suite on Linux and checks Git Client, Ledger and
-platform regressions on macOS, then publishes the GitHub Release with every file:
+`.github/workflows/platform-builds.yml`. The Release Packages workflow
+(`.github/workflows/release.yml`) runs it for a `v*` tag or a manual dispatch
+with a version matching `VERSION`. It builds the package-manager archives,
+runs release tests, and prepares a draft release. The Git Client and Ledger Mac
+ZIPs wait for cloud signing before they are attached to the draft.
 
 | Asset | For |
 |---|---|
@@ -198,6 +197,25 @@ platform regressions on macOS, then publishes the GitHub Release with every file
 
 For a Git Client or Ledger release, the manual workflow can run the app,
 database and scripting checks on Linux instead of the full suite.
+
+### Sign and publish a release
+
+1. Run Release Packages with the version in `VERSION`, or push its matching
+   `v*` tag. Wait for the run that prepares the draft to succeed.
+2. On the Mac with the Apple Developer team configured in Xcode, run
+   `make mac-notarize MAC_RELEASE_RUN=<build-run-id>`. The GitHub CLI must be
+   signed in with access to the release. The target downloads the exact two
+   build artifacts, uses Xcode's Developer ID cloud signing, waits for Apple's
+   tickets, and attaches the verified ZIPs to the draft. It also keeps the ZIPs
+   in `build/macos-notarized/<build-run-id>/` and reuses completed submissions
+   when retried. Set `MAC_NOTARY_TEAM` in the environment and in the matching
+   GitHub Actions repository variable to use a different Apple team.
+3. Run Release Packages again with the same version and set `publish_run` to
+   the original build run ID. The macOS runner downloads both ZIPs from the
+   draft and checks their bundle IDs, version, architecture, Developer ID
+   signatures, stapled tickets, and Gatekeeper status. It updates the macOS
+   checksums and compares the draft's full asset inventory to the original
+   build and the newly verified ZIPs before publishing.
 
 `docs.yml` publishes `docs/` to GitHub Pages for the same tags; it can also be
 started by hand from the Actions tab.
@@ -220,15 +238,14 @@ portable archive that runs without installation:
 | Platform | Asset | Contents |
 |---|---|---|
 | Windows | `<app>-windows-x86_64.zip` | `<app>\bin\<app>.exe` with the Orion and MinGW DLLs beside it, `share\` |
-| macOS | `<app>-macos-arm64.zip` | `<Name>.app`, built like `make mac-deploy` and ad-hoc signed |
+| macOS | `<app>-macos-arm64.zip` | `<Name>.app`, built like `make mac-deploy` |
 | Linux | `<app>-linux-x86_64.tar.gz` | `<app>/bin`, `<app>/lib` (Orion libraries, Lua), `<app>/share` |
 
 The names carry no version, so a page can link to
 `https://github.com/corepunch/orion-ui/releases/latest/download/ledger-windows-x86_64.zip`
-and always get the newest release. The macOS bundles are ad-hoc signed.
-If macOS blocks the first launch, see [Apple's instructions](https://support.apple.com/en-us/102445).
-Signing for public distribution requires a Developer ID Application certificate
-and [Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+and always get the newest release. Local macOS bundles use ad-hoc signing.
+The Git Client and Ledger release ZIPs use Developer ID signing and
+[Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
 Windows SmartScreen may ask for confirmation.
 
 Build them locally for the current platform after `make`:

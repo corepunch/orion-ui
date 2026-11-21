@@ -562,7 +562,7 @@ plugins: $(COMPONENT_PLUGIN_BINS)
 # orionc, cgen) are left out so the refresh cannot form a cycle.
 LINKED_BINS      = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(BIN_DIR)/doom-ed$(EXE_EXT) $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
 BUILT_APP_BINS   = $(filter-out $(MAKECMDGOALS),$(wildcard $(LINKED_BINS)))
-NO_REFRESH_GOALS = clean help install% ipad% android% mac-deploy list-devices app-source check-lua launch-check xcode-check .launch-check-database refresh-built-apps
+NO_REFRESH_GOALS = clean help install% ipad% android% mac-deploy mac-notarize list-devices app-source check-lua launch-check xcode-check .launch-check-database refresh-built-apps
 NO_REFRESH_FILES = $(filter-out $(LINKED_BINS) $(TEST_BINS),$(filter $(BUILD_DIR)/%,$(MAKECMDGOALS)))
 REFRESH_GOALS    = $(filter-out $(NO_REFRESH_GOALS) $(NO_REFRESH_FILES),$(MAKECMDGOALS))
 .PHONY: refresh-built-apps
@@ -745,6 +745,7 @@ help:
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp|ledger|comics (winamp is an iPhone app)"
 	@echo "android / android-all - Debug APKs in build/android/apk; APP=imageeditor|penciltest|groove|winamp, ABIS=\"arm64-v8a x86_64\""
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
+	@echo "mac-notarize - Cloud-sign and notarize both Mac release ZIPs (MAC_RELEASE_RUN=<GitHub Actions run ID>)"
 	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
@@ -790,6 +791,11 @@ android-all:
 	@for app in imageeditor penciltest groove winamp; do $(MAKE) -f packaging/android/build.mk APP=$$app ABIS="$(ABIS)" apk || exit 1; done
 mac-deploy:
 	$(MAKE) -f packaging/macos/build.mk APP=$(APP) APP_SOURCE=$(or $(PHONY_APPS_SRC_$(APP)),$(APP)) deploy
+
+MAC_RELEASE_REPO ?= corepunch/orion-ui
+.PHONY: mac-notarize
+mac-notarize:
+	python3 packaging/macos/notarize.py sign --repo "$(MAC_RELEASE_REPO)" --run "$(MAC_RELEASE_RUN)" --output "$(BUILD_DIR)/macos-notarized"
 
 # Portable per-app downloads (zip / tar.gz) for this platform; see packaging/README.md.
 .PHONY: bundles app-source
