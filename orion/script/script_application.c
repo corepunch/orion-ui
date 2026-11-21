@@ -76,7 +76,14 @@ static script_page_t *app_page(script_application_t *app, const char *name, char
   return page;
 }
 static void app_drop_pages(script_application_t *app, int from) {
-  while (app->page_count > from) script_page_close(app->pages[--app->page_count]);
+  while (app->page_count > from) {
+    script_page_t *page = app->pages[app->page_count - 1];
+    window_t *window = script_page_window(page);
+    // Hosted windows still use their controller during deactivation and destruction.
+    if (window) destroy_window(window);
+    app->page_count--;
+    script_page_close(page);
+  }
 }
 // A role="host" form docks its ActivityBar destinations, each a page with its
 // own controller; the host's window owns their windows.
@@ -255,7 +262,7 @@ void script_application_close(script_application_t *app) {
   if (!app) return;
   for (int i = 0; i < app->database_count; i++) { db_unobserve(app->observers[i]); script_model_detach(app->databases[i]); }
   script_runtime_release(app->runtime, app->model);
-  for (int i = app->page_count - 1; i >= 0; i--) script_page_close(app->pages[i]);
+  app_drop_pages(app, 0);
   script_runtime_close(app->runtime);
   for (int i = app->database_count - 1; i >= 0; i--) { unregister_database(app->databases[i]->name); destroy_database(app->databases[i]); }
   form_library_free(app->library);
