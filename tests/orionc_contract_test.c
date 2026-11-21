@@ -67,6 +67,23 @@ static void test_context_menu_platform_condition(void) {
   PASS();
 }
 
+static void test_menu_condition(void) {
+  TEST("orionc: a conditional menu leaves the bar and keeps its commands and accelerators");
+  const char *fixture = "<orion><menus><menu name=\"file\" label=\"File\">"
+    "<item name=\"quit\" label=\"Quit\"/></menu>"
+    "<menu name=\"tool\" label=\"Tools\" if=\"!APP_LITE\"><item name=\"pencil\" label=\"Pencil\" shortcut=\"P\"/></menu>"
+    "</menus></orion>";
+  char out[16384] = {0};
+  ASSERT_EQUAL(run_orionc(fixture, "menu_condition", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "#if !APP_LITE\nstatic const menu_item_t MENU_TOOL_ITEMS[] = {"));
+  ASSERT_TRUE(contains(out, "#if !APP_LITE\n  { \"Tools\", MENU_TOOL_ITEMS,"));
+  ASSERT_TRUE(contains(out, "  { \"File\", MENU_FILE_ITEMS,"));
+  ASSERT_FALSE(contains(out, "#if !APP_LITE\n#define ID_TOOL_PENCIL"));
+  ASSERT_TRUE(contains(out, "#define ID_TOOL_PENCIL"));
+  ASSERT_TRUE(contains(out, "AX_KEY_P, ID_TOOL_PENCIL }"));
+  PASS();
+}
+
 static void test_tutorial_declaration(void) {
   TEST("orionc: tutorials resolve controls and commands; unknown controls fail");
   const char *fixture = "<orion><menus><menu name=\"edit\" label=\"Edit\"><item name=\"delete\" label=\"Delete\"/></menu></menus>"
@@ -451,6 +468,7 @@ int main(void) {
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
     test_context_menu_platform_condition();
+    test_menu_condition();
     test_tutorial_declaration();
     test_large_control_manifest();
     test_activity_page_bindings();

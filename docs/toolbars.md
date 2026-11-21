@@ -97,6 +97,12 @@ for compatibility, but does not make the target action as explicit.
 A tooltip belongs to a bare icon. A button that shows its caption (the list
 and labels styles) has none: the tooltip would repeat it.
 
+`if="EXPR"` on a menu `<item>`, a toolbar entry or a whole `<menu>` wraps what
+`orionc` emits for it in `#if EXPR`. A menu left out of the bar this way keeps
+its commands: their IDs and accelerators are still generated, so a variant of an
+app can drop a menu and keep its shortcuts. Pencil Test and Image Editor share
+one manifest this way (`<menu name="filter" ... if="!IMAGEEDITOR_BW">`).
+
 ## The descriptor
 
 Defined in `orion/user/messages.h`:
@@ -492,6 +498,13 @@ receives `tbDrawItem`, with the item identifier in `wparam` and a borrowed
 `state` contains `CTRL_*` flags, and `index` identifies the item. Draw only during
 this callback; invalidate the toolbar window when the custom content changes.
 The toolbar owns hover, pressed state, tooltips, and `btnClicked` delivery.
+
+A custom item in a single-column vertical toolbar can be smaller than a button
+without making the bar wider. `TOOLBAR_ITEM_FLAG_SMALL` is a half-size square;
+consecutive ones pack two per row (color swatches). `TOOLBAR_ITEM_FLAG_SLIM` is
+a row a whole cell wide and half a cell tall, for a one-word choice or a readout
+such as "3/12"; two slim rows take the height of one button. Pencil Test's layer
+ladder is four slim rows.
 
 The former toolbox control and `bx*` messages have been removed. Component
 registration uses `toolbar_icon` and `FE_COMPONENT_SHOW_TOOLBAR`.

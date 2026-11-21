@@ -219,7 +219,10 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
     if (!vertical) y = base_y + item_h / 2 - h / 2; // every item is centred on the row's axis
 
     if (vertical) {
-      bool small = tb->columns <= 1 && item->type == TOOLBAR_ITEM_CUSTOM &&
+      bool slim = tb->columns <= 1 && item->type == TOOLBAR_ITEM_CUSTOM &&
+                  (item->style & TOOLBAR_ITEM_FLAG_SLIM) != 0;
+      if (slim) h = MAX(1, (bsz - vertical_spacing) / 2);   // the height of a mini cell, the width of a button
+      bool small = !slim && tb->columns <= 1 && item->type == TOOLBAR_ITEM_CUSTOM &&
                    (item->style & TOOLBAR_ITEM_FLAG_SMALL) != 0;
       if (small) {
         // Half-size cell: two minis + one gap fill a normal button cell, so a
