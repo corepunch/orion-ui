@@ -1433,6 +1433,51 @@ static void test_vertical_grid_columns(void) {
   PASS();
 }
 
+static void test_vertical_slim_rows(void) {
+  TEST("single-column vertical toolbar gives a SLIM item a whole cell's width and half its height");
+  test_env_init();
+  window_t *win = create_window("Slim", WINDOW_TOOLBAR | WINDOW_NOTITLE,
+                                MAKERECT(0, 0, 160, 400), NULL, click_capture_proc, 0, NULL);
+  ASSERT_NOT_NULL(win);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 1, .style = TOOLBAR_ITEM_FLAG_SLIM},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 2, .style = TOOLBAR_ITEM_FLAG_SLIM},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 3},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 4, .style = TOOLBAR_ITEM_FLAG_SLIM | TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 5},
+  };
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  int gap = ui_px("Toolbar", "gap"), mini = (TB_SPACING - gap) / 2;
+  const int slim[] = {0, 1, 3};   // SLIM wins over SMALL
+  for (int i = 0; i < ARRAY_LEN(slim); i++) {
+    ASSERT_EQUAL(tb->item_rects[slim[i]].w, TB_SPACING);
+    ASSERT_EQUAL(tb->item_rects[slim[i]].h, mini);
+    ASSERT_EQUAL(tb->item_rects[slim[i]].x, tb->item_rects[2].x);
+  }
+  ASSERT_EQUAL(tb->item_rects[1].y, tb->item_rects[0].y + mini + gap);   // each on its own row
+  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[1].y + mini + gap);
+  ASSERT_TRUE(2 * mini + gap <= TB_SPACING);                            // two rows take one cell
+  ASSERT_EQUAL(tb->item_rects[2].h, TB_SPACING);
+  ASSERT_EQUAL(tb->item_rects[4].h, TB_SPACING);
+  for (int i = 0; i < ARRAY_LEN(items); i++) {
+    irect16_t r = tb->item_rects[i];
+    uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+    g_last_click_ident = -1;
+    send_message(win->toolbar, evLeftButtonDown, point, NULL);
+    send_message(win->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(g_last_click_ident, items[i].ident);
+  }
+  // The flag belongs to a vertical column: a horizontal bar lays the item out as any other.
+  send_message(win, tbSetOrientation, TOOLBAR_HORIZONTAL, NULL);
+  tb = toolbar_get_state(win);
+  ASSERT_EQUAL(tb->item_rects[0].h, tb->item_rects[2].h);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_vertical_small_items_pack(void) {
   TEST("single-column vertical toolbar packs SMALL items two per row in one cell");
   test_env_init();
@@ -1640,7 +1685,8 @@ int main(int argc, char *argv[]) {
     test_vertical_grid_columns();
     test_vertical_ideal_size();
     test_vertical_column_alignment();
-    test_vertical_small_items_pack();
+    test_vertical_slim_rows();
+  test_vertical_small_items_pack();
     test_toolbar_embedded_slider_drag();
     test_toolbar_trough_slider();
     test_toolbar_vertical_flex_slider();

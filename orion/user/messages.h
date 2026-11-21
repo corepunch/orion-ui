@@ -484,6 +484,9 @@ enum {
 // Half-size cell: consecutive custom items pack two per row in a vertical palette.
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
 #define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // spacer or slider shares the remaining length along the toolbar axis
+// Slim row: a custom item half a cell tall and a whole cell wide in a single-column vertical
+// toolbar, for a one-word choice or a readout. Four of them take the height of two buttons.
+#define TOOLBAR_ITEM_FLAG_SLIM       (1u << 6)
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_TRANSPARENT    (1u << 3) // retain the parent's surface behind toolbar items (TBSTYLE_TRANSPARENT)

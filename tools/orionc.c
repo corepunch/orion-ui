@@ -519,13 +519,15 @@ static void emit_menu_items(FILE *f, xmlNodePtr menu, const char *base, const ch
 
 static void emit_menus(FILE *f, xmlNodePtr menus) {
   if (!menus) return;
-  EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *name = attr(m, "name"), scope[128], base[256]; ident(scope, sizeof(scope), name, true); snprintf(base, sizeof(base), "MENU_%s", scope); emit_menu_items(f, m, base, scope); free(name); }
+  EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *name = attr(m, "name"), scope[128], base[256]; ident(scope, sizeof(scope), name, true); snprintf(base, sizeof(base), "MENU_%s", scope); emit_if(f, m, false); emit_menu_items(f, m, base, scope); emit_if(f, m, true); free(name); }
   char *var = attrs_first(menus, "var", NULL), *count = attrs_first(menus, "count", NULL);
   OUT("static menu_def_t %s[] = {\n", nz(var, "kMenus"));
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) {
     char *name = attr(m, "name"), *raw = attr(m, "label"), label[ORIONC_STRING_SIZE], scope[128], base[256];
     ident(scope, sizeof(scope), name, true); snprintf(base, sizeof(base), "MENU_%s", scope); cstr(label, sizeof(label), raw);
+    emit_if(f, m, false);   // a menu left out of the bar keeps its commands and accelerators
     OUT("  { %s, %s_ITEMS, (int)(sizeof(%s_ITEMS) / sizeof(%s_ITEMS[0])) },\n", label, base, base, base);
+    emit_if(f, m, true);
     free(name); free(raw);
   }
   OUT("};\n#define %s ((int)(sizeof(%s) / sizeof(%s[0])))\n\n", nz(count, "kNumMenus"), nz(var, "kMenus"), nz(var, "kMenus"));

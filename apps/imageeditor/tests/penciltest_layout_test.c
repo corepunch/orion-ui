@@ -331,7 +331,10 @@ static void test_no_fg_bg_swatch(void) {
       if (tb->items[i].type != TOOLBAR_ITEM_CUSTOM) continue;
       uint32_t ident = tb->items[i].ident;
       bool layer_btn = ident >= IE_PENCIL_LAYER_BASE && ident < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT;
-      ASSERT_TRUE(layer_btn || ident == ID_PENCIL_TOOLS_FRAME);
+      bool readout = ident == ID_PENCIL_TOOLS_SIZE_VALUE || ident == ID_PENCIL_TOOLS_OPACITY_VALUE ||
+                     ident == ID_PENCIL_TOOLS_FRAME || ident == ID_PENCIL_TOOLS_SPEED;
+      ASSERT_TRUE(layer_btn || readout);
+      ASSERT_EQUAL(ident == ID_PENCIL_TOOLS_OPACITY_VALUE && layers[layer] != IE_LAYER_PENCIL, false);
     }
   }
   penciltest_teardown();
@@ -349,17 +352,17 @@ static void test_coloring_palette(void) {
   ASSERT_EQUAL(tb->columns, 1);
   ASSERT_EQUAL(g_app->tool_win->frame.w, PALETTE_WIN_W);
   int mini = (TOOL_PALETTE_BTN_SIZE - ui_px("Toolbar", "gap")) / 2;
+  // The layer ladder: four slim rungs, a cell wide and half a cell tall, no wider than the rail was.
   for (int i = 0; i < 4; i++) {
-    ASSERT_TRUE(tb->items[i].style & TOOLBAR_ITEM_FLAG_SMALL);
-    ASSERT_EQUAL(tb->item_rects[i].w, mini);
+    ASSERT_TRUE(tb->items[i].style & TOOLBAR_ITEM_FLAG_SLIM);
+    ASSERT_EQUAL(tb->item_rects[i].w, TOOL_PALETTE_BTN_SIZE);
     ASSERT_EQUAL(tb->item_rects[i].h, mini);
+    ASSERT_EQUAL(tb->item_rects[i].x, tb->item_rects[0].x);
+    if (i) ASSERT_EQUAL(tb->item_rects[i].y, tb->item_rects[i - 1].y + mini + ui_px("Toolbar", "gap"));
   }
-  ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[1].y);
-  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[3].y);
-  ASSERT_TRUE(tb->item_rects[1].x > tb->item_rects[0].x);
   ASSERT_EQUAL(tb->item_rects[3].y + tb->item_rects[3].h - tb->item_rects[0].y,
-               2 * mini + ui_px("Toolbar", "gap"));
-  ASSERT_TRUE(2 * mini + ui_px("Toolbar", "gap") <= TOOL_PALETTE_BTN_SIZE);
+               4 * mini + 3 * ui_px("Toolbar", "gap"));
+  ASSERT_TRUE(4 * mini + 3 * ui_px("Toolbar", "gap") <= 2 * TOOL_PALETTE_BTN_SIZE + ui_px("Toolbar", "gap"));
   tb = window_toolbar_state(g_app->color_win);
   ASSERT_TRUE(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE));
   ASSERT_EQUAL(tb->columns, 1);
@@ -440,6 +443,56 @@ static void test_document_palette(void) {
   penciltest_teardown(); PASS();
 }
 
+static const toolbar_item_t *rail_item(int ident) {
+  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].ident == ident) return &tb->items[i];
+  return NULL;
+}
+
+static void test_compact_rail(void) {
+  TEST("readouts and the ladder fit the rail's width; dead menus leave the header");
+  penciltest_setup();
+  int rail = g_app->tool_win->frame.w;
+  ASSERT_EQUAL(rail, PALETTE_WIN_W);
+  canvas_doc_t *doc = create_document(NULL, 32, 32);
+  ASSERT_NOT_NULL(doc);
+  ASSERT_EQUAL(g_app->tool_win->frame.w, rail);
+  ASSERT_EQUAL(imageeditor_document_workspace_rect().x, rail);
+  ASSERT_EQUAL(imageeditor_document_workspace_rect().x + imageeditor_document_workspace_rect().w, 1080);
+  ASSERT_EQUAL(imageeditor_document_workspace_rect().y + imageeditor_document_workspace_rect().h, 758);
+  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+  int mini = (TOOL_PALETTE_BTN_SIZE - ui_px("Toolbar", "gap")) / 2;
+  const int readouts[] = {ID_PENCIL_TOOLS_SIZE_VALUE, ID_PENCIL_TOOLS_OPACITY_VALUE, ID_PENCIL_TOOLS_FRAME, ID_PENCIL_TOOLS_SPEED};
+  for (int i = 0; i < ARRAY_LEN(readouts); i++) {
+    const toolbar_item_t *item = rail_item(readouts[i]);
+    ASSERT_NOT_NULL(item);
+    ASSERT_EQUAL(item->type, TOOLBAR_ITEM_CUSTOM);
+    ASSERT_TRUE(item->style & TOOLBAR_ITEM_FLAG_SLIM);
+    irect16_t r = tb->item_rects[item - tb->items];
+    ASSERT_EQUAL(r.w, TOOL_PALETTE_BTN_SIZE); ASSERT_EQUAL(r.h, mini);
+    ASSERT_TRUE(r.x + r.w <= rail);
+  }
+  // Each readout sits directly over what it reports.
+  ASSERT_EQUAL(rail_item(ID_PENCIL_TOOLS_SIZE_VALUE) + 1, rail_item(IE_OPT_SIZE));
+  ASSERT_EQUAL(rail_item(ID_PENCIL_TOOLS_OPACITY_VALUE) + 1, rail_item(IE_OPT_OPACITY));
+  ASSERT_EQUAL(rail_item(ID_PENCIL_TOOLS_SPEED) + 1, rail_item(ID_ANIM_PREV_FRAME));
+  // Painted layers have no opacity: slider and readout leave together, and the rail keeps its width.
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
+  ASSERT_NULL(rail_item(IE_OPT_OPACITY));
+  ASSERT_NULL(rail_item(ID_PENCIL_TOOLS_OPACITY_VALUE));
+  ASSERT_NOT_NULL(rail_item(ID_PENCIL_TOOLS_SIZE_VALUE));
+  ASSERT_EQUAL(g_app->tool_win->frame.w, rail);
+  // The header loses the menus that did nothing here.
+  for (int i = 0; i < kNumMenus; i++) {
+    ASSERT_TRUE(strcmp(kMenus[i].label, "Filter") != 0);
+    ASSERT_TRUE(strcmp(kMenus[i].label, "Color") != 0);
+  }
+  ASSERT_EQUAL(kNumMenus, 10);
+  for (int i = 0; i < ARRAY_LEN(MENU_IMAGE_ITEMS); i++) ASSERT_TRUE(MENU_IMAGE_ITEMS[i].id != ID_IMAGE_LEVELS);
+  penciltest_teardown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
@@ -452,5 +505,6 @@ int main(void) {
   test_no_fg_bg_swatch();
   test_coloring_palette();
   test_document_palette();
+  test_compact_rail();
   TEST_END();
 }

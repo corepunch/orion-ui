@@ -176,14 +176,20 @@ resizing/cropping, and history preserve all cels and the shared background.
 Rendering and export compose against the live shared background,
 rather than trusting a preview from before the background changed.
 
-The tool strip stays one column wide. The four layer buttons are half-size
-(`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the floating color toolbar
-uses the same half-size swatches, two per row. Pencil hides the color palette and
+The tool strip stays one column wide, and nothing added to it may widen it. At its top is the
+layer ladder: four slim rungs (`TOOLBAR_ITEM_FLAG_SLIM`, a cell wide and half a cell tall) that
+spell the layers out, front of the stack first: FX, Color, Pencil, Back. Together they take the
+height of two buttons. The working layer's rung is selected, and the rungs above it are drawn in
+the disabled text color, because the canvas leaves those layers out (see the editing cutoff
+below). The rungs and their tooltips are declared in `pencil_tools`; the window turns them into
+the layer commands. The floating color toolbar uses half-size swatches (`TOOLBAR_ITEM_FLAG_SMALL`),
+two per row. Pencil hides the color palette and
 uses a fixed configurable pencil color; painting paper on it erases to transparency. Background,
 Color, and FX use the solid indexed-color brush and expose the document palette,
 with their last color remembered during the session. Pencil uses only the pencil
 drawing tool. The drawing button follows the active layer; keyboard tool commands
-use the same constraint. Brush size lives in the left toolbar, and drawing tools
+use the same constraint. Brush size and pencil opacity live in the left toolbar, each
+under a slim readout of its value ("5px", "50%"), and drawing tools
 never open the floating options panel. Image Editor exposes pencil, brush, and
 spraypaint as separate toolbar buttons beside the shared size control. The canvas shows the active layer and those beneath it in the compositing
 order: Background alone, Background/Pencil, Background/Pencil/Color, or all four for FX.
@@ -198,9 +204,10 @@ Each frame is independently decodable, so arbitrary selection, reordering and
 deletion never need a prior frame. Each exposure carries its own duration in milliseconds; drawing pixels are shared by reference.
 
 Pencil Test has no timeline window or numbered frame strip. Its frame controls live
-below the drawing tools in the left sidebar: current frame number, previous/next
-(`<<` / `>>`), play/pause, onion skin, new, duplicate, and delete. The current frame's
-tooltip includes the total frame count. Playback timers target the tool window,
+below the drawing tools in the left sidebar: two slim readouts, the frame of the total
+("3/12") and the speed ("12fps"), then previous/next (`<<` / `>>`), play/pause, onion
+skin, new, duplicate, and delete. A click on the frame readout opens the exposure sheet
+and a click on the speed opens Animation Speed. Playback timers target the tool window,
 including when frame delays change. Frame edits, navigation, document activation,
 and closing refresh the controls and their enabled/checked states. Image Editor
 retains its numbered timeline and drag reordering.

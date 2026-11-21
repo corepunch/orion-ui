@@ -40,19 +40,20 @@ static int color_button_count(void) {
 }
 
 static void test_layer_sidebar(void) {
-  TEST("2x2 sidebar layer buttons switch the target and show colors only on painting layers");
+  TEST("layer ladder reads front to back, switches the target and shows colors only on painting layers");
   canvas_doc_t *doc = layers_setup();
   ASSERT_NOT_NULL(doc);
   ASSERT_EQUAL(doc->layer.count, 4);
   ASSERT_EQUAL(doc->layer.active, IE_LAYER_PENCIL);
   ASSERT_EQUAL(color_button_count(), 0);
   ASSERT_FALSE(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE));
-  const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  const int order[] = {IE_LAYER_FX, IE_LAYER_COLOR, IE_LAYER_PENCIL, IE_LAYER_BG};
+  const char *const names[] = {"FX", "Color", "Pencil", "Back"};
   for (int i = 0; i < 4; i++) {
     toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
     ASSERT_EQUAL(tb->items[i].ident, IE_PENCIL_LAYER_BASE + order[i]);
-    ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[1].y);
-    ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[3].y);
+    ASSERT_STR_EQUAL(tb->items[i].text, names[i]);
+    ASSERT_TRUE(tb->items[i].tooltip && tb->items[i].tooltip[0]);
     irect16_t r = tb->item_rects[i];
     uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
     send_message(g_app->tool_win->toolbar, evLeftButtonDown, point, NULL);
@@ -62,6 +63,7 @@ static void test_layer_sidebar(void) {
     ASSERT_EQUAL(color_button_count(), order[i] == IE_LAYER_PENCIL ? 0 : IE_PENCIL_COLORS);
     ASSERT_EQUAL(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE), order[i] != IE_LAYER_PENCIL);
   }
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_FX));   // a painted layer remembers its own color
   ASSERT_TRUE(cmd_pencil_color(doc, 12));
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_PENCIL));
   ASSERT_EQUAL(g_app->fg_color, IE_INK_COLOR);

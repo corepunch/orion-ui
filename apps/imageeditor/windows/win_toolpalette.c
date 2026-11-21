@@ -29,15 +29,69 @@ static void pencil_palette_draw(int swatch, const toolbar_draw_item_t *draw) {
   }
 }
 
-// Two-letter codes: mini cells hold a quarter of a normal button.
-static const char *pencil_layer_code(int layer) {
-  switch (layer) {
-    case IE_LAYER_BG:     return "BG";
-    case IE_LAYER_COLOR:  return "CO";
-    case IE_LAYER_PENCIL: return "PE";
-    case IE_LAYER_FX:     return "FX";
-    default:              return "??";
+// The rail's layer ladder: one slim rung per layer, front of the stack at the top.
+static const struct { int ident, layer; } kPencilRungs[] = {
+  {ID_PENCIL_TOOLS_LAYER_FX,     IE_LAYER_FX},
+  {ID_PENCIL_TOOLS_LAYER_COLOR,  IE_LAYER_COLOR},
+  {ID_PENCIL_TOOLS_LAYER_PENCIL, IE_LAYER_PENCIL},
+  {ID_PENCIL_TOOLS_LAYER_BG,     IE_LAYER_BG},
+};
+
+static bool pencil_readout(int ident) {
+  return ident == ID_PENCIL_TOOLS_SIZE_VALUE || ident == ID_PENCIL_TOOLS_OPACITY_VALUE ||
+         ident == ID_PENCIL_TOOLS_FRAME || ident == ID_PENCIL_TOOLS_SPEED;
+}
+
+static void pencil_draw_caption(const toolbar_draw_item_t *draw, const char *text, uint32_t ink) {
+  irect16_t r = rect_center(draw->rect, text_strwidth("Caption", text), text_char_height("Caption"));
+  draw_text("Caption", text, r.x, r.y, ink);
+}
+
+// The canvas shows the stack up to the layer being drawn on, so the rungs above it rest:
+// their names go grey until a layer at or above them is chosen.
+static void pencil_draw_rung(window_t *win, int layer, const toolbar_draw_item_t *draw) {
+  canvas_doc_t *doc = g_app && pencil_has_layers(g_app->active_doc) ? g_app->active_doc : NULL;
+  toolbar_state_t *tb = window_toolbar_state(win);
+  int rung = 0, working = ARRAY_LEN(kPencilRungs);
+  for (int i = 0; i < ARRAY_LEN(kPencilRungs); i++) {
+    if (kPencilRungs[i].layer == layer) rung = i;
+    if (doc && kPencilRungs[i].layer == doc->layer.active) working = i;
   }
+  ctrl_state_t state = draw->state | (rung == working ? CTRL_SELECTED : 0);
+  theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, state);
+  const char *name = tb && draw->index < tb->item_count && tb->items[draw->index].text ? tb->items[draw->index].text : "";
+  pencil_draw_caption(draw, name, rung < working ? get_sys_color(brTextDisabled) : theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
+}
+
+// A readout says in a word what the control under it holds: "5px", "50%", "3/12", "12fps".
+static void pencil_draw_readout(int ident, const toolbar_draw_item_t *draw) {
+  canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
+  anim_timeline_t *anim = doc ? doc->anim : NULL;
+  char a[16], b[16], text[40];
+  switch (ident) {
+    case ID_PENCIL_TOOLS_SIZE_VALUE:
+      ui_format_number(2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1, 0, a, sizeof(a));
+      snprintf(text, sizeof(text), ui_tr("%spx"), a);
+      break;
+    case ID_PENCIL_TOOLS_OPACITY_VALUE:
+      ui_format_number((pencil_opacity() * 100 + 127) / 255, 0, a, sizeof(a));
+      snprintf(text, sizeof(text), ui_tr("%s%%"), a);
+      break;
+    case ID_PENCIL_TOOLS_FRAME:
+      ui_format_number(anim ? anim->active_frame + 1 : 0, 0, a, sizeof(a));
+      ui_format_number(anim ? anim->frame_count : 0, 0, b, sizeof(b));
+      snprintf(text, sizeof(text), ui_tr("%s/%s"), a, b);
+      break;
+    default:
+      ui_format_number(anim ? anim->fps : 0, 0, a, sizeof(a));
+      snprintf(text, sizeof(text), ui_tr("%sfps"), a);
+      break;
+  }
+  // Frame and speed open their dialogs; size and opacity only report.
+  bool opens = ident == ID_PENCIL_TOOLS_FRAME || ident == ID_PENCIL_TOOLS_SPEED;
+  if (opens && !anim) snprintf(text, sizeof(text), "—");   // no film to count
+  if (opens) theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state);
+  pencil_draw_caption(draw, text, opens ? theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state) : get_sys_color(brTextNormal));
 }
 #endif
 
@@ -96,22 +150,23 @@ static void swatch_edit_fg(window_t *owner) {
 static void pencil_toolbar_items(window_t *win) {
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
   int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
-  static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
-  static const char *const tips[] = {"Background — shared by all frames", "Ink and color — above pencil", "Pencil — soft alpha strokes", "FX — above pencil"};
-  toolbar_item_t items[5 + ARRAY_LEN(imageeditor_pencil_tools_toolbar)];
+  toolbar_item_t items[ARRAY_LEN(imageeditor_pencil_tools_toolbar)];
   int count = 0;
-  for (int i = 0; i < 4; i++)
-    items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
-      .ident = IE_PENCIL_LAYER_BASE + order[i], .tooltip = tips[order[i]],
-      .style = TOOLBAR_ITEM_FLAG_SMALL};
-  items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
   for (int i = 0; i < ARRAY_LEN(imageeditor_pencil_tools_toolbar); i++) {
     toolbar_item_t item = imageeditor_pencil_tools_toolbar[i];
     if (layer == IE_LAYER_PENCIL && (item.ident == ID_TOOL_BRUSH || item.ident == ID_TOOL_FILL || item.ident == ID_TOOL_EYEDROPPER)) continue;
-    if (layer != IE_LAYER_PENCIL && (item.ident == ID_TOOL_PENCIL || item.ident == ID_PENCIL_TOOLS_OPACITY)) continue;
-    if (item.ident == ID_PENCIL_TOOLS_FRAME) {
+    if (layer != IE_LAYER_PENCIL && (item.ident == ID_TOOL_PENCIL || item.ident == ID_PENCIL_TOOLS_OPACITY ||
+                                     item.ident == ID_PENCIL_TOOLS_OPACITY_VALUE)) continue;
+    // Rungs and readouts are drawn here as slim rows; a rung answers to its layer's command.
+    for (int r = 0; r < ARRAY_LEN(kPencilRungs); r++)
+      if (item.ident == kPencilRungs[r].ident) {
+        item.type = TOOLBAR_ITEM_CUSTOM;
+        item.ident = IE_PENCIL_LAYER_BASE + kPencilRungs[r].layer;
+        item.style |= TOOLBAR_ITEM_FLAG_SLIM;
+      }
+    if (pencil_readout(item.ident)) {
       item.type = TOOLBAR_ITEM_CUSTOM;
-      item.style |= TOOLBAR_ITEM_FLAG_SMALL;
+      item.style |= TOOLBAR_ITEM_FLAG_SLIM;
     }
     if (g_app && item.ident == imageeditor_tool_group(imageeditor_layer_tool(g_app->current_tool))) item.state |= TBSTATE_CHECKED;
     items[count++] = item;
@@ -225,26 +280,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
     }
     case tbDrawItem:
 #if IMAGEEDITOR_BW
-      if (wparam == ID_PENCIL_TOOLS_FRAME && lparam) {
-        canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
-        char number[16];
-        if (doc && doc->anim) snprintf(number, sizeof(number), "%d", doc->anim->active_frame + 1);
-        else snprintf(number, sizeof(number), "—");
-        toolbar_draw_item_t *draw = lparam;
-        irect16_t r = rect_center(draw->rect, text_strwidth("Caption", number), text_char_height("Caption"));
-        draw_text("Caption", number, r.x, r.y, get_sys_color(brTextNormal));
+      if (g_app && pencil_readout((int)wparam) && lparam) {
+        pencil_draw_readout((int)wparam, lparam);
         return true;
       }
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT && lparam) {
-        int layer = wparam - IE_PENCIL_LAYER_BASE;
-        toolbar_draw_item_t *draw = lparam;
-        bool active = g_app && pencil_has_layers(g_app->active_doc) && g_app->active_doc->layer.active == layer;
-        ctrl_state_t state = draw->state | (active ? CTRL_SELECTED : 0);
-        theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, state);
-        const char *code = pencil_layer_code(layer);
-        int width = text_strwidth("Caption", code);
-        irect16_t text = rect_center(draw->rect, width, text_char_height("Caption"));
-        draw_text("Caption", code, text.x, text.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
+        pencil_draw_rung(win, (int)wparam - IE_PENCIL_LAYER_BASE, lparam);
         return true;
       }
 #endif
@@ -258,6 +299,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         if (LOWORD(wparam) == IE_OPT_SIZE) g_app->brush_size     = CLAMP(v, 0, NUM_BRUSH_SIZES - 1);
         else                               g_app->pencil_opacity = CLAMP(v, 1, 255);
         imageeditor_sync_brush_sliders(win);
+        invalidate_window(win);   // the readout above the slider follows it
         return true;
       }
       if (HIWORD(wparam) != btnClicked) return false;
@@ -266,6 +308,11 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #if IMAGEEDITOR_BW
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
         cmd_pencil_layer(g_app->active_doc, wparam - IE_PENCIL_LAYER_BASE);
+        return true;
+      }
+      if (pencil_readout((int)wparam)) {   // the number is the way to its dialog
+        if (wparam == ID_PENCIL_TOOLS_FRAME) handle_menu_command(ID_ANIM_EXPOSURE_SHEET);
+        if (wparam == ID_PENCIL_TOOLS_SPEED) handle_menu_command(ID_ANIM_SET_FPS);
         return true;
       }
 #endif
@@ -315,9 +362,9 @@ void imageeditor_sync_frame_controls(void) {
   send_message(win, tbCheckButton, ID_ANIM_PLAY, (void *)(intptr_t)(ready && anim->playing));
   send_message(win, tbCheckButton, ID_ANIM_TRACE, (void *)(intptr_t)g_app->anim_trace_enabled);
   char tip[128];
-  if (ready) snprintf(tip, sizeof(tip), "Frame %d of %d · Cel %u · %d ms · %d FPS", anim->active_frame + 1,
-    anim->frame_count, anim->frames[anim->active_frame].cel->id, anim->frames[anim->active_frame].delay_ms, anim->fps);
-  else snprintf(tip, sizeof(tip), "No animation");
+  if (ready) snprintf(tip, sizeof(tip), ui_tr("Frame %d of %d · Cel %u · %d ms: click for the exposure sheet"), anim->active_frame + 1,
+    anim->frame_count, anim->frames[anim->active_frame].cel->id, anim->frames[anim->active_frame].delay_ms);
+  else snprintf(tip, sizeof(tip), "%s", ui_tr("No animation"));
   toolbar_button_info_t info = {.ident = ID_PENCIL_TOOLS_FRAME, .mask = TBIF_TOOLTIP, .tooltip = tip};
   send_message(win, tbSetButtonInfo, 0, &info);
   invalidate_window(win);

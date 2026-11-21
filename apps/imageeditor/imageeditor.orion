@@ -52,10 +52,10 @@
         <item name="flip_v" label="Flip Vertical" />
         <Separator />
         <item name="invert" label="Invert Colors" />
-        <item name="levels" label="Levels..." />
+        <item name="levels" label="Levels..." if="!IMAGEEDITOR_INDEXED" />
       </menu>
 
-      <menu name="filter" label="Filter" dynamic="true">
+      <menu name="filter" label="Filter" dynamic="true" if="!IMAGEEDITOR_BW">
         <item name="reload" label="Reload Filters" />
         <item name="gallery" label="Filter Gallery..." />
         <Separator />
@@ -154,7 +154,7 @@
         <item name="about" label="About..." />
       </menu>
 
-      <menu name="color" label="Color">
+      <menu name="color" label="Color" if="!IMAGEEDITOR_BW">
         <item name="swap" label="Swap Colors" shortcut="X" />
       </menu>
 
@@ -316,6 +316,12 @@
 
       <form name="pencil_tools" title="Tools" width="40" flags="WINDOW_NOTITLE | WINDOW_NORESIZE" spacing="0" padding="0">
         <Toolbar>
+          <!-- The four layers, front to back. The window draws them and the readouts as slim rows. -->
+          <Label name="layer_fx" text="FX" tooltip="FX: in front of everything" />
+          <Label name="layer_color" text="Color" tooltip="Color: ink and paint, over the pencil" />
+          <Label name="layer_pencil" text="Pencil" tooltip="Pencil: the rough sketch" />
+          <Label name="layer_bg" text="Back" tooltip="Background: the same on every frame" />
+          <Separator />
           <Button name="pencil" command="tool.pencil" icon="ie-pencil" tooltip="Pencil" flags="TBSTYLE_CHECKGROUP" />
           <Button name="brush" command="tool.brush" icon="phosphor-circle-fill" tooltip="Brush" flags="TBSTYLE_CHECKGROUP" />
           <Button name="eraser" command="tool.eraser" icon="ie-eraser" tooltip="Eraser" flags="TBSTYLE_CHECKGROUP" />
@@ -325,10 +331,13 @@
           <Button name="move" command="tool.move" icon="ie-move" tooltip="Move" flags="TBSTYLE_CHECKGROUP" />
           <Button name="hand" command="tool.hand" icon="ie-hand" tooltip="Hand" flags="TBSTYLE_CHECKGROUP" if="!defined(AX_PLATFORM_IOS)" />
           <Separator />
+          <Label name="size_value" text="5px" tooltip="Brush size" />
           <Slider name="size" w="TOOL_PALETTE_BTN_SIZE" flags="SLIDER_TROUGH | TOOLBAR_ITEM_FLAG_FLEXSPACE" tooltip="Brush size" />
+          <Label name="opacity_value" text="50%" tooltip="Pencil opacity" />
           <Slider name="opacity" w="TOOL_PALETTE_BTN_SIZE" flags="SLIDER_TROUGH | TOOLBAR_ITEM_FLAG_FLEXSPACE" tooltip="Pencil opacity" />
           <Separator />
-          <Label name="frame" text="1" w="TOOL_PALETTE_BTN_SIZE" tooltip="Current frame" />
+          <Label name="frame" text="1/1" tooltip="Current frame" />
+          <Label name="speed" text="12fps" tooltip="Animation speed: click to change" />
           <Button name="prev" command="anim.prev_frame" icon="fast-arrow-left" tooltip="Previous frame (Left)" />
           <Button name="next" command="anim.next_frame" icon="fast-arrow-right" tooltip="Next frame (Right)" />
           <Button name="play" command="anim.play" icon="play" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" />
