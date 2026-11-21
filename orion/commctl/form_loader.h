@@ -28,6 +28,7 @@
 
 #include <orion/user/user.h>
 #include <orion/user/database.h>
+#include <orion/commctl/commctl.h>
 
 #define FORM_LIBRARY_ID_BASE 20000
 
@@ -64,5 +65,30 @@ const char *form_library_control_attr(const form_library_t *lib, const form_def_
 int form_library_schema_count(const form_library_t *lib);
 const db_schema_def_t *form_library_schema_at(const form_library_t *lib, int index);
 const db_schema_def_t *form_library_schema(const form_library_t *lib, const char *name);
+
+// The application's <ribbon>, as Windows Ribbon markup but with script
+// commands: a <Button> names action= (run on the selected page, or on page=
+// after selecting it) or target="orion.application" action= argument=, and
+// may carry shortcut="Ctrl+N". A <Tab context="form"> shows while that page
+// is selected. Commands with the same action, page, target and argument share
+// one ident, so their state is one. NULL when the document declares none.
+typedef struct {
+  const char *action, *page, *target, *argument;
+} form_command_t;
+typedef struct {
+  ribbon_def_t          def;
+  const form_command_t *commands;      // commands[ident - first_ident]
+  int                   command_count;
+  uint16_t              first_ident;
+  const accel_t        *accelerators;  // from shortcut=
+  int                   accelerator_count;
+  const char *const    *contexts;      // a tab's context bit i is the page contexts[i]
+  int                   context_count;
+} form_ribbon_t;
+const form_ribbon_t *form_library_ribbon(const form_library_t *lib);
+// The command a ribbon ident runs, or NULL.
+const form_command_t *form_ribbon_command(const form_ribbon_t *ribbon, uint32_t ident);
+// The context bit of the page named `form` (0 when no tab names it).
+uint32_t form_ribbon_context(const form_ribbon_t *ribbon, const char *form);
 
 #endif

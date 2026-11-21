@@ -5,6 +5,7 @@
 #include "script_internal.h"
 #include <orion/user/file.h>
 #include <orion/user/page_host.h>
+#include <orion/user/toolbar.h>
 #include <orion/user/svg_icon_loader.h>
 #include <orion/commdlg/commdlg.h>
 #include <platform/platform.h>
@@ -26,8 +27,15 @@ struct script_application_s {
   int observers[APP_MAX_DATABASES], model;
   char directory[1200], data[1200], output[1600];
   bool quit_on_close, refreshing;
+  // The <ribbon>, when the application stands alone (a gem's shell owns the menu row).
+  const form_ribbon_t *ribbon;
+  window_t *chrome, *ribbon_win;
+  accel_table_t *accel;
+  uint32_t *command_states;
 };
 static script_application_t *applications;
+static bool ribbon_allowed;
+void script_application_allow_ribbon(bool allowed) { ribbon_allowed = allowed; }
 
 static bool app_is_display_group(const database_t *database) { return !strcmp(database->class_name, "db_display_group"); }
 // A page filling its lists as it renders, or a change made while pages
@@ -47,7 +55,13 @@ static bool app_save_all(script_application_t *app) {
     if (app->databases[i]->source_path[0] && !send_db_message(app->databases[i], dbSave, 0, NULL)) return false;
   return true;
 }
+static void app_show_page_tab(script_application_t *app);
 static result_t app_window_hook(window_t *window, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evPageChanged) {
+    for (script_application_t *app = applications; app; app = app->next)
+      if (app->page_count && script_page_window(app->pages[0]) == window) app_show_page_tab(app);
+    return false;
+  }
   if (msg != evClose && msg != evDestroy) return false;  // the page proc forwards every message
   script_application_t *owner = NULL;
   for (script_application_t *app = applications; app && !owner; app = app->next)
@@ -95,13 +109,40 @@ static bool app_host_pages(script_application_t *app, script_page_t *host, char 
   app_drop_pages(app, first);
   return false;
 }
+static window_t *app_host_window(script_application_t *app);
+// A window the application opens over its main one: centred on it, or along
+// its right edge with placement="right" (a palette such as an assistant).
+static void app_place_window(script_application_t *app, script_page_t *page) {
+  window_t *win = script_page_window(page), *host = app_host_window(app);
+  const char *placement = form_library_form_attr(app->library, script_page_form(page), "placement");
+  if (!win || !host || win == host) return;
+  int x = host->frame.x + (host->frame.w - win->frame.w) / 2, y = host->frame.y + (host->frame.h - win->frame.h) / 3;
+  if (placement && !strcmp(placement, "right")) { x = host->frame.x + host->frame.w - win->frame.w - 24; y = host->frame.y + 56; }
+  else if (placement && strcmp(placement, "center")) {
+    fprintf(stderr, "[application] form '%s': placement '%s' rejected (want center or right)\n", script_page_form(page)->id, placement);
+    fflush(stderr);
+  }
+  move_window(win, x > host->frame.x ? x : host->frame.x, y > host->frame.y ? y : host->frame.y);
+}
 static script_page_t *app_open_form(script_application_t *app, const char *name, char *error, size_t size) {
   int first = app->page_count;
+  // single="true": the form's open window comes forward instead of a second one.
+  const form_def_t *def = form_library_form(app->library, name);
+  const char *single = def ? form_library_form_attr(app->library, def, "single") : NULL;
+  for (int i = 0; single && !strcmp(single, "true") && i < app->page_count; i++) {
+    window_t *open = script_page_window(app->pages[i]);
+    if (script_page_form(app->pages[i]) == def && open && is_window(open)) {
+      show_window(open, true);
+      script_page_refresh(app->pages[i]);
+      return app->pages[i];
+    }
+  }
   script_page_t *page = app_page(app, name, error, size);
   if (!page) return NULL;
   if (!script_page_create_hook(page, NULL, app_window_hook) || !app_host_pages(app, page, error, size)) {
     app_drop_pages(app, first); return NULL;
   }
+  if (first > 0) app_place_window(app, page);
   return page;
 }
 static script_application_t *application_context(lua_State *L) {
@@ -143,6 +184,132 @@ static script_page_t *app_hosted_page(script_application_t *app, const char *for
       return page_host_select(host, def->page_bindings[i].command) ? page : NULL;
   return NULL;
 }
+// ── Ribbon ──────────────────────────────────────────────────────────────────
+// The ribbon runs a command on the selected page (or the page it names), so
+// its buttons, Quick Access Toolbar and shortcuts reach the same Lua actions
+// as the pages' own buttons; a page's tab shows while the page is selected.
+static window_t *app_host_window(script_application_t *app) {
+  window_t *win = app->page_count ? script_page_window(app->pages[0]) : NULL;
+  const form_def_t *def = app->page_count ? script_page_form(app->pages[0]) : NULL;
+  return win && def && def->role == WINDOW_ROLE_HOST ? win : NULL;
+}
+static script_page_t *app_selected_page(script_application_t *app) {
+  window_t *host = app_host_window(app), *page = host ? window_active_page(host) : NULL;
+  for (int i = 0; page && i < app->page_count; i++) if (script_page_window(app->pages[i]) == page) return app->pages[i];
+  return NULL;
+}
+// The page a command acts on: the one it names, or the selected one.
+static script_page_t *app_command_page(script_application_t *app, const form_command_t *command) {
+  return command->page ? script_application_page(app, command->page) : app_selected_page(app);
+}
+static void app_update_commands(script_application_t *app) {
+  if (!app->ribbon_win || !app->command_states) return;
+  window_t *quick = app->chrome ? app_chrome_toolbar(app->chrome) : NULL;
+  for (int i = 0; i < app->ribbon->command_count; i++) {
+    const form_command_t *command = &app->ribbon->commands[i];
+    bool enabled = command->target ? true : script_page_can_perform(app_command_page(app, command), command->action);
+    uint32_t state = enabled ? 0 : TBSTATE_DISABLED;
+    if (app->command_states[i] == state) continue;
+    app->command_states[i] = state;
+    uint32_t ident = app->ribbon->first_ident + (uint32_t)i;
+    int current = (int)send_message(app->ribbon_win, rbGetState, ident, NULL);
+    if (current >= 0) send_message(app->ribbon_win, rbSetState, ident, (void *)(uintptr_t)(((uint32_t)current & ~TBSTATE_DISABLED) | state));
+    const application_toolbar_t *qat = app->ribbon->def.quick_access;
+    for (int k = 0; quick && qat && k < qat->count; k++)
+      if (qat->items[k].ident == (int)ident && toolbar_item_state(quick, (int)ident) >= 0) {
+        send_message(quick, tbSetState, ident, (void *)(uintptr_t)(((uint32_t)toolbar_item_state(quick, (int)ident) & ~TBSTATE_DISABLED) | state));
+        break;
+      }
+  }
+}
+static void app_page_rendered(script_page_t *page, void *userdata) { (void)page; app_update_commands(userdata); }
+static void app_show_page_tab(script_application_t *app) {
+  if (!app->ribbon_win) return;
+  script_page_t *page = app_selected_page(app);
+  const form_def_t *def = page ? script_page_form(page) : NULL;
+  send_message(app->ribbon_win, rbSetContexts, form_ribbon_context(app->ribbon, def ? def->id : NULL), NULL);
+  app_update_commands(app);
+}
+static script_page_t *app_hosted_page(script_application_t *app, const char *form);
+static void app_run_command(script_application_t *app, uint32_t ident) {
+  const form_command_t *command = form_ribbon_command(app->ribbon, ident);
+  if (!command) {
+    fprintf(stderr, "[application] ribbon command rejected ident=%u: no such command\n", (unsigned)ident);
+    fflush(stderr);
+    return;
+  }
+  window_t *host = app_host_window(app);
+  if (command->target) {
+    char message[1024] = "";
+    if (!script_runtime_action(app->runtime, command->target, command->action, command->argument, message, sizeof(message)) && *message)
+      message_box(host, message, script_page_title(app->pages[0]), MB_OK);
+    return;
+  }
+  script_page_t *page = command->page ? app_hosted_page(app, command->page) : app_selected_page(app);
+  if (!page) page = command->page ? script_application_page(app, command->page) : NULL;
+  if (!page) {
+    fprintf(stderr, "[application] ribbon command '%s' rejected: page '%s' is not open\n", command->action, command->page ? command->page : "(selected)");
+    fflush(stderr);
+    return;
+  }
+  if (!script_page_can_perform(page, command->action)) return;   // its button is greyed out too
+  script_page_perform(page, command->action);
+}
+static script_application_t *app_of_chrome(window_t *win) {
+  window_t *root = win ? get_root_window(win) : NULL;
+  for (script_application_t *app = applications; app; app = app->next)
+    if (app->chrome && (app->chrome == win || app->chrome == root || app->ribbon_win == win)) return app;
+  return NULL;
+}
+static result_t app_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  script_application_t *app = app_of_chrome(win);
+  if (msg == evClose && app && app_host_window(app)) return send_message(app_host_window(app), evClose, 0, NULL);
+  if (app && msg == evCommand && (HIWORD(wparam) == btnClicked || HIWORD(wparam) == kMenuBarNotificationItemClick ||
+                                  HIWORD(wparam) == kAcceleratorNotification)) {
+    app_run_command(app, LOWORD(wparam));
+    return true;
+  }
+  return win_ribbon(win, msg, wparam, lparam);
+}
+static result_t app_quick_access_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)lparam;
+  script_application_t *app = app_of_chrome(win);
+  if (!app || msg != evCommand || HIWORD(wparam) != btnClicked) return false;
+  app_run_command(app, LOWORD(wparam));
+  return true;
+}
+static bool app_open_ribbon(script_application_t *app, const char *title, char *error, size_t size) {
+  app->ribbon = form_library_ribbon(app->library);
+  if (!app->ribbon || !ribbon_allowed) { app->ribbon = NULL; return true; }
+  app->command_states = calloc((size_t)(app->ribbon->command_count ? app->ribbon->command_count : 1), sizeof(*app->command_states));
+  app->chrome = app->command_states ? create_ribbon_chrome(title, app_ribbon_proc, &app->ribbon->def,
+                                                           app->ribbon->def.quick_access ? app_quick_access_proc : NULL, 0) : NULL;
+  if (!app->chrome) { snprintf(error, size, "cannot create the application ribbon"); return false; }
+  app->ribbon_win = app_chrome_ribbon(app->chrome);
+  if (app->ribbon->accelerator_count)
+    app->accel = load_accelerators(app->ribbon->accelerators, app->ribbon->accelerator_count);
+  if (app->accel) send_message(app->ribbon_win, kMenuBarMessageSetAccelerators, 0, app->accel);
+  return true;
+}
+// The host window fills the workspace under the ribbon, and tells it which page shows.
+static void app_place_host(script_application_t *app) {
+  window_t *host = app_host_window(app);
+  if (!host || !app->chrome) return;
+  irect16_t workspace = R(0, MENUBAR_HEIGHT, 0, 0);
+  get_application_workspace(0, &workspace);
+  move_window(host, workspace.x, workspace.y);
+  if (workspace.w > 0 && workspace.h > 0) resize_window(host, workspace.w, workspace.h);
+  for (int i = 0; i < app->page_count; i++) script_page_on_render(app->pages[i], app_page_rendered, app);
+  // Windows a page opened while the application started follow the main window.
+  for (int i = 1; i < app->page_count; i++) {
+    window_t *win = script_page_window(app->pages[i]);
+    if (win && !win->parent) app_place_window(app, app->pages[i]);
+  }
+  app_show_page_tab(app);
+}
+window_t *script_application_menu_window(script_application_t *app) { return app ? app->ribbon_win : NULL; }
+accel_table_t *script_application_accelerators(script_application_t *app) { return app ? app->accel : NULL; }
+
 static int application_api_open(lua_State *L, const char *form) {
   char error[1024];
   script_page_t *page = app_hosted_page(application_context(L), form);
@@ -235,7 +402,9 @@ static script_application_t *app_open(const char *manifest, const char *data_dir
     }
   }
   for (int i = 0; i < app->database_count; i++) app->observers[i] = db_observe(app->databases[i], app_data_changed, app);
+  if (!headless && !app_open_ribbon(app, name, error, size)) goto failed;
   if (!headless && !app_open_form(app, form, error, size)) goto failed;
+  if (!headless) app_place_host(app);
   return app;
 failed:
   fprintf(stderr, "[application] %s: %s\n", manifest ? manifest : "?", error); fflush(stderr);
@@ -255,7 +424,14 @@ void script_application_close(script_application_t *app) {
   if (!app) return;
   for (int i = 0; i < app->database_count; i++) { db_unobserve(app->observers[i]); script_model_detach(app->databases[i]); }
   script_runtime_release(app->runtime, app->model);
+  // The host window messages its hosted pages while it is destroyed, so it
+  // goes first, while every page it hosts is still alive.
+  window_t *main = app->page_count ? script_page_window(app->pages[0]) : NULL;
+  if (main && is_window(main)) destroy_window(main);
   for (int i = app->page_count - 1; i >= 0; i--) script_page_close(app->pages[i]);
+  if (app->chrome && is_window(app->chrome)) destroy_window(app->chrome);
+  free_accelerators(app->accel);
+  free(app->command_states);
   script_runtime_close(app->runtime);
   for (int i = app->database_count - 1; i >= 0; i--) { unregister_database(app->databases[i]->name); destroy_database(app->databases[i]); }
   form_library_free(app->library);

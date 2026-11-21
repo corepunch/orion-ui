@@ -2,14 +2,133 @@
   <include file="schema.orion" />
   <application runtime-api="1" name="lodge" form="main" model="model" />
   <display-groups><DisplayGroup name="bookings" source="lodge.reservations" /><DisplayGroup name="housekeeping_rooms" source="lodge.rooms" /><DisplayGroup name="guest_list" source="lodge.guests" /></display-groups>
+  <!-- The command surface. Home holds the desk's everyday commands and acts on
+       the page that shows (Today or Reservations); each page's own commands are
+       its contextual tab. Pages are switched only in the sidebar. -->
+  <ribbon>
+    <QuickAccessToolbar>
+      <Button action="new_booking" page="reception" icon="lodge-new-reservation" text="New reservation" />
+      <Button target="orion.application" action="open" argument="walk_in" icon="lodge-walk-in" text="Walk-in guest" />
+      <Button target="orion.application" action="open" argument="assistant" icon="lodge-assistant" text="Assistant" />
+    </QuickAccessToolbar>
+    <Tab label="Home">
+      <Group label="New">
+        <Button action="new_booking" page="reception" icon="lodge-new-reservation" text="New reservation" size="large" shortcut="Ctrl+N" tooltip="Start a reservation in the editor" />
+        <Button target="orion.application" action="open" argument="walk_in" icon="lodge-walk-in" text="Walk-in guest" size="large" shortcut="Ctrl+Shift+N" tooltip="Book, check in and take payment for a guest without a booking" />
+        <Button target="orion.application" action="open" argument="group_reservation" icon="lodge-group" text="Group booking" tooltip="Several rooms under one group" />
+      </Group>
+      <Group label="Arrive and leave">
+        <Button action="check_in" icon="lodge-check-in" text="Check in" size="large" shortcut="Ctrl+I" tooltip="Check in the selected arrival or reservation" />
+        <Button action="check_out" icon="lodge-check-out" text="Check out" size="large" shortcut="Ctrl+O" tooltip="Check out the selected departure or reservation; the balance must be settled" />
+        <Button action="extend" icon="lodge-extend" text="Extend stay" shortcut="Ctrl+E" tooltip="One more night for the selected stay" />
+        <Button action="no_show" icon="lodge-no-show" text="No-show" tooltip="The selected arrival did not come: cancel it and free the room" />
+      </Group>
+      <Group label="Money">
+        <Button action="payment" icon="lodge-payment" text="Payment" size="large" shortcut="Ctrl+M" tooltip="Record a payment or refund for the selected stay" />
+        <Button action="invoice" icon="lodge-bill" text="Guest bill" shortcut="Ctrl+B" tooltip="Print the bill of the selected stay" />
+      </Group>
+      <Group label="Documents">
+        <Button action="registration" icon="lodge-registration" text="Registration form" tooltip="The form the guest signs on arrival" />
+        <Button action="confirmation" icon="lodge-confirmation" text="Confirmation" tooltip="Booking confirmation to send to the guest" />
+      </Group>
+      <Group label="Help">
+        <Button target="orion.application" action="open" argument="assistant" icon="lodge-assistant" text="Assistant" size="large" shortcut="Ctrl+K" tooltip="Ask in your own words: check in Morgan, free rooms friday, who owes" />
+      </Group>
+    </Tab>
+    <Tab label="Today" context="today">
+      <Group label="Selected guest">
+        <Button action="settle" icon="lodge-payment" text="Settle balance" size="large" tooltip="Take the balance of the selected departure" />
+        <Button action="open_reservation" icon="lodge-open" text="Open reservation" tooltip="Show the selected stay on the Reservations page" />
+      </Group>
+      <Group label="Print">
+        <Button action="arrivals_list" icon="lodge-print" text="Front desk list" size="large" tooltip="Today's arrivals, departures and guests in house on paper" />
+      </Group>
+      <Group label="View">
+        <Button action="refresh" icon="lodge-refresh" text="Refresh" size="large" shortcut="F5" />
+      </Group>
+    </Tab>
+    <Tab label="Calendar" context="availability">
+      <Group label="Dates">
+        <Button action="previous_week" icon="lodge-previous" text="Previous week" shortcut="Alt+Left" />
+        <Button action="go_today" icon="lodge-today" text="Today" size="large" />
+        <Button action="next_week" icon="lodge-next" text="Next week" shortcut="Alt+Right" />
+      </Group>
+      <Group label="Book">
+        <Button action="book" icon="lodge-new-reservation" text="Book selected room" size="large" tooltip="A reservation for the selected room from its first free night" />
+        <Button action="search" icon="lodge-find" text="Show free rooms" size="large" tooltip="Rooms free for the stay entered below, cheapest first" />
+      </Group>
+    </Tab>
+    <Tab label="Reservation" context="reception">
+      <Group label="Editor">
+        <Button action="reserve" icon="lodge-save" text="Save reservation" size="large" shortcut="Ctrl+S" />
+        <Button action="edit" icon="lodge-edit" text="Edit selected" tooltip="Load the selected reservation into the editor" />
+        <Button action="room_rate" icon="lodge-rate" text="Use room rate" tooltip="Copy the room's nightly rate into the editor" />
+        <Button action="find" icon="lodge-find" text="Find next" shortcut="F3" tooltip="The next reservation whose guest or room matches the search box" />
+      </Group>
+      <Group label="Stay">
+        <Button action="shorten" icon="lodge-shorten" text="Shorten stay" tooltip="One night less for the selected stay" />
+        <Button action="night_prices" icon="lodge-prices" text="Nightly prices" tooltip="A different price for single nights" />
+      </Group>
+      <Group label="Cancel">
+        <Button action="preview_cancel" icon="lodge-cancel" text="Preview cancellation" size="large" tooltip="See the guest, dates and payments held before cancelling" />
+        <Button action="confirm_cancel" icon="lodge-confirm" text="Confirm cancellation" size="large" />
+      </Group>
+      <Group label="Group">
+        <Button action="group_statement" icon="lodge-statement" text="Group statement" tooltip="Every reservation of the selected group, with balances" />
+        <Button action="preview_group_settlement" icon="lodge-group-settle" text="Preview group settlement" />
+        <Button action="confirm_group_settlement" icon="lodge-confirm" text="Confirm group settlement" />
+        <Button action="preview_group_cancel" icon="lodge-group-cancel" text="Preview group cancellation" />
+        <Button action="confirm_group_cancel" icon="lodge-confirm" text="Confirm group cancellation" />
+      </Group>
+    </Tab>
+    <Tab label="Housekeeping" context="rooms">
+      <Group label="Cleaning status">
+        <Button action="mark_clean" icon="lodge-clean" text="Mark clean" size="large" tooltip="The selected room is clean and ready" />
+        <Button action="mark_dirty" icon="lodge-dirty" text="Mark dirty" size="large" />
+        <Button action="mark_inspection" icon="lodge-inspect" text="Needs inspection" size="large" />
+      </Group>
+      <Group label="Print">
+        <Button action="cleaning_list" icon="lodge-cleaning-list" text="Cleaning list" size="large" tooltip="Today's housekeeping list with what to do in each room" />
+      </Group>
+      <Group label="View">
+        <Button action="refresh" icon="lodge-refresh" text="Refresh rooms" size="large" />
+      </Group>
+    </Tab>
+    <Tab label="Reports" context="reports">
+      <Group label="Period">
+        <Button action="this_month" icon="lodge-this-month" text="This month" size="large" />
+        <Button action="last_month" icon="lodge-last-month" text="Last month" size="large" />
+      </Group>
+      <Group label="Export">
+        <Button action="export" icon="lodge-export" text="Export report" size="large" tooltip="The figures as a page to print or file" />
+        <Button action="export_csv" icon="lodge-csv" text="Export data as CSV" size="large" tooltip="Reservations, guests and payments for spreadsheets and accounting" />
+      </Group>
+    </Tab>
+    <Tab label="Night audit" context="day_close">
+      <Group label="Close">
+        <Button action="close_day" icon="lodge-close-day" text="Close today" size="large" tooltip="Locks today's reservations and payments once every red item is resolved" />
+        <Button action="export_overdue" icon="lodge-overdue" text="Overdue stays" size="large" tooltip="Print the stays that block closing" />
+      </Group>
+    </Tab>
+    <Tab label="Setup" context="hotel_setup">
+      <Group label="Hotel">
+        <Button action="save_profile" icon="lodge-save" text="Save hotel details" size="large" />
+        <Button action="sample" icon="lodge-sample" text="Add sample hotel" size="large" tooltip="Nine rooms and a few guests around today, to try Lodge" />
+      </Group>
+      <Group label="Data">
+        <Button action="export_data" icon="lodge-data" text="Export all data" size="large" tooltip="Reservations, guests and payments as CSV files" />
+      </Group>
+    </Tab>
+  </ribbon>
   <forms>
     <!-- One window, as Ledger: the sections in a sidebar, each a page with its
-         own controller. Payments, nightly prices and groups open windows. -->
+         own controller. Payments, nightly prices, groups, walk-ins and the
+         assistant open windows. -->
     <form name="main" title="Orion Lodge" width="1240" height="800" role="host" active-page="today" spacing="0">
       <ActivityBar name="sections" labels="right">
         <Page form="today" />
-        <Page form="reception" />
         <Page form="availability" />
+        <Page form="reception" />
         <Page form="rooms" />
         <Page form="guests" />
         <Page form="reports" />
@@ -35,7 +154,12 @@
               <Label text="Needs attention" font="system" color="text-secondary" />
               <Space /><Label name="attention_count" color="text-secondary" />
             </StackView>
-            <TableView name="attention" source="lodge_views.attention" cell-style="stacked" column-titles="false" flags="notitle,nofill,vscroll,flexspace">
+            <TableView name="attention" source="lodge_views.attention" cell-style="stacked" column-titles="false" action="attend" activate="click"
+                       placeholder="Nothing needs attention." flags="notitle,nofill,vscroll,flexspace">
+              <RowIcon field="kind" value="error" icon="lodge-overdue" color="error" />
+              <RowIcon field="kind" value="warning" icon="lodge-overdue" color="warning" />
+              <RowIcon field="kind" value="tip" icon="lodge-tip" color="info" />
+              <RowIcon icon="lodge-info" color="secondary" />
               <Column field="title" title="Task" width="0" /><Column field="detail" title="Detail" />
             </TableView>
           </Card>
@@ -44,10 +168,15 @@
               <Label text="In house" font="system" color="text-secondary" />
               <Space /><Label name="in_house_count" color="text-secondary" />
             </StackView>
-            <TableView name="in_house" source="lodge_views.in_house" column-titles="false" action="payment" flags="notitle,nofill,vscroll,flexspace">
-              <Column field="room" title="Room" width="70" /><Column field="guest" title="Guest" width="0" />
+            <TableView name="in_house" source="lodge_views.in_house" column-titles="false" action="payment" zeros="blank"
+                       placeholder="No guest is checked in." flags="notitle,nofill,vscroll,flexspace">
+              <Column field="room" title="Room" width="60" /><Column field="guest" title="Guest" width="0" />
               <Column field="departure" title="Departure" width="100" /><Column field="balance" title="Balance" width="90" />
             </TableView>
+            <StackView orientation="horizontal" spacing="6">
+              <Button name="payment" text="Payment" action="payment" tooltip="Record a payment for the selected guest (double-click a row)" />
+              <Button name="extend" text="Extend stay" action="extend" tooltip="One more night for the selected guest" />
+            </StackView>
           </Card>
         </StackView>
         <StackView name="today_right" spacing="12" flags="flexspace">
@@ -56,13 +185,18 @@
               <Label text="Arrivals" font="system" color="text-secondary" />
               <Space /><Label name="arrivals_count" color="text-secondary" />
             </StackView>
-            <TableView name="arrivals" source="lodge_views.arrivals" column-titles="false" action="check_in" flags="notitle,nofill,vscroll,flexspace">
-              <Column field="room" title="Room" width="70" /><Column field="guest" title="Guest" width="0" />
-              <Column field="detail" title="Status" width="140" color="secondary" />
+            <TableView name="arrivals" source="lodge_views.arrivals" column-titles="false" action="check_in"
+                       placeholder="No more arrivals today." flags="notitle,nofill,vscroll,flexspace">
+              <RowIcon field="state" value="ready" icon="lodge-confirm" color="success" />
+              <RowIcon field="state" value="overdue" icon="lodge-overdue" color="error" />
+              <RowIcon icon="lodge-dirty" color="warning" />
+              <Column field="room" title="Room" width="60" /><Column field="guest" title="Guest" width="0" />
+              <Column field="detail" title="Status" width="140" style="badge" />
             </TableView>
             <StackView orientation="horizontal" spacing="6">
-              <Button name="check_in" text="Check in" action="check_in" tooltip="Check in the selected arrival (double-click a row)" />
+              <Button name="check_in" text="Check in" action="check_in" flags="BUTTON_DEFAULT" tooltip="Check in the selected arrival (double-click a row)" />
               <Button name="registration" text="Registration form" action="registration" tooltip="Print the guest registration form of the selected arrival" />
+              <Button name="no_show" text="No-show" action="no_show" tooltip="The selected guest did not come: cancel and free the room" />
             </StackView>
           </Card>
           <Card name="departures_card" spacing="4" flags="flexspace">
@@ -70,9 +204,13 @@
               <Label text="Departures" font="system" color="text-secondary" />
               <Space /><Label name="departures_count" color="text-secondary" />
             </StackView>
-            <TableView name="departures" source="lodge_views.departures" column-titles="false" action="check_out" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
-              <Column field="room" title="Room" width="70" /><Column field="guest" title="Guest" width="0" />
-              <Column field="detail" title="Status" width="130" color="secondary" /><Column field="balance" title="Balance" width="90" />
+            <TableView name="departures" source="lodge_views.departures" column-titles="false" action="check_out" zeros="blank"
+                       placeholder="No more departures today." flags="notitle,nofill,vscroll,flexspace">
+              <RowIcon field="state" value="settled" icon="lodge-confirm" color="success" />
+              <RowIcon field="state" value="overdue" icon="lodge-overdue" color="error" />
+              <RowIcon icon="lodge-payment" color="warning" />
+              <Column field="room" title="Room" width="60" /><Column field="guest" title="Guest" width="0" />
+              <Column field="detail" title="Status" width="130" style="badge" /><Column field="balance" title="Balance" width="90" />
             </TableView>
             <StackView orientation="horizontal" spacing="6">
               <Button name="settle" text="Settle balance" action="settle" tooltip="Record a payment for the selected departure" />
@@ -82,103 +220,153 @@
           </Card>
         </StackView>
       </StackView>
-      <Label name="notice" /><Label name="error" />
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
     </form>
 
-    <!-- Free rooms for a stay, cheapest first; reserve one for a guest here. -->
-    <form name="availability" label="Availability" title="Find a room" icon="lodge-nav-availability" checked-icon="lodge-nav-availability-fill"
-          tooltip="Free rooms for a stay" role="page" controller="availability" focus="arrival"
+    <!-- The room calendar: who sleeps where over two weeks; below it, the
+         rooms free for a stay, cheapest first, to reserve one. -->
+    <form name="availability" label="Calendar" title="Room calendar" icon="lodge-nav-calendar" checked-icon="lodge-nav-calendar-fill"
+          tooltip="Rooms by night, and free rooms for a stay" role="page" controller="availability" focus="calendar"
           width="900" height="600" padding="14" spacing="8">
-      <Label text="Find a room" font="title" />
-      <GridView name="stay_fields" spacing="4">
-        <Column width="auto"><Label text="Arrival:" /><Label text="Departure:" /><Label text="Guests:" /></Column>
-        <Column><TextBox name="arrival" type="date" /><TextBox name="departure" type="date" /><TextBox name="persons" type="integer" /></Column>
-      </GridView>
+      <StackView orientation="horizontal" spacing="8">
+        <Label text="Room calendar" font="title" />
+        <Space />
+        <Label text="From:" v-align="center" /><TextBox name="start" type="date" width="120" />
+        <Button name="show_dates" text="Show" action="show_dates" />
+      </StackView>
+      <Label name="range" color="text-secondary" />
+      <TableView name="calendar" source="lodge_views.calendar" action="book" frame="true" flags="flexspace,vscroll"
+                 placeholder="Add rooms on the Rooms page to see the calendar.">
+        <Column field="name" title="Room" width="64" />
+        <Column field="d1" title="1" width="0" /><Column field="d2" title="2" width="0" /><Column field="d3" title="3" width="0" />
+        <Column field="d4" title="4" width="0" /><Column field="d5" title="5" width="0" /><Column field="d6" title="6" width="0" />
+        <Column field="d7" title="7" width="0" /><Column field="d8" title="8" width="0" /><Column field="d9" title="9" width="0" />
+        <Column field="d10" title="10" width="0" /><Column field="d11" title="11" width="0" /><Column field="d12" title="12" width="0" />
+        <Column field="d13" title="13" width="0" /><Column field="d14" title="14" width="0" />
+      </TableView>
+      <Label text="• in house · › booked · × out of service. Double-click a room to book its first free night." color="text-secondary" />
+      <Label text="Find a free room" font="heading" />
+      <StackView orientation="horizontal" spacing="24">
+        <GridView name="stay_fields" spacing="4" flags="WINDOW_FLEXSPACE">
+          <Column width="auto"><Label text="Arrival:" /><Label text="Departure:" /><Label text="Guests:" /></Column>
+          <Column><TextBox name="arrival" type="date" /><TextBox name="departure" type="date" /><TextBox name="persons" type="integer" /></Column>
+        </GridView>
+        <GridView name="booking_fields" spacing="4" flags="WINDOW_FLEXSPACE">
+          <Column width="auto"><Label text="Guest:" /><Label text="Or new guest:" /><Label text="Booked via:" /></Column>
+          <Column>
+            <ComboBox name="guest" source="lodge.guests" display="name" value="id" />
+            <TextBox name="new_guest" placeholder="Name of a guest not on file yet" />
+            <ComboBox name="source" source="lodge.booking_sources" display="name" value="id" />
+          </Column>
+        </GridView>
+      </StackView>
       <StackView orientation="horizontal" spacing="6">
         <Button name="search" text="Show free rooms" action="search" flags="BUTTON_DEFAULT" />
-        <Label name="summary" v-align="center" />
+        <Button name="reserve" text="Reserve selected room" action="reserve" />
+        <Label name="summary" v-align="center" color="text-secondary" />
       </StackView>
-      <TableView name="free" source="lodge_views.free_rooms" action="reserve" flags="flexspace,vscroll" frame="true">
+      <TableView name="free" source="lodge_views.free_rooms" action="reserve" height="130" flags="vscroll" frame="true"
+                 placeholder="Enter the stay and show free rooms.">
         <Column field="name" title="Room" width="80" /><Column field="category" title="Category" width="0" min-width="140" />
         <Column field="capacity" title="Capacity" width="80" /><Column field="cleaning" title="Cleaning status" width="140" />
         <Column field="rate" title="Nightly rate" width="100" /><Column field="total" title="Stay total" width="100" />
       </TableView>
-      <GridView name="booking_fields" spacing="4">
-        <Column width="auto"><Label text="Guest:" /><Label text="Booked via:" /></Column>
-        <Column>
-          <ComboBox name="guest" source="lodge.guests" display="name" value="id" />
-          <ComboBox name="source" source="lodge.booking_sources" display="name" value="id" />
-        </Column>
-      </GridView>
-      <Button name="reserve" text="Reserve selected room" action="reserve" />
-      <Label name="notice" /><Label name="error" />
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
     </form>
-    <form name="reception" label="Reservations" title="Reservations" icon="lodge-nav-reservations" checked-icon="lodge-nav-reservations-fill" tooltip="Reservations and payments" role="page" controller="reception" focus="bookings" width="1000" height="700" spacing="8" padding="12">
+
+    <form name="reception" label="Reservations" title="Reservations" icon="lodge-nav-reservations" checked-icon="lodge-nav-reservations-fill" tooltip="Reservations and payments" role="page" controller="reception" focus="bookings" width="1000" height="700" spacing="8" padding="14">
       <StackView name="heading_row" orientation="horizontal" spacing="6">
         <Label name="editor" font="title" />
         <Space />
         <Label name="currency" color="text-secondary" v-align="center" />
-        <Button name="group_reservation" text="Group reservation" target="orion.application" action="open" argument="group_reservation" />
       </StackView>
       <StackView name="booking_fields" orientation="horizontal" spacing="24">
         <GridView name="stay_fields" spacing="4" flags="WINDOW_FLEXSPACE">
         <Column width="auto">
-          <Label text="Room:" /><Label text="Guest:" /><Label text="Arrival:" /><Label text="Departure:" /><Label text="Guests:" /><Label text="Booked via:" />
+          <Label text="Room:" /><Label text="Guest:" /><Label text="Or new guest:" /><Label text="Arrival:" /><Label text="Departure:" /><Label text="Guests:" />
         </Column>
         <Column>
           <ComboBox name="room" source="lodge.rooms" display="name" value="id" />
           <ComboBox name="guest" source="lodge.guests" display="name" value="id" />
+          <TextBox name="new_guest" placeholder="Name of a guest not on file yet" />
           <TextBox name="arrival" type="date" /><TextBox name="departure" type="date" /><TextBox name="persons" type="integer" />
-          <ComboBox name="source" source="lodge.booking_sources" display="name" value="id" />
         </Column>
         </GridView>
         <GridView name="payment_fields" spacing="4" flags="WINDOW_FLEXSPACE">
         <Column width="auto">
-          <Label text="Nightly rate:" /><Label text="Extra charges:" /><Label text="Paid to date:" /><Label text="Notes:" />
+          <Label text="Nightly rate:" /><Label text="Extra charges:" /><Label text="Booked via:" /><Label text="Paid to date:" /><Label text="Notes:" />
         </Column>
         <Column>
           <TextBox name="rate" type="number" decimals="2" /><TextBox name="extras" type="number" decimals="2" />
+          <ComboBox name="source" source="lodge.booking_sources" display="name" value="id" />
           <Label name="paid" /><TextBox name="notes" />
-          <Button name="room_rate" text="Use room rate" action="room_rate" />
+        </Column>
+        <Column width="auto">
+          <Button name="room_rate" text="Use room rate" action="room_rate" /><Space /><Space /><Space /><Space />
         </Column>
         </GridView>
       </StackView>
       <StackView name="booking_actions" orientation="horizontal" spacing="6">
         <Button name="reserve" text="Save reservation" action="reserve" flags="BUTTON_DEFAULT" />
-        <Button name="new_booking" text="New reservation" action="new_booking" />
-        <Label text="New reservation discards unsaved editor changes." />
-        <Space />
-        <TextBox name="search" placeholder="Find a guest or room" />
+        <Button name="new_booking" text="New reservation" action="new_booking" tooltip="Clears the editor; unsaved changes are discarded" />
+        <Label text="Find:" v-align="center" />
+        <TextBox name="search" placeholder="Guest, room, phone or reservation number" flags="WINDOW_FLEXSPACE" />
         <Button name="find" text="Find" action="find" />
       </StackView>
-      <TableView name="bookings" source="bookings.objects" action="edit" zeros="blank" flags="flexspace,vscroll" frame="true">
+      <TableView name="bookings" source="bookings.objects" action="edit" zeros="blank" flags="flexspace,vscroll" frame="true"
+                 placeholder="No reservations yet. Fill in the editor above and save.">
+        <RowIcon field="status" value="checked_in" icon="lodge-check-in" color="success" />
+        <RowIcon field="status" value="reserved" icon="lodge-today" color="info" />
+        <RowIcon field="status" value="cancelled" icon="lodge-cancel" color="disabled" />
+        <RowIcon icon="lodge-check-out" color="secondary" />
         <Column field="room.name" title="Room" width="70" /><Column field="guest.name" title="Guest" width="0" min-width="150" />
         <Column field="arrival" title="Arrival" width="100" /><Column field="departure" title="Departure" width="100" />
-        <Column field="status_label" title="Status" width="110" /><Column field="total" title="Total" width="90" />
+        <Column field="status_label" title="Status" width="110" style="badge" /><Column field="total" title="Total" width="90" />
         <Column field="paid" title="Paid" width="90" /><Column field="balance" title="Balance" width="90" />
       </TableView>
       <StackView name="selection_actions" orientation="horizontal" spacing="6">
         <Button name="edit" text="Edit selected" action="edit" /><Button name="check_in" text="Check in" action="check_in" />
-        <Button name="check_out" text="Check out" action="check_out" /><Button name="preview_cancel" text="Preview cancellation" action="preview_cancel" />
-        <Button name="payment" text="Payment or refund" action="payment" />
-        <Button name="confirmation" text="Export confirmation" action="confirmation" /><Button name="registration" text="Registration form" action="registration" />
-        <Button name="invoice" text="Guest bill" action="invoice" /><Button name="save_data" text="Retry saving" action="save_data" />
+        <Button name="check_out" text="Check out" action="check_out" /><Button name="payment" text="Payment or refund" action="payment" />
+        <Space /><Label name="summary" color="text-secondary" v-align="center" />
       </StackView>
-      <StackView orientation="horizontal" spacing="6"><Label name="cancel_notice"/><Button name="confirm_cancel" text="Confirm cancellation" action="confirm_cancel"/></StackView>
-      <StackView orientation="horizontal" spacing="6"><Button name="preview_group_cancel" text="Preview group cancellation" action="preview_group_cancel"/><Button name="confirm_group_cancel" text="Confirm group cancellation" action="confirm_group_cancel"/></StackView><Label name="group_cancel_notice"/>
-      <StackView orientation="horizontal" spacing="6"><Button name="preview_group_settlement" text="Preview group settlement" action="preview_group_settlement"/><Button name="confirm_group_settlement" text="Confirm group settlement" action="confirm_group_settlement"/></StackView><Label name="settlement_notice"/>
-      <StackView name="pricing_actions" orientation="horizontal" spacing="6"><Button name="night_prices" text="Nightly prices" action="night_prices" /><Button name="group_statement" text="Export group statement" action="group_statement" /></StackView>
-      <Label name="summary" /><Label name="notice" /><Label name="error" />
+      <Label name="cancel_notice" color="warning" flags="LABEL_COLLAPSE_EMPTY" />
+      <Label name="group_cancel_notice" color="warning" flags="LABEL_COLLAPSE_EMPTY" />
+      <Label name="settlement_notice" color="info" flags="LABEL_COLLAPSE_EMPTY" />
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
     </form>
-    <form name="hotel_setup" label="Setup" title="Hotel setup" icon="lodge-nav-setup" checked-icon="lodge-nav-setup-fill" tooltip="Country, currency and catalogs" role="page" controller="hotel_setup" width="900" height="600" padding="14" spacing="8">
-      <Label name="current" font="title" />
-      <Label text="Existing amounts will be interpreted in the selected currency without conversion." />
-      <Label text="This choice cannot be changed after it is saved." />
-      <StackView orientation="horizontal" spacing="6">
-        <Button name="germany" text="Set Germany and EUR" action="germany" />
-        <Button name="russia" text="Set Russia and RUB" action="russia" />
+    <form name="hotel_setup" label="Setup" title="Hotel setup" icon="lodge-nav-setup" checked-icon="lodge-nav-setup-fill" tooltip="The hotel, country, currency and catalogs" role="page" controller="hotel_setup" width="900" height="600" padding="14" spacing="8">
+      <Label text="Hotel setup" font="title" />
+      <StackView orientation="horizontal" spacing="24">
+        <StackView spacing="6" flags="flexspace">
+          <Label text="The hotel" font="heading" />
+          <GridView spacing="4">
+            <Column width="auto"><Label text="Hotel name:" /><Label text="Address:" /><Label text="Phone:" /><Label text="Email:" /><Label text="Check-in from:" /><Label text="Check-out until:" /></Column>
+            <Column>
+              <TextBox name="hotel_name" /><TextBox name="hotel_address" /><TextBox name="hotel_phone" /><TextBox name="hotel_email" />
+              <TextBox name="check_in_time" placeholder="14:00" /><TextBox name="check_out_time" placeholder="11:00" />
+            </Column>
+          </GridView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="save_profile" text="Save hotel details" action="save_profile" flags="BUTTON_DEFAULT" />
+            <Label text="Shown on bills, confirmations and registration forms." color="text-secondary" v-align="center" />
+          </StackView>
+        </StackView>
+        <StackView spacing="6" flags="flexspace">
+          <Label text="Country and currency" font="heading" />
+          <Label name="current" />
+          <Label text="Existing amounts will be interpreted in the selected currency without conversion. This choice cannot be changed after it is saved." color="text-secondary" />
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="germany" text="Set Germany and EUR" action="germany" />
+            <Button name="russia" text="Set Russia and RUB" action="russia" />
+          </StackView>
+          <Label text="Try Lodge" font="heading" />
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="sample" text="Add sample hotel" action="sample" />
+            <Button name="export_data" text="Export all data" action="export_data" />
+          </StackView>
+        </StackView>
       </StackView>
-      <Label name="notice" /><Label name="error" />
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
       <StackView orientation="horizontal" spacing="12" flags="flexspace">
         <StackView spacing="6" flags="flexspace">
           <Label text="Booking sources" font="heading" />
@@ -200,6 +388,168 @@
         </StackView>
       </StackView>
     </form>
+    <!-- Rooms: the catalog, housekeeping status and out-of-service dates. -->
+    <form name="rooms" label="Rooms" title="Rooms" icon="lodge-nav-rooms" checked-icon="lodge-nav-rooms-fill" tooltip="Rooms, housekeeping and maintenance"
+          role="page" controller="housekeeping" focus="rooms" width="900" height="600" padding="14" spacing="8">
+      <Label text="Rooms and housekeeping" font="title" />
+      <TableView name="rooms" source="housekeeping_rooms.objects" form="room" flags="flexspace,vscroll" frame="true"
+                 placeholder="No rooms yet. Add the hotel's rooms, or add the sample hotel in Setup.">
+        <RowIcon field="cleaning_state" value="clean" icon="lodge-clean" color="success" />
+        <RowIcon field="cleaning_state" value="dirty" icon="lodge-dirty" color="warning" />
+        <RowIcon icon="lodge-inspect" color="info" />
+        <Column field="name" title="Room" width="80" /><Column field="category" title="Category" width="0" min-width="120" />
+        <Column field="capacity" title="Capacity" width="80" /><Column field="rate" title="Nightly rate" width="100" />
+        <Column field="cleaning_label" title="Cleaning status" width="150" style="badge" /><Column field="occupancy_label" title="Occupancy" width="160" />
+      </TableView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Add room" target="rooms" action="insert" /><Button text="Edit" target="rooms" action="edit" /><Button text="Delete" target="rooms" action="delete" />
+        <Separator />
+        <Button name="mark_clean" text="Mark clean" action="mark_clean" /><Button name="mark_dirty" text="Mark dirty" action="mark_dirty" />
+        <Button name="mark_inspection" text="Needs inspection" action="mark_inspection" />
+        <Space />
+        <Button name="cleaning_list" text="Cleaning list" action="cleaning_list" tooltip="Print today's housekeeping list" />
+        <Button name="refresh" text="Refresh rooms" action="refresh" />
+      </StackView>
+      <Label text="Out of service" font="heading" />
+      <TableView name="blocks" source="lodge.room_blocks" form="room_block" height="140" flags="vscroll" frame="true"
+                 placeholder="Every room is in service.">
+        <Column field="room.name" title="Room" width="80" /><Column field="blocked_from" title="From" width="110" />
+        <Column field="blocked_until" title="Until" width="110" /><Column field="reason" title="Reason" width="0" />
+      </TableView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Take a room out of service" target="blocks" action="insert" /><Button text="Edit" target="blocks" action="edit" /><Button text="Return to service" target="blocks" action="delete" />
+      </StackView>
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
+    </form>
+    <!-- Guests and what a registration form needs: the guest's identity. -->
+    <form name="guests" label="Guests" title="Guests" icon="lodge-nav-guests" checked-icon="lodge-nav-guests-fill" tooltip="Guest records"
+          role="page" focus="records" width="900" height="600" padding="14" spacing="8">
+      <Label text="Guests" font="title" />
+      <TableView name="records" source="guest_list.objects" form="guest" flags="flexspace,vscroll" frame="true"
+                 placeholder="No guests yet. They are added here, or by typing a new guest's name when booking.">
+        <Column field="name" title="Name" width="0" min-width="160" /><Column field="phone" title="Phone" width="130" />
+        <Column field="email" title="Email" width="190" /><Column field="nationality" title="Nationality" width="110" />
+        <Column field="stays" title="Stays" width="60" />
+      </TableView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Add guest" target="records" action="insert" />
+        <Button text="Edit" target="records" action="edit" />
+        <Button text="Delete" target="records" action="delete" />
+      </StackView>
+      <Card spacing="4">
+        <GridView spacing="4"><Column width="auto">
+          <Label text="Address:" /><Label text="Document:" /><Label text="Notes:" />
+        </Column><Column>
+          <Label field="guest_list.selection.address" /><Label field="guest_list.selection.document" /><Label field="guest_list.selection.notes" />
+        </Column></GridView>
+      </Card>
+    </form>
+    <!-- Reports: the figures of a period, and its printout. -->
+    <form name="reports" label="Reports" title="Reports" icon="lodge-nav-reports" checked-icon="lodge-nav-reports-fill" tooltip="Occupancy, revenue and payments"
+          role="page" controller="reports" focus="from" width="900" height="600" padding="14" spacing="8">
+      <Label text="Period report" font="title" />
+      <StackView orientation="horizontal" spacing="6">
+        <Label text="From:" v-align="center" /><TextBox name="from" type="date" />
+        <Label text="Until:" v-align="center" /><TextBox name="to" type="date" />
+        <Button name="run" text="Show" action="run" flags="BUTTON_DEFAULT" />
+        <Space />
+        <Label name="period" color="text-secondary" v-align="center" />
+      </StackView>
+      <TableView name="figures" source="lodge_views.report" group-field="section" flags="flexspace,vscroll" frame="true">
+        <Column field="label" title="Figure" width="0" /><Column field="value" title="Value" width="160" />
+      </TableView>
+      <Label text="Until is exclusive, as a departure date: a month runs from its first day until the first day of the next." color="text-secondary" />
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
+    </form>
+    <!-- Night audit: what the day still needs, today's money, then the close. -->
+    <form name="day_close" label="Night audit" title="Night audit" icon="lodge-nav-close" checked-icon="lodge-nav-close-fill" tooltip="Night audit: check and close the day" role="page" controller="day_close" focus="checklist" width="900" height="600" padding="14" spacing="8">
+      <StackView orientation="horizontal" spacing="8">
+        <Label name="day" font="title" />
+        <Space />
+        <Button name="export_overdue" text="Overdue stays" action="export_overdue" />
+        <Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" />
+      </StackView>
+      <Label name="status" color="text-secondary" />
+      <TableView name="checklist" source="lodge_views.audit" cell-style="stacked" column-titles="false" frame="true" fit-rows="true" flags="notitle,nofill">
+        <RowIcon field="kind" value="ok" icon="lodge-confirm" color="success" />
+        <RowIcon field="kind" value="error" icon="lodge-cancel" color="error" />
+        <RowIcon field="kind" value="warning" icon="lodge-overdue" color="warning" />
+        <RowIcon field="kind" value="money" icon="lodge-payment" color="secondary" />
+        <RowIcon icon="lodge-info" color="secondary" />
+        <Column field="title" title="Check" width="0" /><Column field="detail" title="Result" />
+      </TableView>
+      <Label text="Closing locks today's reservations and payments until tomorrow." color="text-secondary" />
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
+      <Label text="Previous day closes" font="heading" />
+      <TableView name="day_history" source="lodge.day_closes" flags="flexspace,vscroll" frame="true" placeholder="No day has been closed yet.">
+        <Column field="day" title="Day" width="110" /><Column field="actor" title="Closed by" width="0" min-width="140" />
+        <Column field="net_display" title="Net payments" width="120" /><Column field="outstanding_display" title="Outstanding" width="120" />
+        <Column field="cancelled_count_display" title="Cancelled with payments" width="180" /><Column field="cancelled_paid_display" title="Paid on cancelled" width="150" />
+      </TableView>
+    </form>
+    <!-- A guest at the desk without a booking, in one window. -->
+    <form name="walk_in" controller="walk_in" title="Walk-in guest" width="620" height="560" padding="14" spacing="8" focus="name">
+      <Label text="Walk-in guest" font="title" />
+      <GridView spacing="4">
+        <Column width="auto"><Label text="Guest name:" /><Label text="Phone:" /><Label text="Nights:" /><Label text="Guests:" /></Column>
+        <Column><TextBox name="name" placeholder="As on the ID" /><TextBox name="phone" /><TextBox name="nights" type="integer" /><TextBox name="persons" type="integer" /></Column>
+      </GridView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="search" text="Show free rooms" action="search" />
+        <Label name="hint" color="text-secondary" v-align="center" />
+      </StackView>
+      <TableView name="free" source="lodge_views.free_rooms" action="check_in" frame="true" flags="flexspace,vscroll"
+                 placeholder="No room is free from tonight.">
+        <Column field="name" title="Room" width="70" /><Column field="category" title="Category" width="0" />
+        <Column field="capacity" title="Capacity" width="70" /><Column field="cleaning" title="Cleaning status" width="130" />
+        <Column field="rate" title="Nightly rate" width="90" /><Column field="total" title="Stay total" width="90" />
+      </TableView>
+      <GridView spacing="4">
+        <Column width="auto"><Label text="Pays now:" /><Label text="Method:" /><Label text="Booked via:" /></Column>
+        <Column>
+          <TextBox name="pay" type="number" decimals="2" />
+          <ComboBox name="method" source="lodge.payment_methods" display="name" value="id" />
+          <ComboBox name="source" source="lodge.booking_sources" display="name" value="id" />
+        </Column>
+      </GridView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="check_in" text="Check in now" action="check_in" flags="BUTTON_DEFAULT" />
+        <Button text="Close" />
+      </StackView>
+      <Label name="notice" color="success" flags="LABEL_COLLAPSE_EMPTY" /><Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
+    </form>
+    <!-- The assistant: a request in the user's own words, and rows that settle it. -->
+    <form name="assistant" controller="assistant" title="Lodge assistant" width="460" height="620" padding="14" spacing="8"
+          focus="ask" placement="right" single="true">
+      <Label text="What would you like to do?" font="heading" />
+      <StackView orientation="horizontal" spacing="6">
+        <TextBox name="ask" list="answers" flags="WINDOW_FLEXSPACE" />
+        <Button name="send" text="Ask" action="ask" flags="BUTTON_DEFAULT" />
+      </StackView>
+      <Label name="reply" />
+      <Label name="done" color="success" flags="LABEL_COLLAPSE_EMPTY" />
+      <TableView name="answers" source="lodge_views.assistant" group-field="section" cell-style="stacked" column-titles="false"
+                 action="choose" frame="true" flags="notitle,nofill,vscroll,flexspace" placeholder="Type a request above.">
+        <RowIcon field="kind" value="warning" icon="lodge-overdue" color="warning" />
+        <RowIcon field="kind" value="action" icon="lodge-check-in" color="info" />
+        <RowIcon field="kind" value="money" icon="lodge-payment" color="info" />
+        <RowIcon field="kind" value="room" icon="lodge-find-room" color="info" />
+        <RowIcon field="kind" value="command" icon="lodge-open" color="info" />
+        <RowIcon field="kind" value="stay" icon="lodge-today" color="secondary" />
+        <RowIcon field="kind" value="guest" icon="lodge-guest" color="secondary" />
+        <RowIcon field="kind" value="figure" icon="lodge-info" color="secondary" />
+        <RowIcon icon="lodge-tip" color="secondary" />
+        <Column field="title" title="Answer" width="0" /><Column field="detail" title="Detail" />
+      </TableView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="suggest" text="Suggestions" action="suggest" />
+        <Button name="examples" text="Examples" action="examples" />
+        <Space />
+        <Button text="Close" />
+      </StackView>
+      <Label text="Enter asks · Enter again does it · Up and Down choose a row" color="text-secondary" font="smallest" />
+      <Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
+    </form>
     <form name="booking_source" title="Booking source" width="400" height="140" padding="10" spacing="6">
       <GridView spacing="4"><Column width="auto"><Label text="Name:" /></Column><Column><TextBox name="name" field="lodge.booking_sources.name" /></Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button text="Save" action="db.update" flags="BUTTON_DEFAULT" /><Button text="Cancel" /></StackView>
@@ -207,18 +557,6 @@
     <form name="payment_method" title="Payment method" width="400" height="140" padding="10" spacing="6">
       <GridView spacing="4"><Column width="auto"><Label text="Name:" /></Column><Column><TextBox name="name" field="lodge.payment_methods.name" /></Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button text="Save" action="db.update" flags="BUTTON_DEFAULT" /><Button text="Cancel" /></StackView>
-    </form>
-    <form name="day_close" label="Close day" title="Close day" icon="lodge-nav-close" checked-icon="lodge-nav-close-fill" tooltip="Night audit: close the operational day" role="page" controller="day_close" width="900" height="600" padding="14" spacing="8">
-      <Label name="day" font="title" /><Label name="payments" /><Label name="outstanding" /><Label name="cancelled_paid" /><Label name="pending" />
-      <Label text="Closing prevents reservation and payment changes until tomorrow." />
-      <StackView orientation="horizontal" spacing="6"><Button name="export_overdue" text="Export overdue stays" action="export_overdue"/><Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" /></StackView>
-      <Label name="notice" /><Label name="error" />
-      <Label text="Previous day closes" font="heading" />
-      <TableView name="day_history" source="lodge.day_closes" flags="flexspace,vscroll" frame="true">
-        <Column field="day" title="Day" width="110" /><Column field="actor" title="Closed by" width="0" min-width="140" />
-        <Column field="net_display" title="Net payments" width="120" /><Column field="outstanding_display" title="Outstanding" width="120" />
-        <Column field="cancelled_count_display" title="Cancelled with payments" width="180" /><Column field="cancelled_paid_display" title="Paid on cancelled" width="150" />
-      </TableView>
     </form>
     <form name="group_reservation" controller="group_reservation" title="Group reservation" width="560" height="420" padding="12" spacing="8">
       <Label text="Create reservations for two rooms under one group." />
@@ -258,33 +596,6 @@
       </StackView>
       <Label name="notice" /><Label name="error" />
     </form>
-    <!-- Rooms: the catalog, housekeeping status and out-of-service dates. -->
-    <form name="rooms" label="Rooms" title="Rooms" icon="lodge-nav-rooms" checked-icon="lodge-nav-rooms-fill" tooltip="Rooms, housekeeping and maintenance"
-          role="page" controller="housekeeping" focus="rooms" width="900" height="600" padding="14" spacing="8">
-      <Label text="Rooms" font="title" />
-      <TableView name="rooms" source="housekeeping_rooms.objects" form="room" flags="flexspace,vscroll" frame="true">
-        <Column field="name" title="Room" width="80" /><Column field="category" title="Category" width="0" min-width="120" />
-        <Column field="capacity" title="Capacity" width="80" /><Column field="rate" title="Nightly rate" width="100" />
-        <Column field="cleaning_label" title="Cleaning status" width="150" /><Column field="occupancy_label" title="Occupancy" width="160" />
-      </TableView>
-      <StackView orientation="horizontal" spacing="6">
-        <Button text="Add" target="rooms" action="insert" /><Button text="Edit" target="rooms" action="edit" /><Button text="Delete" target="rooms" action="delete" />
-        <Separator />
-        <Button name="mark_clean" text="Mark clean" action="mark_clean" /><Button name="mark_dirty" text="Mark dirty" action="mark_dirty" />
-        <Button name="mark_inspection" text="Needs inspection" action="mark_inspection" />
-        <Button name="cleaning_list" text="Cleaning list" action="cleaning_list" tooltip="Print today's housekeeping list" />
-        <Button name="refresh" text="Refresh rooms" action="refresh" />
-      </StackView>
-      <Label text="Out of service" font="heading" />
-      <TableView name="blocks" source="lodge.room_blocks" form="room_block" height="150" flags="vscroll" frame="true">
-        <Column field="room.name" title="Room" width="80" /><Column field="blocked_from" title="From" width="110" />
-        <Column field="blocked_until" title="Until" width="110" /><Column field="reason" title="Reason" width="0" />
-      </TableView>
-      <StackView orientation="horizontal" spacing="6">
-        <Button text="Take a room out of service" target="blocks" action="insert" /><Button text="Edit" target="blocks" action="edit" /><Button text="Return to service" target="blocks" action="delete" />
-      </StackView>
-      <Label name="notice" /><Label name="error" />
-    </form>
     <form name="room_block" title="Out of service" width="460" height="230" padding="10" spacing="6">
       <GridView spacing="4"><Column width="auto">
         <Label text="Room:" /><Label text="From:" /><Label text="Until:" /><Label text="Reason:" />
@@ -313,27 +624,6 @@
       </Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button text="Save" action="db.update" flags="BUTTON_DEFAULT" /><Button text="Cancel" /></StackView>
     </form>
-    <!-- Guests and what a registration form needs: the guest's identity. -->
-    <form name="guests" label="Guests" title="Guests" icon="lodge-nav-guests" checked-icon="lodge-nav-guests-fill" tooltip="Guest records"
-          role="page" focus="records" width="900" height="600" padding="14" spacing="8">
-      <Label text="Guests" font="title" />
-      <TableView name="records" source="guest_list.objects" form="guest" flags="flexspace,vscroll" frame="true">
-        <Column field="name" title="Name" width="0" min-width="160" /><Column field="phone" title="Phone" width="130" />
-        <Column field="email" title="Email" width="190" /><Column field="nationality" title="Nationality" width="110" />
-        <Column field="stays" title="Stays" width="60" />
-      </TableView>
-      <StackView orientation="horizontal" spacing="6">
-        <Button text="Add" target="records" action="insert" />
-        <Button text="Edit" target="records" action="edit" />
-        <Button text="Delete" target="records" action="delete" />
-        <Button text="Fetch" target="records" action="fetch" />
-      </StackView>
-      <GridView spacing="4"><Column width="auto">
-        <Label text="Address:" /><Label text="Document:" /><Label text="Notes:" />
-      </Column><Column>
-        <Label field="guest_list.selection.address" /><Label field="guest_list.selection.document" /><Label field="guest_list.selection.notes" />
-      </Column></GridView>
-    </form>
     <form name="guest" title="Guest" width="520" height="380" padding="10" spacing="6">
       <GridView spacing="4"><Column width="auto">
         <Label text="Guest name:" /><Label text="Phone:" /><Label text="Email:" /><Label text="Date of birth:" />
@@ -349,25 +639,6 @@
         <TextBox name="notes" field="lodge.guests.notes" />
       </Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button text="Save" action="db.update" flags="BUTTON_DEFAULT" /><Button text="Cancel" /></StackView>
-    </form>
-    <!-- Reports: the figures of a period, and its printout. -->
-    <form name="reports" label="Reports" title="Reports" icon="lodge-nav-reports" checked-icon="lodge-nav-reports-fill" tooltip="Occupancy, revenue and payments"
-          role="page" controller="reports" focus="from" width="900" height="600" padding="14" spacing="8">
-      <Label text="Period report" font="title" />
-      <StackView orientation="horizontal" spacing="6">
-        <Label text="From:" v-align="center" /><TextBox name="from" type="date" />
-        <Label text="Until:" v-align="center" /><TextBox name="to" type="date" />
-        <Button name="run" text="Show" action="run" flags="BUTTON_DEFAULT" />
-        <Button name="this_month" text="This month" action="this_month" />
-        <Button name="last_month" text="Last month" action="last_month" />
-        <Button name="export" text="Export report" action="export" />
-      </StackView>
-      <Label name="period" color="text-secondary" />
-      <TableView name="figures" source="lodge_views.report" group-field="section" flags="flexspace,vscroll" frame="true">
-        <Column field="label" title="Figure" width="0" /><Column field="value" title="Value" width="160" />
-      </TableView>
-      <Label text="Until is exclusive, as a departure date: a month runs from its first day until the first day of the next." />
-      <Label name="notice" /><Label name="error" />
     </form>
   </forms>
 </orion>

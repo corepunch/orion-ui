@@ -159,6 +159,19 @@ A page's `data()` may return `lists = {name = rows}` for a TableView whose
 application model, and filling them does not refresh the other pages. Use it for computed views such as today's
 arrivals; persistent tables are never filled this way.
 
+### The ribbon and secondary windows
+
+An application's `<ribbon>` replaces a menu bar in the standalone app, as
+[Ribbon](ribbon.md#declarative-applications) describes: its buttons run Lua
+actions on the selected page, a `<Tab context="form">` shows while that page
+is selected, and `shortcut=` makes a key run the command. A command greys out
+when the page has no such action or its `data()` turns it off.
+
+A form the application opens in its own window (`application.open("payment")`)
+is centred over the main window. `placement="right"` puts it along the right
+edge instead, for a palette such as an assistant; `single="true"` brings an
+open window of the form forward instead of opening a second one.
+
 ## Lua models and computed properties
 
 Add `model="model"` on `<application>` to load `model.lua`. It returns an object

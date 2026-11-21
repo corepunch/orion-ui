@@ -523,7 +523,9 @@ ReportView takes the row as `RVM_SETFOOTER` (wparam = text count, lparam =
 `reportview_item_t.icon_name`, tinted by `icon_color`.
 
 A TableView shows up to `MAX_REPORTVIEW_COLUMNS` (16) columns; more are
-reported on stderr.
+reported on stderr. `tvSetColumnTitle` (wparam = column, lparam = the title,
+copied) renames a column whose title follows the data, such as the dates of a
+room calendar; a script page sets it with `titles = {name = {...}}`.
 
 ### Framed, grouped and popover lists
 

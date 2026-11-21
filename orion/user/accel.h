@@ -85,6 +85,11 @@ const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd);
 // Returns the number of characters written (not counting NUL).
 int accel_format(const accel_t *a, char *buf, int bufsize);
 
+// Parse a shortcut as .orion files spell it ("F9", "Ctrl+N", "Ctrl+Shift+K",
+// "Alt+Left", "Delete") into a's fVirt and key; a->cmd is left alone. Letters
+// are case-insensitive. Returns false, and logs, for a spelling it cannot map.
+bool accel_parse(const char *spec, accel_t *a);
+
 // The AX_MOD_* keys the user holds for the entry: FCONTROL is Command on Apple
 // platforms, as translate_accelerator() matches it.
 uint32_t accel_modifiers(const accel_t *a);

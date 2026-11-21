@@ -1,38 +1,77 @@
 # Orion Lodge
 
-A small hotel's reception desk, built with Orion controls and portable Lua
-plugins. Lodge means a place to stay; it sits alongside Ledger as a focused
-business application.
+The front desk of a small hotel, guesthouse or inn: reservations, arrivals
+and departures, the room calendar, housekeeping, payments, the night audit and
+reports, in one window with a ribbon, in English, German and Russian. Lodge
+runs locally on the hotel's own computer and keeps the hotel's data in a file
+it owns; nothing depends on an Internet connection. It is built from Orion
+controls and Lua, with no app-specific C.
 
-![Lodge's Today page with arrivals, departures and guests in house](../../docs/lodge/images/today-dark.jpg)
+![Lodge's Today page with the ribbon, arrivals, departures and guests in house](../../docs/lodge/images/today.jpg)
 
-[Rooms, housekeeping and out-of-service dates](../../docs/lodge/images/rooms-dark.jpg)
+| | |
+|---|---|
+| ![Room calendar](../../docs/lodge/images/calendar.jpg) | ![The assistant](../../docs/lodge/images/assistant.jpg) |
+| ![Walk-in guest](../../docs/lodge/images/walk-in.jpg) | ![Night audit](../../docs/lodge/images/night-audit.jpg) |
 
 ## Pages
 
-Lodge is one window with a sidebar, like Ledger:
+The sidebar switches pages; the ribbon holds the commands.
 
-- **Today**: what needs attention, today's arrivals and departures and the
-  guests in house. Double-click an arrival to check in, a departure to check
-  out; print the registration form (*Meldeschein*) or the guest bill.
-- **Reservations**: the booking editor and list, payments, nightly prices,
-  groups, cancellations, confirmations; **Find** steps through bookings by guest
-  or room name.
-- **Availability**: free rooms for dates and a guest count, cheapest first,
-  with the stay total; reserve one for a guest.
+- **Today**: what needs attention (a row opens the page that settles it),
+  today's arrivals and departures with status badges, and the guests in house.
+  Double-click an arrival to check in, a departure to check out, a guest in
+  house to take a payment; mark no-shows, extend stays, print the
+  registration form (*Meldeschein*), the guest bill or the front desk list.
+- **Calendar**: who sleeps where over two weeks (rooms by night, with dates),
+  week by week; double-click a room to book its first free night. Below it,
+  free rooms for dates and a guest count, cheapest first, with the stay total;
+  reserve one for a guest on file or a new one.
+- **Reservations**: the booking editor and list with totals, payments and
+  balances; payments, nightly prices, groups, cancellations, confirmations;
+  **Find** (F3) steps through bookings by guest, room, phone or number.
 - **Rooms**: the room catalog, cleaning status, the day's cleaning list and
   out-of-service dates (repairs), which leave the room out of availability.
 - **Guests**: contact and identity details for registration, and stay counts.
 - **Reports**: occupancy, guest-nights, room revenue, ADR, RevPAR, payments by
-  method and bookings by source for any period up to a year; exportable.
-- **Close day** and **Setup** (country and currency, booking sources and payment
-  methods).
+  method and bookings by source for any period up to a year; printable, and
+  every record exportable as CSV.
+- **Night audit**: a checklist of what the day still needs and today's money
+  by method; **Close today** once nothing red is left.
+- **Setup**: the hotel's name, address and times for documents; country and
+  currency; booking sources and payment methods; the sample hotel; data export.
 
-Printable documents are written to the data directory as HTML:
-`registration.html`, `bill.html`, `cleaning-list.html`, `period-report.html`.
-They are operational documents, not tax invoices.
-[What a small hotel needs](../../docs/lodge/small-hotel-needs.md) lists the
-routine work of a small hotel and which parts Lodge covers.
+## Ribbon, shortcuts and the assistant
+
+**Home** holds the desk's everyday commands — New reservation (Ctrl+N),
+Walk-in guest (Ctrl+Shift+N), Check in (Ctrl+I), Check out (Ctrl+O), Extend
+stay (Ctrl+E), No-show, Payment (Ctrl+M), Guest bill (Ctrl+B), documents and
+the Assistant (Ctrl+K) — and acts on the page that shows; each page's own
+commands are its contextual tab. Commands a page cannot run are greyed out.
+See [ribbon design](../../docs/lodge/ribbon-design.md).
+
+The **assistant** takes requests in your own words — "check in Morgan",
+"free rooms friday 2 nights for 2", "Taylor paid 50 cash", "who owes",
+"mark 104 clean", "occupancy this month" — in English, German or Russian.
+Enter shows the answer, Enter again carries out a single action; rows open or
+do what they say. With nothing typed it lists what today still needs. See
+[the assistant](../../docs/lodge/assistant.md).
+
+Printable documents are written to the data directory as HTML, headed with
+the hotel's details from Setup: `registration.html`, `bill.html`,
+`confirmation.html`, `cleaning-list.html`, `front-desk-list.html`,
+`period-report.html`. They are operational documents, not tax invoices.
+**Export data as CSV** writes `lodge-reservations.csv`, `lodge-guests.csv` and
+`lodge-payments.csv` with stable English column names for spreadsheets and
+accounting.
+
+## Design reports
+
+- [Personas](../../docs/lodge/personas.md) and [user stories](../../docs/lodge/user-stories.md), with what is done and what is next
+- [What small hotels complain about](../../docs/lodge/research-hotel-software-complaints.md): the research behind the design
+- [UX audit and redesign report](../../docs/lodge/ux-audit.md), before and after
+- [Ribbon design](../../docs/lodge/ribbon-design.md) and [the assistant](../../docs/lodge/assistant.md)
+- [What a small hotel needs](../../docs/lodge/small-hotel-needs.md) and [country readiness](../../docs/lodge/country-readiness.md)
 
 ## Run
 
@@ -46,19 +85,26 @@ build/bin/orion-run --app apps/lodge/share/application.orion --data /path/to/hot
 ```
 
 Without `--data`, Lodge uses `<settings>/lodge/hotel.xml`. New databases start
-empty apart from default booking sources and payment methods. For a demo (nine
-rooms, ten bookings around 14 November 2026), copy `share/samples/demo.xml` to `hotel.xml` inside a new,
-separate data directory, then launch with `--data` pointing there. Open **Setup**
-and choose Germany/EUR or Russia/RUB before recording reservations or
-payments. For an existing hotel this explicitly adopts the existing amounts as
+empty apart from default booking sources and payment methods. To try Lodge, open **Setup**, choose
+Germany/EUR or Russia/RUB, then **Add sample hotel**: nine rooms, eight guests
+and stays dated around today. (`share/samples/demo.xml` is an older fixed demo
+around 14 November 2026, kept for migration tests.) Choose the country and
+currency before recording reservations or payments. For an existing hotel this explicitly adopts the existing amounts as
 the selected currency without converting them; the choice cannot be changed.
-Back up and verify those amounts first. Add rooms and guests, select them in the reservation editor, choose
-dates and use **Use room rate**, then **Save reservation**. Select a reservation
+Back up and verify those amounts first. Add rooms, then in the reservation editor choose a room and a guest — or type
+a new guest's name in **Or new guest** — choose dates and use **Use room rate**,
+then **Save reservation** (Ctrl+S). Select a reservation
 in the table and use **Edit selected** to change dates, room or extras.
 Select a reservation and choose **Payment or refund** to record an amount.
 If saving fails, retry the same operation and amount in that window; close it
 to start a different request.
-**New reservation** discards editor inputs; saved reservations are retained.
+**New reservation** (Ctrl+N) discards editor inputs; saved reservations are retained.
+A guest without a booking is handled in **Walk-in guest** (Ctrl+Shift+N): name,
+nights, a free room (ready rooms first) and what they pay now; **Check in now**
+creates the guest, the stay, the check-in and the payment together or not at all.
+**Extend stay** (Ctrl+E) and **Shorten stay** move the departure by one night;
+**No-show** cancels a reserved arrival from its arrival day, notes it and frees
+the room, leaving payments for a separate refund.
 
 Room-night availability uses half-open dates: a departure on 31 October permits
 the next arrival on 31 October. Non-cancelled reservations occupy their dates;
@@ -111,11 +157,11 @@ each member and its total, paid amount and balance. Its totals include cancelled
 reservations, following the individual balances; reconcile refunds separately.
 The statement is an operational summary, not a tax invoice or proof of payment.
 
-**Close day** previews today's net recorded payments, outstanding balance and
+The **Night audit** previews today's net recorded payments, outstanding balance and
 overdue arrivals or departures. It separately shows the number of cancelled
 reservations with payments still held and their total paid after refunds. Check
 each reservation against the hotel's cancellation policy; this amount does not
-decide whether a refund is due. Use **Export overdue stays** to write a printable `overdue-stays.html` listing the reservations needing arrival or departure; the shared view refreshes from the server first. The file replaces the previous export and contains guest data. Resolve the overdue stays before closing. In shared mode, preview the day before closing; Lodge refuses the close if the day, its figures, or reservation and nightly-price history have changed since that preview, even when the totals are unchanged. Preview again after such changes. After
+decide whether a refund is due. Use **Overdue stays** to write a printable `overdue-stays.html` listing the reservations needing arrival or departure; the shared view refreshes from the server first. The file replaces the previous export and contains guest data. Resolve the overdue stays before closing. In shared mode, preview the day before closing; Lodge refuses the close if the day, its figures, or reservation and nightly-price history have changed since that preview, even when the totals are unchanged. Preview again after such changes. After
 closing, reservation, nightly-price and payment changes are blocked until the
 next calendar day in the host process's time zone; housekeeping remains available.
 The hotel day follows the operating-system time zone of the local process or,
@@ -152,7 +198,7 @@ See the [database migration guide](../../docs/lodge/migration-v2.md) before
 opening an existing hotel database.
 Open it in a browser to print. It includes the current reservation status and hotel currency; it is a booking confirmation, not a tax invoice.
 Reservation actions save immediately; catalog edits save when closing a window. A save failure rolls the action back and stays visible;
-**Retry saving** retries any pending database save; closing is blocked if the final save fails.
+repeat the action to retry; closing is blocked if the final save fails.
 The model rejects direct changes to the paid field; record payments and refunds
 through the payment action so each new event has a retry key. Migrated opening
 balances retain their historical treatment.
@@ -160,7 +206,7 @@ balances retain their historical treatment.
 ## Architecture
 
 - `share/schema.orion`: persistent records, defaults, delete rules and computed fields.
-- `share/application.orion`: application object graph, DisplayGroup, reception and catalog forms.
+- `share/application.orion`: application object graph, DisplayGroup, the ribbon, pages, windows and catalog forms.
 - Orion’s shared application host owns the VM, databases, windows and output. No app C host or bindings.
 - `share/model.lua`: validates native and Lua writes and supplies computed values.
 - `share/application.orion`'s `main` form is a `role="host"` window; each sidebar
@@ -170,12 +216,16 @@ balances retain their historical treatment.
 - `share/front_desk.lua`: read-only views: today's movements, attention items,
   free rooms and period figures. `share/documents.lua`: printable documents.
   Computed lists fill transient tables of the in-memory `lodge_views` database.
-- `share/hotel.lua`: hotel-specific availability, capacity and state transitions.
+- `share/hotel.lua`: hotel-specific availability, capacity and state transitions,
+  and the desk's one-transaction shortcuts (walk-in, extend, no-show, search).
+- `share/walk_in.lua`, `share/assistant.lua`: the walk-in and assistant windows;
+  `share/assistant_engine.lua`: what the assistant understands and does.
+- `share/exports.lua`: CSV export; `share/samples.lua`: the sample hotel.
 - Shared `calendar`, `money`, `intervals`, `records` and `template` plugins:
   [authoring and usage](../../docs/plugins.md).
 
-Lodge provides a reservation list, rather than a timeline. It
-supports adding, editing and deleting rooms, guests, booking sources, payment
+Lodge provides a reservation list and a two-week room calendar; stays are
+moved in the editor rather than by dragging. It supports adding, editing and deleting rooms, guests, booking sources, payment
 methods and out-of-service dates through codeless forms. Housekeeping
 tracks room readiness and prints a daily list but does not assign staff.
 Category-level inventory, group folios, tax rules,

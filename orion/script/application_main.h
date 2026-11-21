@@ -47,6 +47,9 @@ bool gem_init(int argc, char *argv[], hinstance_t instance) {
     path = remote_manifest;
   }
   char error[1024];
+#ifndef BUILD_AS_GEM
+  script_application_allow_ribbon(true);
+#endif
   launched_application = recovery ? script_application_open_recovery(path, data, error, sizeof(error)) :
     script_application_open(path, data, error, sizeof(error));
 #ifndef BUILD_AS_GEM
@@ -56,4 +59,5 @@ bool gem_init(int argc, char *argv[], hinstance_t instance) {
 }
 void gem_shutdown(void) { script_application_close(launched_application); launched_application = NULL; }
 GEM_DEFINE("Orion " ORION_APP_NAME, "1.0", gem_init, gem_shutdown, NULL)
-GEM_STANDALONE_MAIN("Orion " ORION_APP_NAME, UI_INIT_DESKTOP, 1240, 900, NULL, NULL)
+GEM_STANDALONE_MAIN("Orion " ORION_APP_NAME, UI_INIT_DESKTOP, 1240, 900,
+                    script_application_menu_window(launched_application), script_application_accelerators(launched_application))

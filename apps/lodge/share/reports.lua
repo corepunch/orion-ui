@@ -28,6 +28,10 @@ function Reports:export()
   self:compute()
   self.notice = string.format(orion.tr("Report saved: %s"), orion.assert(application.write("period-report.html", Documents.period(self.report, self.rows))))
 end
+function Reports:export_csv()
+  local paths = require("exports").all()
+  self.notice = string.format(orion.tr("Data exported for spreadsheets and accounting: %s"), table.concat(paths, ", "))
+end
 function Reports:data()
   -- The figures follow the records: recompute on every refresh.
   local ok = pcall(self.compute, self)

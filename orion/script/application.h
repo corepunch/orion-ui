@@ -11,4 +11,11 @@ script_page_t *script_application_main(script_application_t *app);
 script_page_t *script_application_page(script_application_t *app, const char *form);
 script_runtime_t *script_application_runtime(script_application_t *app);
 void script_application_quit_on_close(script_application_t *app, bool quit);
+// A standalone application shows the <ribbon> its manifest declares; a gem's
+// shell owns the menu row, so the launcher allows it only outside a shell.
+// Call before opening. The ribbon window and its shortcuts are what the event
+// loop passes to translate_accelerator().
+void script_application_allow_ribbon(bool allowed);
+window_t *script_application_menu_window(script_application_t *app);
+accel_table_t *script_application_accelerators(script_application_t *app);
 #endif

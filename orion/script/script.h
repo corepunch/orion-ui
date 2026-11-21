@@ -72,6 +72,13 @@ result_t script_page_window_proc(window_t *win, uint32_t msg, uint32_t wparam, v
 // the action receives that name after `values`.
 bool script_page_perform_from(script_page_t *page, const char *action, const char *control);
 const char *script_page_message(const script_page_t *page);
+// Whether the page's controller has `action` and its last data() did not turn
+// it off: disabled = {control = true} for the control's action, or
+// commands = {action = false} for a command the page offers only elsewhere.
+bool script_page_can_perform(const script_page_t *page, const char *action);
+// Called after every render of the page (data() applied), e.g. for a host's
+// command surface to follow the page's state. NULL stops it.
+void script_page_on_render(script_page_t *page, void (*rendered)(script_page_t *, void *), void *userdata);
 // The control named `name` in the page's window, or NULL.
 window_t *script_page_control(const script_page_t *page, const char *name);
 

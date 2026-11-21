@@ -8,24 +8,24 @@
   <string source="Category:" where="room">Категория:</string>
   <string source="Capacity:" where="room">Вместимость:</string>
   <string source="Nightly rate:" where="reception,room">Цена за ночь:</string>
-  <string source="Add room" obsolete="true">Добавить номер</string>
+  <string source="Add room" where="rooms">Добавить номер</string>
   <string source="Add a guest" obsolete="true">Добавить гостя</string>
-  <string source="Guest name:" where="guest">Имя гостя:</string>
-  <string source="Phone:" where="guest">Телефон:</string>
-  <string source="Add guest" obsolete="true">Добавить гостя</string>
+  <string source="Guest name:" where="walk_in,guest">Имя гостя:</string>
+  <string source="Phone:" where="hotel_setup,walk_in,guest">Телефон:</string>
+  <string source="Add guest" where="guests">Добавить гостя</string>
   <string source="Room:" where="reception,room_block">Номер:</string>
   <string source="Guest:" where="availability,reception,group_reservation">Гость:</string>
   <string source="Arrival:" where="availability,reception,group_reservation">Заезд:</string>
   <string source="Departure:" where="availability,reception,group_reservation">Выезд:</string>
-  <string source="Guests:" where="availability,reception">Гостей:</string>
+  <string source="Guests:" where="availability,reception,walk_in">Гостей:</string>
   <string source="Extra charges:" where="reception">Дополнительные услуги:</string>
   <string source="Paid to date:" where="reception">Уже оплачено:</string>
   <string source="Notes:" where="reception,guests">Примечания:</string>
   <string source="Use room rate" where="reception">Взять цену номера</string>
   <string source="Save reservation" where="reception">Сохранить бронь</string>
   <string source="New reservation" where="reception">Новая бронь</string>
-  <string source="New reservation discards unsaved editor changes." where="reception">Новая бронь сбрасывает несохранённые изменения.</string>
-  <string source="Room" where="today,availability,reception,rooms">Номер</string>
+  <string source="New reservation discards unsaved editor changes." obsolete="true">Новая бронь сбрасывает несохранённые изменения.</string>
+  <string source="Room" where="today,availability,reception,rooms,walk_in">Номер</string>
   <string source="Guest" where="today,reception,guest">Гость</string>
   <string source="Arrival" where="reception">Заезд</string>
   <string source="Departure" where="today,reception">Выезд</string>
@@ -37,8 +37,8 @@
   <string source="Check in" where="today,reception">Заселить</string>
   <string source="Check out" where="today,reception">Выселить</string>
   <string source="Cancel reservation" obsolete="true">Отменить бронь</string>
-  <string source="Export confirmation" where="reception">Экспорт подтверждения</string>
-  <string source="Retry saving" where="reception">Повторить сохранение</string>
+  <string source="Export confirmation" obsolete="true">Экспорт подтверждения</string>
+  <string source="Retry saving" obsolete="true">Повторить сохранение</string>
   <string source="%d reservations · Outstanding: %s" where="code">Броней: %d · К оплате: %s</string>
   <string source="Balance:" where="code">Остаток:</string>
   <string source="Booking confirmation" where="code">Подтверждение бронирования</string>
@@ -81,14 +81,14 @@
   <string source="Rooms" where="rooms">Номера</string>
   <string source="Guests" where="guests">Гости</string>
   <string source="Name" where="guests">Имя</string>
-  <string source="Add" where="hotel_setup,rooms,guests">Добавить</string>
+  <string source="Add" where="hotel_setup">Добавить</string>
   <string source="Edit" where="hotel_setup,rooms,guests">Изменить</string>
   <string source="Delete" where="hotel_setup,rooms,guests">Удалить</string>
-  <string source="Fetch" where="guests">Обновить</string>
+  <string source="Fetch" obsolete="true">Обновить</string>
   <string source="Save" where="booking_source,payment_method,room_block,guest">Сохранить</string>
   <string source="Cancel" where="booking_source,payment_method,room_block,guest">Отмена</string>
-  <string source="Housekeeping" obsolete="true">Уборка</string>
-  <string source="Cleaning status" where="availability,rooms">Статус уборки</string>
+  <string source="Housekeeping">Уборка</string>
+  <string source="Cleaning status" where="availability,rooms,walk_in">Статус уборки</string>
   <string source="Cleaning status:" where="room">Статус уборки:</string>
   <string source="Select a room to update its cleaning status." obsolete="true">Выберите номер, чтобы изменить статус уборки.</string>
   <string source="Mark clean" where="rooms">Отметить чистым</string>
@@ -113,7 +113,7 @@
   <string source="Refund recorded." where="code">Возврат записан.</string>
   <string source="Reservation %d" where="code">Бронирование %d</string>
   <string source="Balance: %s" where="code">Остаток: %s</string>
-  <string source="Nightly prices" where="reception,night_prices">Цены по ночам</string>
+  <string source="Nightly prices" where="night_prices">Цены по ночам</string>
   <string source="Night:" where="night_prices">Ночь:</string>
   <string source="Nightly price:" where="night_prices">Цена за ночь:</string>
   <string source="Show price" where="night_prices">Показать цену</string>
@@ -135,9 +135,9 @@
   <string source="Invalid request field." where="code">Недопустимое поле запроса.</string>
   <string source="Unknown service command." where="code">Неизвестная команда сервиса.</string>
   <string source="This role cannot perform that action." where="code">Эта роль не может выполнить действие.</string>
-  <string source="Group reservation" where="reception,group_reservation">Групповое бронирование</string>
-  <string source="Close day" where="day_close">Закрыть день</string>
-  <string source="Closing prevents reservation and payment changes until tomorrow." where="day_close">После закрытия изменения бронирований и платежей будут доступны завтра.</string>
+  <string source="Group reservation" where="group_reservation">Групповое бронирование</string>
+  <string source="Close day" obsolete="true">Закрыть день</string>
+  <string source="Closing prevents reservation and payment changes until tomorrow." obsolete="true">После закрытия изменения бронирований и платежей будут доступны завтра.</string>
   <string source="Close today" where="day_close">Закрыть сегодня</string>
   <string source="Create reservations for two rooms under one group." where="group_reservation">Создайте бронирования двух номеров для одной группы.</string>
   <string source="Group name:" where="group_reservation">Название группы:</string>
@@ -162,8 +162,8 @@
   <string source="Outstanding balance: %s" where="code">Непогашенный остаток: %s</string>
   <string source="Overdue arrivals and departures: %d" where="code">Просроченные заезды и выезды: %d</string>
   <string source="Hotel setup" where="hotel_setup">Настройка отеля</string>
-  <string source="Existing amounts will be interpreted in the selected currency without conversion." where="hotel_setup">Существующие суммы будут считаться указанными в выбранной валюте без пересчёта.</string>
-  <string source="This choice cannot be changed after it is saved." where="hotel_setup">После сохранения изменить этот выбор нельзя.</string>
+  <string source="Existing amounts will be interpreted in the selected currency without conversion." obsolete="true">Существующие суммы будут считаться указанными в выбранной валюте без пересчёта.</string>
+  <string source="This choice cannot be changed after it is saved." obsolete="true">После сохранения изменить этот выбор нельзя.</string>
   <string source="Set Germany and EUR" where="hotel_setup">Выбрать Германию и EUR</string>
   <string source="Set Russia and RUB" where="hotel_setup">Выбрать Россию и RUB</string>
   <string source="Hotel currency settings cannot be changed directly." where="code">Настройки валюты отеля нельзя изменить напрямую.</string>
@@ -174,7 +174,7 @@
   <string source="Country: %s · Currency: %s" where="code">Страна: %s · Валюта: %s</string>
   <string source="Hotel country and currency are not configured." where="code">Страна и валюта отеля не настроены.</string>
   <string source="Choose a guest." where="code">Выберите гостя.</string>
-  <string source="Export group statement" where="reception">Экспорт сводки группы</string>
+  <string source="Export group statement" obsolete="true">Экспорт сводки группы</string>
   <string source="Group reservation statement" where="code">Сводка бронирований группы</string>
   <string source="Group:" where="code">Группа:</string>
   <string source="Currency:" where="code">Валюта:</string>
@@ -195,15 +195,15 @@
   <string source="Guest checked in" where="code">Гость заселён</string>
   <string source="No guest checked in" where="code">Гость не заселён</string>
   <string source="Occupancy unknown" where="code">Проживание неизвестно</string>
-  <string source="Preview group cancellation" where="reception">Проверить отмену группы</string>
-  <string source="Confirm group cancellation" where="reception">Подтвердить отмену группы</string>
+  <string source="Preview group cancellation">Проверить отмену группы</string>
+  <string source="Confirm group cancellation">Подтвердить отмену группы</string>
   <string source="This group has no reservations." where="code">В этой группе нет бронирований.</string>
   <string source="All group reservations must be reserved before cancelling the group." where="code">Для отмены группы все её бронирования должны иметь статус «Забронировано».</string>
   <string source="Preview the group cancellation again." where="code">Повторно проверьте отмену группы.</string>
   <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Отменить группу %s: бронирований — %d; удержанные оплаты — %s. Возвраты оформляются отдельно.</string>
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Бронирования группы отменены. Проверьте необходимость возврата оплат.</string>
-  <string source="Preview group settlement" where="reception">Проверить оплату группы</string>
-  <string source="Confirm group settlement" where="reception">Подтвердить оплату группы</string>
+  <string source="Preview group settlement">Проверить оплату группы</string>
+  <string source="Confirm group settlement">Подтвердить оплату группы</string>
   <string source="Group settlement records cannot be changed directly." where="code">Записи об оплате группы нельзя изменять напрямую.</string>
   <string source="The group settlement request key was already used." where="code">Ключ запроса оплаты группы уже использован.</string>
   <string source="Enter a valid group settlement request." where="code">Укажите корректный запрос оплаты группы.</string>
@@ -215,15 +215,15 @@
   <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Оплатить группу %s: %s %s по %d бронированиям. Перед подтверждением проверьте выгруженную ведомость группы.</string>
   <string source="The day has changed. Preview it again before closing." where="code">День изменился. Повторно проверьте его перед закрытием.</string>
   <string source="Preview the day before closing." where="code">Проверьте день перед закрытием.</string>
-  <string source="Preview cancellation" where="reception">Предпросмотр отмены</string>
-  <string source="Confirm cancellation" where="reception">Подтвердить отмену</string>
+  <string source="Preview cancellation">Предпросмотр отмены</string>
+  <string source="Confirm cancellation">Подтвердить отмену</string>
   <string source="Cancel reservation %d · %s · %s to %s · Payments held: %s %s. Refunds are separate." where="code">Отменить бронь %d · %s · с %s по %s · Удержано оплат: %s %s. Возвраты оформляются отдельно.</string>
   <string source="Only reserved bookings can be cancelled." where="code">Отменить можно только подтверждённую бронь.</string>
   <string source="Preview the cancellation again." where="code">Повторно проверьте отмену.</string>
-  <string source="Export overdue stays" where="day_close">Экспорт просроченных заездов и выездов</string>
+  <string source="Export overdue stays" obsolete="true">Экспорт просроченных заездов и выездов</string>
   <string source="Overdue arrival" where="code">Просроченный заезд</string>
   <string source="Overdue departure" where="code">Просроченный выезд</string>
-  <string source="Overdue stays" where="code">Просроченные заезды и выезды</string>
+  <string source="Overdue stays" where="code,day_close">Просроченные заезды и выезды</string>
   <string source="Operational day:" where="code">Операционный день:</string>
   <string source="Reservations still awaiting arrival or departure at the time of export." where="code">Бронирования, ожидающие заезда или выезда на момент экспорта.</string>
   <string source="Reservation" where="code">Бронирование</string>
@@ -233,34 +233,34 @@
   <string source="Today at the front desk" where="today">Сегодня на стойке</string>
   <string source="Needs attention" where="today">Требует внимания</string>
   <string source="Task" where="today">Задача</string>
-  <string source="Detail" where="today">Подробности</string>
+  <string source="Detail" where="today,assistant">Подробности</string>
   <string source="In house" where="today">Проживают</string>
   <string source="Arrivals" where="today">Заезды</string>
   <string source="Check in the selected arrival (double-click a row)" where="today">Заселить выбранного гостя (двойной щелчок по строке)</string>
-  <string source="Registration form" where="today,reception">Регистрационная карта</string>
+  <string source="Registration form" where="today">Регистрационная карта</string>
   <string source="Print the guest registration form of the selected arrival" where="today">Распечатать регистрационную карту выбранного гостя</string>
   <string source="Departures" where="today">Выезды</string>
   <string source="Settle balance" where="today">Принять оплату</string>
   <string source="Record a payment for the selected departure" where="today">Записать оплату выбранного выезда</string>
   <string source="Check out the selected departure (double-click a row)" where="today">Выселить выбранного гостя (двойной щелчок по строке)</string>
-  <string source="Guest bill" where="today,reception">Счёт гостя</string>
+  <string source="Guest bill" where="today">Счёт гостя</string>
   <string source="Print the bill of the selected departure" where="today">Распечатать счёт выбранного выезда</string>
-  <string source="Find a room" where="availability">Поиск номера</string>
-  <string source="Availability" where="availability">Наличие мест</string>
-  <string source="Free rooms for a stay" where="availability">Свободные номера на даты</string>
-  <string source="Show free rooms" where="availability">Показать свободные</string>
-  <string source="Category" where="availability,rooms">Категория</string>
-  <string source="Capacity" where="availability,rooms">Вместимость</string>
-  <string source="Nightly rate" where="availability,rooms">Цена за ночь</string>
-  <string source="Stay total" where="availability">Стоимость</string>
-  <string source="Booked via:" where="availability,reception">Источник:</string>
+  <string source="Find a room" obsolete="true">Поиск номера</string>
+  <string source="Availability" obsolete="true">Наличие мест</string>
+  <string source="Free rooms for a stay" obsolete="true">Свободные номера на даты</string>
+  <string source="Show free rooms" where="availability,walk_in">Показать свободные</string>
+  <string source="Category" where="availability,rooms,walk_in">Категория</string>
+  <string source="Capacity" where="availability,rooms,walk_in">Вместимость</string>
+  <string source="Nightly rate" where="availability,rooms,walk_in">Цена за ночь</string>
+  <string source="Stay total" where="availability,walk_in">Стоимость</string>
+  <string source="Booked via:" where="availability,reception,walk_in">Источник:</string>
   <string source="Reserve selected room" where="availability">Забронировать выбранный номер</string>
   <string source="Reservations" where="reception">Бронирования</string>
   <string source="Reservations and payments" where="reception">Бронирования и оплаты</string>
-  <string source="Find a guest or room" where="reception">Найти гостя или номер</string>
+  <string source="Find a guest or room" obsolete="true">Найти гостя или номер</string>
   <string source="Find" where="reception">Найти</string>
   <string source="Setup" where="hotel_setup">Настройка</string>
-  <string source="Country, currency and catalogs" where="hotel_setup">Страна, валюта и справочники</string>
+  <string source="Country, currency and catalogs" obsolete="true">Страна, валюта и справочники</string>
   <string source="Booking sources" where="hotel_setup">Источники бронирований</string>
   <string source="Booked via" where="hotel_setup">Источник</string>
   <string source="Payment methods" where="hotel_setup">Способы оплаты</string>
@@ -268,8 +268,8 @@
   <string source="Booking source" where="booking_source">Источник бронирования</string>
   <string source="Name:" where="booking_source,payment_method">Название:</string>
   <string source="Payment method" where="payment_method">Способ оплаты</string>
-  <string source="Night audit: close the operational day" where="day_close">Ночной аудит: закрыть операционный день</string>
-  <string source="Method:" where="payment">Способ:</string>
+  <string source="Night audit: close the operational day" obsolete="true">Ночной аудит: закрыть операционный день</string>
+  <string source="Method:" where="walk_in,payment">Способ:</string>
   <string source="Rooms, housekeeping and maintenance" where="rooms">Номера, уборка и обслуживание</string>
   <string source="Cleaning list" where="rooms">Список уборки</string>
   <string source="Print today's housekeeping list" where="rooms">Распечатать список уборки на сегодня</string>
@@ -279,8 +279,8 @@
   <string source="Reason" where="rooms">Причина</string>
   <string source="Take a room out of service" where="rooms">Вывести номер из продажи</string>
   <string source="Return to service" where="rooms">Вернуть в продажу</string>
-  <string source="From:" where="room_block,reports">С:</string>
-  <string source="Until:" where="room_block,reports">До:</string>
+  <string source="From:" where="availability,reports,room_block">С:</string>
+  <string source="Until:" where="reports,room_block">До:</string>
   <string source="Reason:" where="room_block">Причина:</string>
   <string source="The room is free again on the Until date, as a guest's departure frees it." where="room_block">В дату «До» номер снова свободен, как в день выезда гостя.</string>
   <string source="Guest records" where="guests">Карточки гостей</string>
@@ -288,9 +288,9 @@
   <string source="Email" where="guests">Эл. почта</string>
   <string source="Nationality" where="guests">Гражданство</string>
   <string source="Stays" where="guests">Визиты</string>
-  <string source="Address:" where="guests">Адрес:</string>
+  <string source="Address:" where="hotel_setup,guests">Адрес:</string>
   <string source="Document:" where="guests">Документ:</string>
-  <string source="Email:" where="guest">Эл. почта:</string>
+  <string source="Email:" where="hotel_setup,guest">Эл. почта:</string>
   <string source="Date of birth:" where="guest">Дата рождения:</string>
   <string source="Nationality:" where="guest">Гражданство:</string>
   <string source="Home address:" where="guest">Адрес проживания:</string>
@@ -298,10 +298,10 @@
   <string source="Reports" where="reports">Отчёты</string>
   <string source="Occupancy, revenue and payments" where="reports">Загрузка, выручка и оплаты</string>
   <string source="Period report" where="reports">Отчёт за период</string>
-  <string source="Show" where="reports">Показать</string>
-  <string source="This month" where="reports">Этот месяц</string>
-  <string source="Last month" where="reports">Прошлый месяц</string>
-  <string source="Export report" where="reports">Экспорт отчёта</string>
+  <string source="Show" where="availability,reports">Показать</string>
+  <string source="This month">Этот месяц</string>
+  <string source="Last month">Прошлый месяц</string>
+  <string source="Export report">Экспорт отчёта</string>
   <string source="Figure" where="reports">Показатель</string>
   <string source="Value" where="reports">Значение</string>
   <string source="Until is exclusive, as a departure date: a month runs from its first day until the first day of the next." where="reports">Дата «До» не включается, как дата выезда: месяц — с первого числа до первого числа следующего.</string>
@@ -310,11 +310,11 @@
   <string source="%d rooms free" where="code">Свободно номеров: %d</string>
   <string source="Guest registration form" where="code">Регистрационная карта гостя</string>
   <string source="Accompanying guests (name, date of birth):" where="code">Сопровождающие (имя, дата рождения):</string>
-  <string source="Guest&#x27;s signature" where="code">Подпись гостя</string>
+  <string source="Guest's signature" where="code">Подпись гостя</string>
   <string source="Night of %s" where="code">Ночь %s</string>
   <string source="Extra charges" where="code">Дополнительные услуги</string>
   <string source="Refund" where="code">Возврат</string>
-  <string source="Payment" where="code">Оплата</string>
+  <string source="Payment" where="code,today">Оплата</string>
   <string source="Item" where="code">Позиция</string>
   <string source="Amount, %s" where="code">Сумма, %s</string>
   <string source="Payments and refunds" where="code">Оплаты и возвраты</string>
@@ -326,15 +326,15 @@
   <string source="To do" where="code">Задача</string>
   <string source="Done" where="code">Готово</string>
   <string source="%s to %s (exclusive) · Currency: %s" where="code">С %s по %s (не включая) · Валюта: %s</string>
-  <string source="Operational figures from Lodge&#x27;s records; not a statutory or tax report." where="code">Операционные показатели по данным Lodge; не регламентированный и не налоговый отчёт.</string>
+  <string source="Operational figures from Lodge's records; not a statutory or tax report." where="code">Операционные показатели по данным Lodge; не регламентированный и не налоговый отчёт.</string>
   <string source="Room not ready" where="code">Номер не готов</string>
   <string source="Room ready" where="code">Номер готов</string>
   <string source="Balance to settle" where="code">Есть долг</string>
   <string source="Settled" where="code">Оплачено</string>
   <string source="%d guests" where="code">Гостей: %d</string>
-  <string source="Choose the hotel&#x27;s country and currency" where="code">Выберите страну и валюту гостиницы</string>
+  <string source="Choose the hotel's country and currency" where="code">Выберите страну и валюту гостиницы</string>
   <string source="Setup, before the first reservation" where="code">Настройка, до первого бронирования</string>
-  <string source="Add the hotel&#x27;s rooms" where="code">Добавьте номера гостиницы</string>
+  <string source="Add the hotel's rooms" where="code">Добавьте номера гостиницы</string>
   <string source="Rooms page" where="code">Раздел «Номера»</string>
   <string source="%s did not arrive" where="code">%s не заселился</string>
   <string source="Room %s · check in or cancel" where="code">Номер %s · заселить или отменить</string>
@@ -399,4 +399,307 @@
   <string source="Cash" where="code">Наличные</string>
   <string source="Card" where="code">Карта</string>
   <string source="Bank transfer" where="code">Банковский перевод</string>
+  <string source="Walk-in guest" where="walk_in">Гость без брони</string>
+  <string source="Assistant">Помощник</string>
+  <string source="Home">Главная</string>
+  <string source="New">Создать</string>
+  <string source="Start a reservation in the editor">Начать бронирование в редакторе</string>
+  <string source="Book, check in and take payment for a guest without a booking">Бронирование, заселение и оплата для гостя без брони</string>
+  <string source="Group booking">Групповая бронь</string>
+  <string source="Several rooms under one group">Несколько номеров в одной группе</string>
+  <string source="Arrive and leave">Заезд и выезд</string>
+  <string source="Check in the selected arrival or reservation">Заселить выбранный заезд или бронь</string>
+  <string source="Check out the selected departure or reservation; the balance must be settled">Выселить выбранный выезд или бронь; остаток должен быть оплачен</string>
+  <string source="Extend stay" where="today">Продлить</string>
+  <string source="One more night for the selected stay">Ещё одна ночь для выбранного проживания</string>
+  <string source="No-show" where="today">Незаезд</string>
+  <string source="The selected arrival did not come: cancel it and free the room">Выбранный гость не приехал: отменить и освободить номер</string>
+  <string source="Money">Деньги</string>
+  <string source="Record a payment or refund for the selected stay">Записать оплату или возврат по выбранному проживанию</string>
+  <string source="Print the bill of the selected stay">Напечатать счёт выбранного проживания</string>
+  <string source="Documents">Документы</string>
+  <string source="The form the guest signs on arrival">Анкета, которую гость подписывает при заезде</string>
+  <string source="Confirmation">Подтверждение</string>
+  <string source="Booking confirmation to send to the guest">Подтверждение бронирования для гостя</string>
+  <string source="Help">Помощь</string>
+  <string source="Ask in your own words: check in Morgan, free rooms friday, who owes">Спросите своими словами: заселить Morgan, свободные номера в пятницу, кто должен</string>
+  <string source="Selected guest">Выбранный гость</string>
+  <string source="Take the balance of the selected departure">Принять остаток по выбранному выезду</string>
+  <string source="Open reservation">Открыть бронь</string>
+  <string source="Show the selected stay on the Reservations page">Показать выбранное проживание на странице «Бронирования»</string>
+  <string source="Print">Печать</string>
+  <string source="Front desk list">Список для стойки</string>
+  <string source="Today's arrivals, departures and guests in house on paper">Сегодняшние заезды, выезды и проживающие на бумаге</string>
+  <string source="View">Вид</string>
+  <string source="Refresh">Обновить</string>
+  <string source="Calendar" where="availability">Календарь</string>
+  <string source="Dates">Даты</string>
+  <string source="Previous week">Предыдущая неделя</string>
+  <string source="Next week">Следующая неделя</string>
+  <string source="Book">Бронирование</string>
+  <string source="Book selected room">Забронировать номер</string>
+  <string source="A reservation for the selected room from its first free night">Бронирование выбранного номера с первой свободной ночи</string>
+  <string source="Rooms free for the stay entered below, cheapest first">Свободные номера на указанные ниже даты, сначала дешёвые</string>
+  <string source="Editor">Редактор</string>
+  <string source="Load the selected reservation into the editor">Загрузить выбранную бронь в редактор</string>
+  <string source="Copy the room's nightly rate into the editor">Подставить в редактор цену номера за ночь</string>
+  <string source="Find next">Найти далее</string>
+  <string source="The next reservation whose guest or room matches the search box">Следующая бронь, у которой гость или номер совпадают с поиском</string>
+  <string source="Stay">Проживание</string>
+  <string source="Shorten stay">Сократить</string>
+  <string source="One night less for the selected stay">На одну ночь меньше для выбранного проживания</string>
+  <string source="A different price for single nights">Другая цена для отдельных ночей</string>
+  <string source="See the guest, dates and payments held before cancelling">Посмотреть гостя, даты и внесённые оплаты перед отменой</string>
+  <string source="Group">Группа</string>
+  <string source="Group statement">Выписка по группе</string>
+  <string source="Every reservation of the selected group, with balances">Все брони выбранной группы с остатками</string>
+  <string source="The selected room is clean and ready">Выбранный номер убран и готов</string>
+  <string source="Today's housekeeping list with what to do in each room">Сегодняшний список уборки с задачами по номерам</string>
+  <string source="Period">Период</string>
+  <string source="Export">Выгрузка</string>
+  <string source="The figures as a page to print or file">Показатели на странице для печати или архива</string>
+  <string source="Export data as CSV">Выгрузить данные в CSV</string>
+  <string source="Reservations, guests and payments for spreadsheets and accounting">Брони, гости и оплаты для таблиц и бухгалтерии</string>
+  <string source="Night audit" where="day_close">Закрытие дня</string>
+  <string source="Close" where="walk_in,assistant">Закрыть</string>
+  <string source="Locks today's reservations and payments once every red item is resolved">Блокирует сегодняшние брони и оплаты, когда все красные пункты решены</string>
+  <string source="Print the stays that block closing">Напечатать проживания, мешающие закрытию</string>
+  <string source="Hotel">Отель</string>
+  <string source="Save hotel details" where="hotel_setup">Сохранить данные отеля</string>
+  <string source="Add sample hotel" where="hotel_setup">Добавить пример отеля</string>
+  <string source="Nine rooms and a few guests around today, to try Lodge">Девять номеров и несколько гостей на ближайшие дни, чтобы попробовать Lodge</string>
+  <string source="Data">Данные</string>
+  <string source="Export all data" where="hotel_setup">Выгрузить все данные</string>
+  <string source="Reservations, guests and payments as CSV files">Брони, гости и оплаты в файлах CSV</string>
+  <string source="Nothing needs attention." where="today">Всё в порядке.</string>
+  <string source="No guest is checked in." where="today">Никто не заселён.</string>
+  <string source="Record a payment for the selected guest (double-click a row)" where="today">Записать оплату выбранного гостя (двойной щелчок по строке)</string>
+  <string source="One more night for the selected guest" where="today">Ещё одна ночь для выбранного гостя</string>
+  <string source="No more arrivals today." where="today">Сегодня заездов больше нет.</string>
+  <string source="The selected guest did not come: cancel and free the room" where="today">Выбранный гость не приехал: отменить и освободить номер</string>
+  <string source="No more departures today." where="today">Сегодня выездов больше нет.</string>
+  <string source="Room calendar" where="availability">Календарь номеров</string>
+  <string source="Rooms by night, and free rooms for a stay" where="availability">Номера по ночам и свободные номера на даты</string>
+  <string source="Add rooms on the Rooms page to see the calendar." where="availability">Добавьте номера на странице «Номера», чтобы увидеть календарь.</string>
+  <string source="1" where="availability">1</string>
+  <string source="2" where="availability">2</string>
+  <string source="3" where="availability">3</string>
+  <string source="4" where="availability">4</string>
+  <string source="5" where="availability">5</string>
+  <string source="6" where="availability">6</string>
+  <string source="7" where="availability">7</string>
+  <string source="8" where="availability">8</string>
+  <string source="9" where="availability">9</string>
+  <string source="10" where="availability">10</string>
+  <string source="11" where="availability">11</string>
+  <string source="12" where="availability">12</string>
+  <string source="13" where="availability">13</string>
+  <string source="14" where="availability">14</string>
+  <string source="• in house · › booked · × out of service. Double-click a room to book its first free night." where="availability">• проживает · › забронировано · × не в работе. Двойной щелчок по номеру бронирует его первую свободную ночь.</string>
+  <string source="Find a free room" where="availability">Найти свободный номер</string>
+  <string source="Or new guest:" where="availability,reception">Или новый гость:</string>
+  <string source="Name of a guest not on file yet" where="availability,reception">Имя гостя, которого ещё нет в базе</string>
+  <string source="Enter the stay and show free rooms." where="availability">Укажите даты и покажите свободные номера.</string>
+  <string source="Clears the editor; unsaved changes are discarded" where="reception">Очищает редактор; несохранённые изменения теряются</string>
+  <string source="Find:" where="reception">Найти:</string>
+  <string source="Guest, room, phone or reservation number" where="reception">Гость, номер, телефон или номер брони</string>
+  <string source="No reservations yet. Fill in the editor above and save." where="reception">Бронирований пока нет. Заполните редактор выше и сохраните.</string>
+  <string source="The hotel, country, currency and catalogs" where="hotel_setup">Отель, страна, валюта и справочники</string>
+  <string source="The hotel" where="hotel_setup">Отель</string>
+  <string source="Hotel name:" where="hotel_setup">Название отеля:</string>
+  <string source="Check-in from:" where="hotel_setup">Заезд с:</string>
+  <string source="Check-out until:" where="hotel_setup">Выезд до:</string>
+  <string source="14:00" where="hotel_setup">14:00</string>
+  <string source="11:00" where="hotel_setup">11:00</string>
+  <string source="Shown on bills, confirmations and registration forms." where="hotel_setup">Печатается на счетах, подтверждениях и регистрационных картах.</string>
+  <string source="Country and currency" where="hotel_setup">Страна и валюта</string>
+  <string source="Existing amounts will be interpreted in the selected currency without conversion. This choice cannot be changed after it is saved." where="hotel_setup">Существующие суммы будут считаться в выбранной валюте без пересчёта. После сохранения этот выбор изменить нельзя.</string>
+  <string source="Try Lodge" where="hotel_setup">Попробовать Lodge</string>
+  <string source="Rooms and housekeeping" where="rooms">Номера и уборка</string>
+  <string source="No rooms yet. Add the hotel's rooms, or add the sample hotel in Setup." where="rooms">Номеров пока нет. Добавьте номера отеля или пример отеля в настройках.</string>
+  <string source="Every room is in service." where="rooms">Все номера в работе.</string>
+  <string source="No guests yet. They are added here, or by typing a new guest's name when booking." where="guests">Гостей пока нет. Добавьте их здесь или введите имя нового гостя при бронировании.</string>
+  <string source="Night audit: check and close the day" where="day_close">Закрытие дня: проверить и закрыть день</string>
+  <string source="Check" where="day_close">Проверка</string>
+  <string source="Result" where="day_close">Результат</string>
+  <string source="Closing locks today's reservations and payments until tomorrow." where="day_close">Закрытие дня блокирует сегодняшние бронирования и оплаты до завтра.</string>
+  <string source="No day has been closed yet." where="day_close">Ни один день ещё не закрыт.</string>
+  <string source="Nights:" where="walk_in">Ночей:</string>
+  <string source="As on the ID" where="walk_in">Как в документе</string>
+  <string source="No room is free from tonight." where="walk_in">С сегодняшней ночи нет свободных номеров.</string>
+  <string source="Pays now:" where="walk_in">Оплата сейчас:</string>
+  <string source="Check in now" where="walk_in">Заселить сейчас</string>
+  <string source="Lodge assistant" where="assistant">Помощник Lodge</string>
+  <string source="What would you like to do?" where="assistant">Что вы хотите сделать?</string>
+  <string source="Ask" where="assistant">Спросить</string>
+  <string source="Type a request above." where="assistant">Введите запрос выше.</string>
+  <string source="Answer" where="assistant">Ответ</string>
+  <string source="Suggestions" where="assistant">Подсказки</string>
+  <string source="Examples" where="assistant">Примеры</string>
+  <string source="Enter asks · Enter again does it · Up and Down choose a row" where="assistant">Enter — спросить · ещё раз Enter — выполнить · стрелки выбирают строку</string>
+  <string source="%d arrivals match. Choose one." where="code">Подходит заездов: %d. Выберите один.</string>
+  <string source="%d arrivals on %s." where="code">%d заездов на %s.</string>
+  <string source="%d departures on %s." where="code">%d выездов на %s.</string>
+  <string source="%d guests are in house." where="code">Проживает гостей: %d.</string>
+  <string source="%d guests in house match. Choose one." where="code">Подходит проживающих: %d. Выберите одного.</string>
+  <string source="%d guests owe %s in total. Choose one to take a payment." where="code">Гостей с долгом: %d, всего %s. Выберите гостя, чтобы принять оплату.</string>
+  <string source="%d matches. Choose one to open it." where="code">Найдено: %d. Выберите, чтобы открыть.</string>
+  <string source="%d of %d rooms occupied · %d arriving · %d leaving" where="code">Занято %d из %d номеров · заездов: %d · выездов: %d</string>
+  <string source="%d reservations match. Choose one." where="code">Подходит бронирований: %d. Выберите одно.</string>
+  <string source="%d rooms are free from %s for %d nights, cheapest first. Choose one to book it." where="code">Свободно номеров: %d с %s на ночей: %d, сначала дешёвые. Выберите номер, чтобы забронировать.</string>
+  <string source="%d rooms free from tonight; %s at %s a night is first." where="code">Свободно с сегодняшней ночи: %d; первый — %s за %s в ночь.</string>
+  <string source="%d rooms to clean or inspect. Choose a room once it is clean." where="code">Номеров к уборке или проверке: %d. Выберите номер, когда он убран.</string>
+  <string source="%d still expected · Today page" where="code">Ещё ожидается: %d · страница «Сегодня»</string>
+  <string source="%d still in house · Today page" where="code">Ещё проживает: %d · страница «Сегодня»</string>
+  <string source="%d to clean or inspect · Rooms page" where="code">К уборке или проверке: %d · страница «Номера»</string>
+  <string source="%d with a balance" where="code">С задолженностью: %d</string>
+  <string source="%d · %s · refund or keep as agreed" where="code">%d · %s · вернуть или удержать по договорённости</string>
+  <string source="%s a night · %s for the stay · %s" where="code">%s за ночь · %s за проживание · %s</string>
+  <string source="%s is checked in to room %s until %s. Balance: %s." where="code">%s заселён(а) в номер %s до %s. Остаток: %s.</string>
+  <string source="%s marked as a no-show; room %s is free again." where="code">%s отмечен(а) как незаезд; номер %s снова свободен.</string>
+  <string source="%s now stays until %s." where="code">%s теперь проживает до %s.</string>
+  <string source="%s pays %s %s" where="code">%s платит %s %s</string>
+  <string source="%s to %s · tonight %d of %d rooms free" where="code">%s – %s · сегодня свободно %d из %d номеров</string>
+  <string source="%s to %s: occupancy %s %%, room revenue %s, ADR %s." where="code">%s – %s: загрузка %s %%, выручка от номеров %s, средняя цена %s.</string>
+  <string source="%s · room %s" where="code">%s · номер %s</string>
+  <string source="%s – %s · %d guests" where="code">%s – %s · гостей: %d</string>
+  <string source="%s – %s · %s · balance %s" where="code">%s – %s · %s · остаток %s</string>
+  <string source="(method not recorded)" where="code">(способ не указан)</string>
+  <string source="1 Lake Road" where="code">ул. Озёрная, 1</string>
+  <string source="A guest can be marked as a no-show from the arrival day." where="code">Незаезд можно отметить начиная с даты заезда.</string>
+  <string source="A stay needs at least one night." where="code">Проживание должно длиться хотя бы одну ночь.</string>
+  <string source="Arrivals and departures list saved: %s" where="code">Список заездов и выездов сохранён: %s</string>
+  <string source="Bathroom repair" where="code">Ремонт ванной</string>
+  <string source="Book room %s for %s" where="code">Забронировать номер %s для %s</string>
+  <string source="Book room %s for a new guest, %s" where="code">Забронировать номер %s для нового гостя: %s</string>
+  <string source="Book, check in and take payment in one window" where="code">Бронирование, заселение и оплата в одном окне</string>
+  <string source="Cancelled reservations still holding payments" where="code">Отменённые брони с внесёнными оплатами</string>
+  <string source="Check in %s" where="code">Заселить: %s</string>
+  <string source="Check out %s" where="code">Выселить: %s</string>
+  <string source="Check-out is until %s on the day of departure." where="code">Выезд в день отъезда до %s.</string>
+  <string source="Choose a room in the calendar." where="code">Выберите номер в календаре.</string>
+  <string source="Choose a row." where="code">Выберите строку.</string>
+  <string source="Choose a task." where="code">Выберите задачу.</string>
+  <string source="Choose an example to see how it works; change the names and dates to your own." where="code">Выберите пример, чтобы увидеть, как это работает; подставьте свои имена и даты.</string>
+  <string source="Choose one to check in or out, or open it." where="code">Выберите, чтобы заселить, выселить или открыть.</string>
+  <string source="Choose the hotel&#x27;s country and currency first." where="code">Сначала выберите страну и валюту отеля.</string>
+  <string source="Choose the hotel&#x27;s country and currency in Setup first." where="code">Сначала выберите страну и валюту отеля в настройках.</string>
+  <string source="Choose to start a reservation for this guest" where="code">Выберите, чтобы начать бронирование для этого гостя</string>
+  <string source="Choose who pays." where="code">Выберите, кто платит.</string>
+  <string source="Choose who pays; without an amount the balance is taken." where="code">Выберите, кто платит; без суммы берётся остаток.</string>
+  <string source="Closed. Reservations and payments resume tomorrow." where="code">Закрыт. Бронирования и оплаты возобновятся завтра.</string>
+  <string source="Commands" where="code">Команды</string>
+  <string source="Data exported for spreadsheets and accounting: %s" where="code">Данные выгружены для таблиц и бухгалтерии: %s</string>
+  <string source="Departing guests have settled their bills" where="code">Выезжающие гости оплатили счета</string>
+  <string source="Double" where="code">Двухместный</string>
+  <string source="Empty rooms are clean for tomorrow" where="code">Пустые номера убраны к завтрашнему дню</string>
+  <string source="Empty · choose to mark clean" where="code">Пустой · выберите, чтобы отметить убранным</string>
+  <string source="Enter from 1 to 90 nights." where="code">Укажите от 1 до 90 ночей.</string>
+  <string source="Enter the amount in the payment window." where="code">Введите сумму в окне оплаты.</string>
+  <string source="Enter the guest&#x27;s name." where="code">Введите имя гостя.</string>
+  <string source="Enter the hotel details as text." where="code">Введите данные отеля текстом.</string>
+  <string source="Enter times as hours and minutes, such as 14:00." where="code">Вводите время в часах и минутах, например 14:00.</string>
+  <string source="Every arrival is checked in, cancelled or a no-show" where="code">Каждый заезд заселён, отменён или отмечен как незаезд</string>
+  <string source="Every departure is checked out" where="code">Каждый выезд оформлен</string>
+  <string source="Every room is clean." where="code">Все номера убраны.</string>
+  <string source="Extend by one night" where="code">Продлить на одну ночь</string>
+  <string source="Family" where="code">Семейный</string>
+  <string source="Fill in the guest and details yourself" where="code">Укажите гостя и детали сами</string>
+  <string source="Fill in the walk-in window." where="code">Заполните окно гостя без брони.</string>
+  <string source="For example: check in Morgan · free rooms friday 2 nights" where="code">Например: заселить Morgan · свободные номера пятница 2 ночи</string>
+  <string source="For spreadsheets, accounting or a backup" where="code">Для таблиц, бухгалтерии или резервной копии</string>
+  <string source="Free rooms" where="code">Свободные номера</string>
+  <string source="Fri" where="code">Пт</string>
+  <string source="Guests in house tonight" where="code">Гостей в отеле этой ночью</string>
+  <string source="Here is what today still needs. Type a request, or choose a row." where="code">Вот что ещё нужно сделать сегодня. Напишите запрос или выберите строку.</string>
+  <string source="Hotel details saved. They appear on bills, confirmations and registration forms." where="code">Данные отеля сохранены. Они печатаются на счетах, подтверждениях и регистрационных картах.</string>
+  <string source="I could not read those dates. Try “free rooms 24.11 2 nights”." where="code">Не удалось разобрать даты. Попробуйте «свободные номера 24.11 2 ночи».</string>
+  <string source="I could not work out that period." where="code">Не удалось определить период.</string>
+  <string source="I did not understand that. Try a guest&#x27;s name, a room number, or one of these examples." where="code">Не понял запрос. Попробуйте имя гостя, номер комнаты или один из примеров.</string>
+  <string source="Mark %s as a no-show" where="code">Отметить незаезд: %s</string>
+  <string source="Mark as a no-show" where="code">Отметить незаезд</string>
+  <string source="Mark room %s: %s" where="code">Отметить номер %s: %s</string>
+  <string source="Mon" where="code">Пн</string>
+  <string source="Net payments today" where="code">Чистые поступления за сегодня</string>
+  <string source="Night audit for %s" where="code">Закрытие дня за %s</string>
+  <string source="Nine rooms and a few guests, to explore" where="code">Девять номеров и несколько гостей для знакомства</string>
+  <string source="No guest in house matches. Try the guest&#x27;s surname or the room number." where="code">Среди проживающих никого не найдено. Попробуйте фамилию или номер комнаты.</string>
+  <string source="No open reservation matches." where="code">Подходящих открытых броней нет.</string>
+  <string source="No reserved arrival matches." where="code">Подходящих заездов нет.</string>
+  <string source="No reserved arrival matches. Try the guest&#x27;s surname or the room number." where="code">Подходящих заездов нет. Попробуйте фамилию или номер комнаты.</string>
+  <string source="No room is free from %s for %d nights." where="code">Нет свободных номеров с %s на ночей: %d.</string>
+  <string source="No room is free from tonight for this stay." where="code">На эти даты с сегодняшней ночи нет свободных номеров.</string>
+  <string source="Nobody owes anything: every arrived guest is settled." where="code">Никто ничего не должен: все прибывшие гости рассчитались.</string>
+  <string source="Open balances" where="code">Задолженности</string>
+  <string source="Open the reservation form for room %s" where="code">Открыть форму брони для номера %s</string>
+  <string source="Outstanding on open reservations" where="code">Остаток по открытым броням</string>
+  <string source="Payment of %s from %s recorded. Balance: %s." where="code">Оплата %s от %s записана. Остаток: %s.</string>
+  <string source="Press Enter again to book room %s from %s to %s." where="code">Нажмите Enter ещё раз, чтобы забронировать номер %s с %s по %s.</string>
+  <string source="Press Enter again to check in %s to room %s." where="code">Нажмите Enter ещё раз, чтобы заселить %s в номер %s.</string>
+  <string source="Press Enter again to check out %s from room %s." where="code">Нажмите Enter ещё раз, чтобы выселить %s из номера %s.</string>
+  <string source="Press Enter again to export reservations, guests and payments as CSV files." where="code">Нажмите Enter ещё раз, чтобы выгрузить брони, гостей и оплаты в CSV.</string>
+  <string source="Press Enter again to extend the stay of %s in room %s by one night." where="code">Нажмите Enter ещё раз, чтобы продлить проживание %s в номере %s на ночь.</string>
+  <string source="Press Enter again to mark %s (room %s) as a no-show and free the room." where="code">Нажмите Enter ещё раз, чтобы отметить незаезд %s (номер %s) и освободить номер.</string>
+  <string source="Press Enter again to mark room %s as %s." where="code">Нажмите Enter ещё раз, чтобы отметить номер %s: %s.</string>
+  <string source="Press Enter again to open the night audit." where="code">Нажмите Enter ещё раз, чтобы открыть закрытие дня.</string>
+  <string source="Press Enter again to open the room calendar." where="code">Нажмите Enter ещё раз, чтобы открыть календарь номеров.</string>
+  <string source="Press Enter again to open the walk-in window." where="code">Нажмите Enter ещё раз, чтобы открыть окно гостя без брони.</string>
+  <string source="Press Enter again to record %s from %s." where="code">Нажмите Enter ещё раз, чтобы записать оплату %s от %s.</string>
+  <string source="Press Enter again to shorten the stay of %s in room %s by one night." where="code">Нажмите Enter ещё раз, чтобы сократить проживание %s в номере %s на ночь.</string>
+  <string source="Ready to close." where="code">Можно закрывать день.</string>
+  <string source="Record a payment" where="code">Записать оплату</string>
+  <string source="Reservation %d saved: room %s for %s, %s to %s." where="code">Бронь %d сохранена: номер %s для %s, %s – %s.</string>
+  <string source="Reservation %d updated: room %s for %s, %s to %s." where="code">Бронь %d изменена: номер %s для %s, %s – %s.</string>
+  <string source="Resolve the red items, then close the day." where="code">Решите красные пункты, затем закройте день.</string>
+  <string source="Room %s is now marked %s." where="code">Номер %s теперь отмечен: %s.</string>
+  <string source="Room %s is ready" where="code">Номер %s готов</string>
+  <string source="Room %s · %s" where="code">Номер %s · %s</string>
+  <string source="Room %s · %s · up to %d" where="code">Номер %s · %s · до %d</string>
+  <string source="Room %s · check in or mark as a no-show" where="code">Номер %s · заселить или отметить незаезд</string>
+  <string source="Room %s · expected %s" where="code">Номер %s · ожидался %s</string>
+  <string source="Room %s · leaving" where="code">Номер %s · выезд</string>
+  <string source="Room %s · ready" where="code">Номер %s · готов</string>
+  <string source="Room %s · settled" where="code">Номер %s · оплачено</string>
+  <string source="Rooms page, or try the sample hotel in Setup" where="code">Страница «Номера» или пример отеля в настройках</string>
+  <string source="Rooms to clean or inspect" where="code">Номера к уборке или проверке</string>
+  <string source="Sample Lakeside Inn" where="code">Пример: гостиница у озера</string>
+  <string source="Sample hotel added: nine rooms and a few guests around today. Open Today to try it." where="code">Пример отеля добавлен: девять номеров и несколько гостей на ближайшие дни. Откройте «Сегодня», чтобы попробовать.</string>
+  <string source="Sat" where="code">Сб</string>
+  <string source="Say who pays: the guest&#x27;s surname or the room number, and the amount." where="code">Укажите, кто платит: фамилию или номер комнаты и сумму.</string>
+  <string source="Several guests match. Choose one." where="code">Подходит несколько гостей. Выберите одного.</string>
+  <string source="Shorten by one night" where="code">Сократить на одну ночь</string>
+  <string source="Single" where="code">Одноместный</string>
+  <string source="Suite" where="code">Люкс</string>
+  <string source="Sun" where="code">Вс</string>
+  <string source="Take %s from %s" where="code">Принять %s от %s</string>
+  <string source="Taken today: %s" where="code">Принято сегодня: %s</string>
+  <string source="Taylor paid 50 cash" where="code">Taylor оплатил 50 наличными</string>
+  <string source="The assistant cannot do that yet." where="code">Помощник пока этого не умеет.</string>
+  <string source="The checklist, today&#x27;s money and closing the day" where="code">Контрольный список, деньги за день и закрытие дня</string>
+  <string source="The reservation form is ready for this guest. Choose the room and dates, then save." where="code">Форма брони готова для этого гостя. Выберите номер и даты, затем сохраните.</string>
+  <string source="The reservation form is ready with the room and dates. Choose the guest and save." where="code">Форма брони заполнена номером и датами. Выберите гостя и сохраните.</string>
+  <string source="The reservation is open on the Reservations page." where="code">Бронь открыта на странице «Бронирования».</string>
+  <string source="The room has no free night in these two weeks." where="code">У номера нет свободных ночей в эти две недели.</string>
+  <string source="The sample hotel can only be added to an empty hotel." where="code">Пример отеля можно добавить только в пустой отель.</string>
+  <string source="This guest is already checked in. Close the window to start another walk-in." where="code">Этот гость уже заселён. Закройте окно, чтобы оформить следующего гостя без брони.</string>
+  <string source="This row is information only." where="code">Эта строка только для информации.</string>
+  <string source="Thu" where="code">Чт</string>
+  <string source="Today is closed. Reservations and payments resume tomorrow." where="code">Сегодняшний день закрыт. Бронирования и оплаты возобновятся завтра.</string>
+  <string source="Try the sample hotel" where="code">Попробовать пример отеля</string>
+  <string source="Tue" where="code">Вт</string>
+  <string source="Twin" where="code">Твин</string>
+  <string source="Type what you want in your own words: a guest&#x27;s name, a room, a date. Choose a row below to try it." where="code">Напишите своими словами, что нужно: имя гостя, номер, дату. Выберите строку ниже, чтобы попробовать.</string>
+  <string source="Wed" where="code">Ср</string>
+  <string source="What would you like to do? Type it in your own words, or choose an example." where="code">Что вы хотите сделать? Напишите своими словами или выберите пример.</string>
+  <string source="Who is the guest? Add the name, or open the form." where="code">Кто гость? Добавьте имя или откройте форму.</string>
+  <string source="Who sleeps where over the next two weeks" where="code">Кто где живёт в ближайшие две недели</string>
+  <string source="book 203 for Grace Miller friday 3 nights" where="code">забронируй 203 для Grace Miller пятница 3 ночи</string>
+  <string source="check in Morgan" where="code">заселить Morgan</string>
+  <string source="dirty rooms" where="code">грязные номера</string>
+  <string source="extend Novak" where="code">продли Novak</string>
+  <string source="free rooms tomorrow 2 nights for 2" where="code">свободные номера завтра 2 ночи на 2</string>
+  <string source="mark 104 clean" where="code">отметь 104 чистый</string>
+  <string source="occupancy this month" where="code">загрузка за этот месяц</string>
+  <string source="who arrives today" where="code">кто приезжает сегодня</string>
+  <string source="who owes" where="code">кто должен</string>
 </strings>

@@ -13,12 +13,12 @@ function Reception:init() self:new_booking() end
 function Reception:new_booking()
   local today = orion.today()
   self.editing = nil
-  self.fields = {room = 0, guest = 0, arrival = today, departure = calendar.add(today, 1), persons = 1, rate = 0, extras = 0, paid = 0, notes = "", source = 0, search = self.fields and self.fields.search or ""}
+  self.fields = {room = 0, guest = 0, new_guest = "", arrival = today, departure = calendar.add(today, 1), persons = 1, rate = 0, extras = 0, paid = 0, notes = "", source = 0, search = self.fields and self.fields.search or ""}
   self.notice = ""
 end
 function Reception:save_data() orion.assert(application.save("lodge")) end
 function Reception:remember(v)
-  for _, key in ipairs({"room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes", "source", "search"}) do self.fields[key] = v[key] end
+  for _, key in ipairs({"room", "guest", "new_guest", "arrival", "departure", "persons", "rate", "extras", "notes", "source", "search"}) do self.fields[key] = v[key] end
 end
 function Reception:write(model, action)
   return model:transaction(function()
@@ -34,7 +34,7 @@ function Reception:edit(v)
 end
 function Reception:load(row)
   self.editing = row.id
-  self.fields = {room = row.room_id, guest = row.guest_id, arrival = row.arrival, departure = row.departure,
+  self.fields = {room = row.room_id, guest = row.guest_id, new_guest = "", arrival = row.arrival, departure = row.departure,
     persons = row.persons, rate = row.rate, extras = row.extras, paid = row.paid, notes = row.notes, source = row.source_id,
     search = self.fields and self.fields.search or ""}
 end
@@ -59,11 +59,38 @@ function Reception:room_rate(v)
   for k in pairs(self.fields) do if v[k] ~= nil then self.fields[k] = v[k] end end
   self.fields.room, self.fields.guest, self.fields.rate = v.room, v.guest, room.rate
 end
+-- The guest chosen in the list, or a new guest typed by name (found again
+-- when a guest of that name is already on file).
 function Reception:reserve(v)
-  local row = self:write(Hotel.reservations.model, function() return Hotel.save(self.editing, {room_id = v.room or 0, guest_id = v.guest or 0,
-    arrival = v.arrival or "", departure = v.departure or "", persons = v.persons or 0, rate = v.rate or 0,
-    extras = v.extras or 0, notes = v.notes or "", source_id = v.source or 0}) end)
+  local new_guest = v.new_guest and v.new_guest:find("%S") and v.new_guest
+  local creating = not self.editing
+  local row = self:write(Hotel.reservations.model, function()
+    local guest = v.guest or 0
+    if new_guest and (guest == 0 or not self.editing) then guest = orion.assert(Hotel.guest_named(new_guest)).id end
+    return Hotel.save(self.editing, {room_id = v.room or 0, guest_id = guest,
+      arrival = v.arrival or "", departure = v.departure or "", persons = v.persons or 0, rate = v.rate or 0,
+      extras = v.extras or 0, notes = v.notes or "", source_id = v.source or 0})
+  end)
   self:load(row)
+  self.notice = string.format(creating and orion.tr("Reservation %d saved: room %s for %s, %s to %s.") or orion.tr("Reservation %d updated: room %s for %s, %s to %s."),
+    row.id, row.room.name, row.guest.name, orion.formatDate(row.arrival), orion.formatDate(row.departure))
+end
+function Reception:extend(v)
+  local row = self:selected(v)
+  local saved = orion.assert(Hotel.extend(row.id, 1))
+  if self.editing == row.id then self:load(saved) end
+  self.notice = string.format(orion.tr("%s now stays until %s."), row.guest.name, orion.formatDate(saved.departure))
+end
+function Reception:shorten(v)
+  local row = self:selected(v)
+  local saved = orion.assert(Hotel.extend(row.id, -1))
+  if self.editing == row.id then self:load(saved) end
+  self.notice = string.format(orion.tr("%s now stays until %s."), row.guest.name, orion.formatDate(saved.departure))
+end
+function Reception:no_show(v)
+  local row = self:selected(v)
+  orion.assert(Hotel.no_show(row.id))
+  self.notice = string.format(orion.tr("%s marked as a no-show; room %s is free again."), row.guest.name, row.room.name)
 end
 function Reception:transition(v, target)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
@@ -192,6 +219,20 @@ function Reception:confirm_group_settlement(v)
   self.notice = orion.tr("Group settlement recorded.")
 end
 function Reception:data()
+  -- Another page (the calendar, Today, the assistant) asked to show a booking
+  -- or to start one with a room and dates.
+  if Hotel.focus_reservation then
+    local row = Hotel.reservations.model:find(Hotel.focus_reservation)
+    Hotel.focus_reservation = nil
+    if row then self:load(row); self.notice = "" end
+  elseif Hotel.prefill then
+    local prefill = Hotel.prefill
+    Hotel.prefill = nil
+    self:new_booking()
+    for key, value in pairs(prefill) do self.fields[key] = value end
+    local room = Hotel.rooms.model:find(self.fields.room or 0)
+    if room and (self.fields.rate or 0) == 0 then self.fields.rate = room.rate end
+  end
   local count, outstanding = 0, 0
   for _, row in ipairs(Hotel.reservations.model:select(nil, {order = "arrival, id"})) do
     local balance = Hotel.balance(row)
@@ -205,6 +246,10 @@ function Reception:data()
   for k, v in pairs(self.fields) do values[k] = v end
   local edited = self.editing and Hotel.reservations.model:find(self.editing)
   values.paid = orion.formatNumber(edited and Hotel.paid(edited) or 0, 2)
-  return {values = values, disabled = {confirm_cancel = not self.cancel_booking, confirm_group_cancel = not self.cancel_group_id, confirm_group_settlement = not self.settlement}}
+  local any = count > 0
+  return {values = values, commands = {confirm_cancel = self.cancel_booking ~= nil, confirm_group_cancel = self.cancel_group_id ~= nil,
+    confirm_group_settlement = self.settlement ~= nil, edit = any, check_in = any, check_out = any, payment = any, preview_cancel = any,
+    confirmation = any, registration = any, invoice = any, night_prices = any, extend = any, shorten = any, no_show = any,
+    group_statement = any, preview_group_cancel = any, preview_group_settlement = any}}
 end
 return Reception

@@ -1,6 +1,6 @@
 <orion>
   <databases>
-    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="7" migration="additive">
+    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="8" migration="additive">
       <table name="rooms">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="40" />
@@ -28,6 +28,15 @@
         <field name="country" type="string" length="3" />
         <field name="currency" type="string" length="4" />
         <field name="actor" type="string" length="101" default="legacy-unknown" />
+      </table>
+      <table name="hotel_profile">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="100" />
+        <field name="address" type="string" length="200" />
+        <field name="phone" type="string" length="60" />
+        <field name="email" type="string" length="120" />
+        <field name="check_in_time" type="string" length="8" />
+        <field name="check_out_time" type="string" length="8" />
       </table>
       <table name="reservation_groups">
         <field name="id" type="integer" key="YES" />
@@ -117,6 +126,7 @@
       <table name="arrivals" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="reservation_id" type="integer" />
+        <field name="state" type="string" length="20" />
         <field name="room" type="string" length="40" />
         <field name="guest" type="string" length="100" />
         <field name="arrival" type="date" />
@@ -127,6 +137,7 @@
       <table name="departures" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="reservation_id" type="integer" />
+        <field name="state" type="string" length="20" />
         <field name="room" type="string" length="40" />
         <field name="guest" type="string" length="100" />
         <field name="arrival" type="date" />
@@ -137,6 +148,7 @@
       <table name="in_house" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="reservation_id" type="integer" />
+        <field name="state" type="string" length="20" />
         <field name="room" type="string" length="40" />
         <field name="guest" type="string" length="100" />
         <field name="arrival" type="date" />
@@ -149,6 +161,42 @@
         <field name="kind" type="string" length="20" />
         <field name="title" type="string" length="160" />
         <field name="detail" type="string" length="160" />
+        <field name="target" type="string" length="40" />
+      </table>
+      <table name="audit" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="kind" type="string" length="20" />
+        <field name="title" type="string" length="160" />
+        <field name="detail" type="string" length="160" />
+      </table>
+      <table name="calendar" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="room_id" type="integer" />
+        <field name="name" type="string" length="40" />
+        <field name="free" type="integer" />
+        <field name="d1" type="string" length="48" />
+        <field name="d2" type="string" length="48" />
+        <field name="d3" type="string" length="48" />
+        <field name="d4" type="string" length="48" />
+        <field name="d5" type="string" length="48" />
+        <field name="d6" type="string" length="48" />
+        <field name="d7" type="string" length="48" />
+        <field name="d8" type="string" length="48" />
+        <field name="d9" type="string" length="48" />
+        <field name="d10" type="string" length="48" />
+        <field name="d11" type="string" length="48" />
+        <field name="d12" type="string" length="48" />
+        <field name="d13" type="string" length="48" />
+        <field name="d14" type="string" length="48" />
+      </table>
+      <table name="assistant" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="section" type="string" length="60" />
+        <field name="kind" type="string" length="20" />
+        <field name="title" type="string" length="200" />
+        <field name="detail" type="string" length="200" />
+        <field name="action" type="string" length="40" />
+        <field name="arg" type="string" length="200" />
       </table>
       <table name="free_rooms" transient="true">
         <field name="id" type="integer" key="YES" />

@@ -98,7 +98,10 @@ as needed. `edGetText` with a null destination returns the text byte length.
 | `values = {name = value}` | Sets controls by `name=`. A text box shows text, a number or a date (as its `type=` says). A CheckBox takes a boolean. A ComboBox bound to a datasource takes a key and refreshes its choices from that datasource; any other ComboBox takes a 1-based index. Any other control takes it as its caption. |
 | `lists = {name = rows}` | Fills the TableView `name` with exactly these rows. Its `source=` must be a table of the add-on's own database. |
 | `hidden = {name = true}` | Hides controls |
-| `disabled = {name = true}` | Disables controls |
+| `disabled = {name = true}` | Disables controls; an application ribbon also greys out the commands that run their `action=` |
+| `commands = {action = false}` | Turns off an action that only the application's ribbon offers (no control on the page runs it); `true` leaves it on |
+| `titles = {name = {"Mon 23", ...}}` | Sets the column titles of the TableView `name`, in column order, for titles that follow the data such as a calendar's dates |
+| `placeholders = {name = "..."}` | The hint a TextBox shows while it is empty |
 | `title = "..."` | Retitles the window |
 
 An action receives `values`, the typed contents of every named input:

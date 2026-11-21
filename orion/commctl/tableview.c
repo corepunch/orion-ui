@@ -626,6 +626,23 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case tvGetTable:
       if (s && lparam) *(int *)lparam = s->table_id;
       return s != NULL;
+    case tvSetColumnTitle: {
+      const char *title = lparam;
+      if (!s || !s->column_titles || !title || (int)wparam < 0 || (int)wparam >= s->column_count) {
+        fprintf(stderr, "[tableview] tvSetColumnTitle rejected win=%u column=%d columns=%d title=%s\n",
+                win->id, (int)wparam, s ? s->column_count : 0, title ? title : "(null)");
+        fflush(stderr);
+        return false;
+      }
+      if (s->column_titles[wparam] && !strcmp(s->column_titles[wparam], title)) return true;
+      char *copy = strdup(title);
+      if (!copy) return false;
+      free(s->column_titles[wparam]);
+      s->column_titles[wparam] = copy;
+      send_message(win, RVM_CLEARCOLUMNS, 0, NULL);   // the next refresh lays the columns out again
+      tv_refresh(win, s, (int)send_message(win, RVM_GETSELECTION, 0, NULL));
+      return true;
+    }
     case tvInsertRecord: case tvEditRecord: case tvDeleteRecord:
       return s && tv_record_action(win, s, msg, (const char *)lparam);
 

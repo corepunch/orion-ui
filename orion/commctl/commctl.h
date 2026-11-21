@@ -518,6 +518,8 @@ enum {
   tvEditRecord,             // the selected record
   tvDeleteRecord,           // the selected record, after confirmation; delete rules apply
   tvGetTable,               // lparam = int* table id; returns 1 when bound
+  tvSetColumnTitle,         // wparam = column index; lparam = const char * (copied), for titles that
+                            // follow the data, e.g. the dates of a calendar; false for a bad index
 };
 // evCommand notification (HIWORD) sent by a TableView after a record action.
 #define tvnChanged 0x7401

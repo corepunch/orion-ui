@@ -26,6 +26,44 @@ accel_table_t *load_accelerators(const accel_t *entries, int count) {
   return tbl;
 }
 
+bool accel_parse(const char *spec, accel_t *a) {
+  static const struct { const char *name; uint16_t key; } names[] = {
+    {"SPACE", AX_KEY_SPACE},   {"ENTER", AX_KEY_ENTER},   {"RETURN", AX_KEY_ENTER}, {"ESCAPE", AX_KEY_ESCAPE},
+    {"ESC", AX_KEY_ESCAPE},    {"BACKSPACE", AX_KEY_BACKSPACE}, {"TAB", AX_KEY_TAB},  {"HOME", AX_KEY_HOME},
+    {"END", AX_KEY_END},       {"LEFT", AX_KEY_LEFTARROW}, {"RIGHT", AX_KEY_RIGHTARROW}, {"UP", AX_KEY_UPARROW},
+    {"DOWN", AX_KEY_DOWNARROW}, {"PAGEUP", AX_KEY_PGUP},  {"PAGEDOWN", AX_KEY_PGDN},  {"DELETE", AX_KEY_DEL},
+    {"DEL", AX_KEY_DEL},       {"INSERT", AX_KEY_INS},    {"EQUALS", AX_KEY_EQUALS}, {"MINUS", AX_KEY_MINUS},
+    {"SLASH", AX_KEY_SLASH},
+  };
+  char buf[64], *tok;
+  if (!a || !spec || !*spec || strlen(spec) >= sizeof(buf)) goto rejected;
+  snprintf(buf, sizeof(buf), "%s", spec);
+  a->fVirt = FVIRTKEY;
+  a->key = 0;
+  tok = buf;
+  for (char *p = buf; *p; p++) if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+  for (char *sep; tok; tok = sep) {
+    if ((sep = strchr(tok, '+'))) *sep++ = 0;
+    char *w = tok, *r = tok;   // "Page Up" is one name
+    for (; *r; r++) if (*r != ' ') *w++ = *r;
+    *w = 0;
+    if (!strcmp(tok, "CTRL") || !strcmp(tok, "CMD")) a->fVirt |= FCONTROL;
+    else if (!strcmp(tok, "SHIFT")) a->fVirt |= FSHIFT;
+    else if (!strcmp(tok, "ALT")) a->fVirt |= FALT;
+    else if (a->key || sep) goto rejected;   // one key, last
+    else if (tok[0] == 'F' && tok[1] >= '1' && tok[1] <= '9' && atoi(tok + 1) >= 1 && atoi(tok + 1) <= 12 &&
+             strspn(tok + 1, "0123456789") == strlen(tok + 1)) a->key = (uint16_t)(AX_KEY_F1 + atoi(tok + 1) - 1);
+    else if (((tok[0] >= 'A' && tok[0] <= 'Z') || (tok[0] >= '0' && tok[0] <= '9')) && !tok[1]) a->key = (uint16_t)tok[0];
+    else for (size_t i = 0; i < sizeof(names) / sizeof(names[0]) && !a->key; i++) if (!strcmp(tok, names[i].name)) a->key = names[i].key;
+    if (!a->key && !sep && strcmp(tok, "CTRL") && strcmp(tok, "CMD") && strcmp(tok, "SHIFT") && strcmp(tok, "ALT")) goto rejected;
+  }
+  if (a->key) return true;
+rejected:
+  fprintf(stderr, "[accel] accel_parse rejected shortcut '%s'\n", spec ? spec : "(null)");
+  fflush(stderr);
+  return false;
+}
+
 void free_accelerators(accel_table_t *table) {
   if (!table) return;
   free(table->entries);

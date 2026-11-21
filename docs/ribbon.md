@@ -167,6 +167,47 @@ if (ribbon) set_host_page_toolbars(win, false);   // before page_host_init
 
 As a gem there is no ribbon, and the pages' `<Toolbar>`s show as before.
 
+## Declarative applications
+
+An application run by the Lua host (`application.orion`, no C) declares the
+same `<ribbon>`, but its buttons name script actions instead of menu
+commands; `form_library_ribbon()` builds the `ribbon_def_t` at run time and the
+host creates the chrome, the Quick Access Toolbar and the shortcuts:
+
+```xml
+<ribbon>
+  <QuickAccessToolbar>
+    <Button action="new_booking" page="reception" icon="lodge-new-reservation" text="New reservation" />
+  </QuickAccessToolbar>
+  <Tab label="Home">
+    <Group label="Arrive and leave">
+      <Button action="check_in" icon="lodge-check-in" text="Check in" size="large" shortcut="Ctrl+I" />
+    </Group>
+  </Tab>
+  <Tab label="Reservation" context="reception">
+    <Group label="Editor">
+      <Button action="reserve" icon="lodge-save" text="Save reservation" size="large" shortcut="Ctrl+S" />
+    </Group>
+  </Tab>
+</ribbon>
+```
+
+| Attribute | |
+|---|---|
+| `action=` | The page method to run, with the page's input values, as its own button would |
+| `page=` | The page to run it on, selected first; without it, the page that shows |
+| `target="orion.application" action="open" argument="form"` | An application action instead, such as opening a window |
+| `shortcut=` | `Ctrl+N`, `Ctrl+Shift+K`, `F5`, `Alt+Left`: parsed by `accel_parse()`; a shortcut used twice is an error |
+| `context=` on `<Tab>` | The name of a `role="page"` form: the tab shows while that page is selected, and opens when it is chosen |
+
+Buttons with the same action, page, target and argument are one command with
+one state, wherever they appear. The host disables a command whose page has no
+such method, or whose last `data()` turned it off: `disabled = {control = true}`
+for a control that runs the action, `commands = {action = false}` for one only
+the ribbon offers. A malformed ribbon is reported on stderr and left out; the
+application then runs without one. As a gem the shell owns the menu row, so the
+ribbon is not created. [Lodge](../apps/lodge/README.md) is the example.
+
 ## Styling
 
 | Selector | |

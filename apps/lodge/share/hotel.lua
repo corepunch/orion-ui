@@ -459,4 +459,133 @@ function Hotel.payment(id, amount_minor, request_key, method_id)
   if not ok then error(result, 0) end
   return result, message
 end
+-- ── Front-desk shortcuts ────────────────────────────────────────────────────
+-- What a small desk does many times a day, each as one transaction.
+
+-- Runs fn in one transaction and saves; a refusal comes back as nil, message.
+local function write_all(fn)
+  local ok, result = pcall(Hotel.reservations.model.transaction, Hotel.reservations.model, function()
+    local value = orion.assert(fn())
+    orion.assert(require("orion.application").save("lodge"))
+    return value
+  end)
+  if ok then return result end
+  if type(result) == "table" and type(result.message) == "string" then return nil, result.message end
+  error(result, 0)
+end
+Hotel.write_all = write_all
+
+-- The guest named exactly so (ignoring case and surrounding spaces), else a
+-- new guest with that name and phone.
+function Hotel.guest_named(name, phone)
+  name = type(name) == "string" and name:match("^%s*(.-)%s*$") or ""
+  if name == "" then return nil, orion.tr("Enter the guest's name.") end
+  local lower = name:lower()
+  for _, guest in ipairs(Hotel.guests.model:all()) do
+    if guest.name:lower() == lower then return guest end
+  end
+  return Hotel.guests:save(nil, {name = name, phone = phone or ""})
+end
+
+-- A guest who walks in: the guest, a stay from today, check-in and an
+-- optional payment, all or nothing.
+function Hotel.walk_in(args)
+  local today = orion.today()
+  local nights = args.nights
+  if math.type(nights) ~= "integer" or nights < 1 or nights > 90 then return nil, orion.tr("Enter from 1 to 90 nights.") end
+  local room = Hotel.rooms.model:find(args.room_id or 0)
+  if not room then return nil, orion.tr("Choose a room.") end
+  if room.cleaning_state ~= "clean" then return nil, orion.tr("Mark the room clean before checking in.") end
+  local paid = args.pay or 0
+  if not valid_amount(paid) then return nil, orion.tr("Enter an amount from 0 to 1000000 with at most two decimal places.") end
+  return write_all(function()
+    local guest = orion.assert(Hotel.guest_named(args.name, args.phone))
+    local row = orion.assert(Hotel.save(nil, {room_id = room.id, guest_id = guest.id, arrival = today, departure = calendar.add(today, nights),
+      persons = args.persons or 1, rate = room.rate, extras = 0, notes = args.notes or "", source_id = args.source_id or 0}))
+    orion.assert(Hotel.reservations:save(row.id, {status = "checked_in"}))
+    if money.minor(paid) > 0 then
+      Hotel.payment_request, Hotel.payment_method = Hotel.next_payment_key(), args.method_id
+      local ok, saved, refusal = pcall(Hotel.reservations.save, Hotel.reservations, row.id, {paid = paid})
+      Hotel.payment_request, Hotel.payment_method = nil, nil
+      if not ok then error(saved, 0) end
+      orion.assert(saved, refusal)
+    end
+    return Hotel.reservations.model:find(row.id)
+  end)
+end
+
+-- One more night (or `nights`) on a stay that is reserved or in house.
+function Hotel.extend(id, nights)
+  nights = nights or 1
+  local row = Hotel.reservations.model:find(id)
+  if not row then return nil, orion.tr("Choose a reservation.") end
+  if row.status ~= "reserved" and row.status ~= "checked_in" then return nil, orion.tr("This reservation is closed.") end
+  if math.type(nights) ~= "integer" or nights == 0 or nights > 90 or nights < -90 then return nil, orion.tr("Enter from 1 to 90 nights.") end
+  local departure = calendar.add(row.departure, nights)
+  if departure <= row.arrival then return nil, orion.tr("A stay needs at least one night.") end
+  return write_all(function() return Hotel.reservations:save(id, {departure = departure}) end)
+end
+
+-- A booked guest who did not come: the stay is cancelled and noted as a no-show.
+function Hotel.no_show(id)
+  local row = Hotel.reservations.model:find(id)
+  if not row then return nil, orion.tr("Choose a reservation.") end
+  if row.status ~= "reserved" then return nil, orion.tr("Only reserved bookings can be cancelled.") end
+  if row.arrival > orion.today() then return nil, orion.tr("A guest can be marked as a no-show from the arrival day.") end
+  local note = orion.tr("No-show")
+  local notes = row.notes and row.notes ~= "" and (note .. ". " .. row.notes) or note
+  return write_all(function() return Hotel.reservations:save(id, {status = "cancelled", notes = notes:sub(1, 255)}) end)
+end
+
+-- The reservations that match a guest, room, phone or reservation number,
+-- active first, then by arrival.
+function Hotel.search(text, limit)
+  text = type(text) == "string" and text:lower():match("^%s*(.-)%s*$") or ""
+  if text == "" then return {} end
+  local number = tonumber(text:match("^#?(%d+)$") or "")
+  local rows = {}
+  for _, row in ipairs(Hotel.reservations.model:select(nil, {order = "arrival, id"})) do
+    local guest, room = row.guest or {}, row.room or {}
+    if row.id == number or (guest.name or ""):lower():find(text, 1, true) or (room.name or ""):lower() == text or
+       ((guest.phone or ""):gsub("%D", "") ~= "" and text:gsub("%D", "") ~= "" and (guest.phone or ""):gsub("%D", ""):find(text:gsub("%D", ""), 1, true)) then
+      rows[#rows + 1] = row
+    end
+  end
+  -- The reservation with that number, then the room of that name, then by status.
+  local rank = {checked_in = 1, reserved = 2, checked_out = 3, cancelled = 4}
+  local function order(row)
+    if row.id == number then return 0 end
+    if row.room and row.room.name:lower() == text then return 0.5 end
+    return rank[row.status] or 9
+  end
+  table.sort(rows, function(a, b)
+    if order(a) ~= order(b) then return order(a) < order(b) end
+    if a.arrival ~= b.arrival then return a.arrival < b.arrival end
+    return a.id < b.id
+  end)
+  while limit and #rows > limit do table.remove(rows) end
+  return rows
+end
+-- The hotel's own details for printed documents: one editable record.
+Hotel.hotel_profile = records.bind("lodge.hotel_profile", function(row)
+  for _, key in ipairs({"name", "address", "phone", "email", "check_in_time", "check_out_time"}) do
+    if row[key] ~= nil and type(row[key]) ~= "string" then return nil, orion.tr("Enter the hotel details as text.") end
+  end
+  if row.email and row.email ~= "" and not row.email:match("^[^%s@]+@[^%s@]+%.[^%s@]+$") then
+    return nil, orion.tr("Enter a valid email address or leave it empty.")
+  end
+  for _, key in ipairs({"check_in_time", "check_out_time"}) do
+    local value = row[key]
+    if value and value ~= "" then
+      local h, m = value:match("^(%d%d?):(%d%d)$")
+      if not h or tonumber(h) > 23 or tonumber(m) > 59 then return nil, orion.tr("Enter times as hours and minutes, such as 14:00.") end
+    end
+  end
+  return true
+end)
+function Hotel.profile() return Hotel.hotel_profile.model:all()[1] or {} end
+function Hotel.save_profile(fields)
+  local current = Hotel.hotel_profile.model:all()[1]
+  return Hotel.hotel_profile:save(current and current.id, fields)
+end
 return Hotel

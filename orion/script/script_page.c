@@ -51,6 +51,9 @@ struct script_page_s {
   char title[256];
   char message[1024];
   page_sprite_t sprites[SCRIPT_MAX_SPRITES];
+  char *unavailable;              // "\0"-separated actions data() disabled; NULL when none
+  void (*rendered)(script_page_t *, void *);
+  void *rendered_userdata;
 };
 
 static script_page_t *live_pages;
@@ -251,6 +254,20 @@ static void apply_disabled(script_page_t *page, const form_ctrl_def_t *d, window
   enable_window(ctrl, !lua_toboolean(L, idx));
 }
 
+// titles = { calendar = {"Mon 23", "Tue 24"} }: a TableView's column titles
+// follow the data, in column order; nil keeps a column's title.
+static void apply_titles(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  (void)page;
+  if (!class_is(d, "TableView") || !lua_istable(L, idx)) { luaL_error(L, "titles.%s: want a TableView and a list of titles", d->name); return; }
+  lua_Integer n = luaL_len(L, idx);
+  for (lua_Integer i = 1; i <= n; i++) {
+    lua_geti(L, idx, i);
+    if (lua_isstring(L, -1) && !send_message(ctrl, tvSetColumnTitle, (uint32_t)(i - 1), (void *)lua_tostring(L, -1)))
+      luaL_error(L, "titles.%s: the list has no column %d", d->name, (int)i);
+    lua_pop(L, 1);
+  }
+}
+
 // placeholders = { field = "Show debtors" }: the hint a TextBox shows while empty.
 static void apply_placeholder(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
   (void)page;
@@ -330,6 +347,42 @@ static void set_sprite(script_page_t *page, const form_ctrl_def_t *d, window_t *
   if (count > 1) s->timer = axSetTimer(page->win, (uint32_t)interval, NULL, true);
 }
 
+// The actions a render turned off: disabled = {name = true} for a control
+// that runs that action, and commands = {action = false} for one that only
+// the application's command surface (a ribbon) offers.
+static void add_unavailable(char *list, size_t size, size_t *used, const char *action) {
+  size_t n = strlen(action) + 1;
+  if (*used + n + 1 > size) return;
+  memcpy(list + *used, action, n);
+  *used += n;
+}
+static void collect_unavailable(script_page_t *page, lua_State *L, int data) {
+  char list[2048];
+  size_t used = 0;
+  static const char *const keys[] = {"disabled", "commands"};
+  for (int k = 0; k < 2; k++) {
+    lua_getfield(L, data, keys[k]);
+    int table = lua_gettop(L);
+    if (lua_istable(L, table)) {
+      lua_pushnil(L);
+      while (lua_next(L, table)) {
+        const char *name = lua_type(L, -2) == LUA_TSTRING ? lua_tostring(L, -2) : NULL;
+        if (k == 1 && !lua_isboolean(L, -1)) luaL_error(L, "commands.%s: want true or false", name ? name : "?");
+        bool off = k == 0 ? lua_toboolean(L, -1) : !lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        if (!off || !name) continue;
+        const char *action = k == 0 ? control_attr(page, form_library_control_id(page->lib, page->form, name), "action") : name;
+        if (action && *action) add_unavailable(list, sizeof(list), &used, action);
+      }
+    }
+    lua_pop(L, 1);
+  }
+  list[used] = 0;
+  free(page->unavailable);
+  page->unavailable = used ? malloc(used + 1) : NULL;
+  if (page->unavailable) memcpy(page->unavailable, list, used + 1);
+}
+
 // Runs inside script_call: (page) -> applies page:data().
 static int render_data(lua_State *L) {
   script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
@@ -341,11 +394,13 @@ static int render_data(lua_State *L) {
   luaL_checktype(L, -1, LUA_TTABLE);
   int data = lua_gettop(L);
   each_named(page, L, data, "values", set_value);
+  each_named(page, L, data, "titles", apply_titles);
   each_named(page, L, data, "lists", fill_list);
   each_named(page, L, data, "hidden", apply_hidden);
   each_named(page, L, data, "disabled", apply_disabled);
   each_named(page, L, data, "placeholders", apply_placeholder);
   each_named(page, L, data, "sprites", set_sprite);
+  collect_unavailable(page, L, data);
   lua_getfield(L, data, "title");
   if (lua_isstring(L, -1)) set_window_title(page->win, lua_tostring(L, -1));
   return 0;
@@ -402,6 +457,7 @@ static void render(script_page_t *page) {
       resize_window(page->win, size.w, size.h);
   }
   window_layout_sync(page->win);
+  if (page->rendered) page->rendered(page, page->rendered_userdata);
   if (page->focus) {
     window_t *ctrl = get_window_item(page->win, page->focus);
     page->focus = 0;
@@ -531,6 +587,23 @@ static bool perform(script_page_t *page, const char *action, const char *control
 
 bool script_page_perform(script_page_t *page, const char *action) {
   return perform(page, action, NULL);
+}
+
+bool script_page_can_perform(const script_page_t *page, const char *action) {
+  if (!page || !page->L || !action || !*action) return false;
+  for (const char *a = page->unavailable; a && *a; a += strlen(a) + 1) if (!strcmp(a, action)) return false;
+  lua_State *L = page->L;
+  lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
+  lua_getfield(L, -1, action);
+  bool known = lua_isfunction(L, -1);
+  lua_pop(L, 2);
+  return known;
+}
+
+void script_page_on_render(script_page_t *page, void (*rendered)(script_page_t *, void *), void *userdata) {
+  if (!page) return;
+  page->rendered = rendered;
+  page->rendered_userdata = userdata;
 }
 
 bool script_page_perform_from(script_page_t *page, const char *action, const char *control) {
@@ -874,6 +947,7 @@ void script_page_close(script_page_t *page) {
     destroy_database(page->dbs[i]);
   }
   if (!page->borrowed_library) form_library_free(page->lib);
+  free(page->unavailable);
   script_page_t **link = &live_pages;
   while (*link && *link != page) link = &(*link)->next;
   if (*link) *link = page->next;

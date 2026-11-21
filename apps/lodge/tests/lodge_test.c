@@ -206,7 +206,7 @@ static void test_refused_migration(void) {
   file = fopen(target, "rb"); ASSERT_NOT_NULL(file);
   size_t size = fread(contents, 1, sizeof(contents) - 1, file); fclose(file); contents[size] = 0;
   ASSERT_STR_EQUAL(contents, xml);
-  const char *future = "<lodge orion-version=\"8\"><reservations/></lodge>";
+  const char *future = "<lodge orion-version=\"9\"><reservations/></lodge>";
   file = fopen(target, "wb"); ASSERT_NOT_NULL(file); ASSERT_EQUAL(fputs(future, file) >= 0, true); fclose(file);
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error));
   ASSERT_NULL(app);
@@ -445,8 +445,10 @@ static void test_service(void) {
   ASSERT_NOT_NULL(day_page);
   ASSERT_NOT_NULL(script_page_create(day_page, NULL));
   ASSERT_NOT_NULL(script_page_control(day_page, "day_history"));
-  window_t *cancelled_paid = script_page_control(day_page, "cancelled_paid"); ASSERT_NOT_NULL(cancelled_paid);
-  ASSERT_NOT_NULL(strstr(cancelled_paid->title, "Cancelled reservations with payments: 1"));
+  ASSERT_NOT_NULL(script_page_control(day_page, "checklist"));
+  ASSERT_NOT_NULL(strstr(script_page_control(day_page, "status")->title, "Closed"));
+  ASSERT_TRUE(hotel_script(app, "local d,h=require('day_close'),require('hotel'); local found=false; "
+    "for _,row in ipairs(d:checklist(h.day_report())) do if row.title=='Cancelled reservations still holding payments' then found=row.detail:find('^1 ') end end; assert(found)"));
   ASSERT_TRUE(hotel_script(app, "local f=require('remote.overdue'); local h=f('2036-03-01',{{id=9,room='A<&',guest='Guest <one>',arrival='2036-02-29',departure='2036-03-02',status='reserved'},{id=10,room='B',guest='Leaving',arrival='2036-02-27',departure='2036-03-01',status='checked_in'},{id=11,room='C',guest='Future',arrival='2036-03-02',departure='2036-03-03',status='reserved'},{id=12,room='D',guest='Done',arrival='2036-02-27',departure='2036-03-01',status='checked_out'}}); assert(h:find('A&lt;&amp;',1,true) and h:find('Guest &lt;one&gt;',1,true) and h:find('Overdue arrival',1,true) and h:find('Overdue departure',1,true) and not h:find('Future',1,true) and not h:find('Done',1,true))"));
   ASSERT_TRUE(script_page_perform(day_page, "export_overdue"));
   ASSERT_NOT_NULL(strstr(script_page_control(day_page, "notice")->title, "overdue-stays.html"));
@@ -689,13 +691,194 @@ static void test_demo(void) {
   for (int i = 0; i < 3; i++) { snprintf(path, sizeof(path), "%s/%s", directory, files[i]); unlink(path); }
   rmdir(directory); PASS();
 }
+static bool run_spec(script_application_t *app, const char *path) {
+  FILE *file = fopen(path, "rb"); if (!file) return false;
+  static char source[65536]; size_t size = fread(source, 1, sizeof(source) - 1, file); fclose(file); source[size] = 0;
+  return hotel_script(app, source);
+}
+static script_application_t *open_sample(const char *name, char *directory, size_t size) {
+  char error[2048];
+  snprintf(directory, size, "/tmp/orion-lodge-%s-%ld", name, (long)getpid()); test_mkdir(directory, 0700);
+  script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error));
+  if (!app) { fprintf(stderr, "%s\n", error); return NULL; }
+  hotel = get_database_by_name("lodge");
+  if (!hotel_script(app, "assert(require('hotel').configure_hotel('DE','EUR'))")) return NULL;
+  return app;
+}
+static void close_sample(script_application_t *app, const char *directory) {
+  script_application_close(app); hotel = NULL;
+  const char *files[] = {"hotel.xml", "hotel.xml.bak", "hotel.xml.lock", "lodge-reservations.csv", "lodge-guests.csv", "lodge-payments.csv", "bill.html", "front-desk-list.html"};
+  char path[256];
+  for (int i = 0; i < (int)(sizeof(files) / sizeof(files[0])); i++) { snprintf(path, sizeof(path), "%s/%s", directory, files[i]); unlink(path); }
+  rmdir(directory);
+}
+static void test_desk_tools(void) {
+  TEST("sample hotel, walk-in, extend, no-show, search, calendar, CSV export and letterhead");
+  char directory[128];
+  script_application_t *app = open_sample("tools", directory, sizeof(directory)); ASSERT_NOT_NULL(app);
+  ASSERT_TRUE(run_spec(app, "apps/lodge/tests/desk_spec.lua"));
+  // Every page renders the new data, and the calendar's titles follow its dates.
+  script_page_t *calendar = script_application_page(app, "availability"); ASSERT_NOT_NULL(calendar);
+  script_page_refresh(calendar);
+  ASSERT_STR_EQUAL(script_page_message(calendar), "");
+  ASSERT_TRUE(script_page_perform(calendar, "next_week"));
+  ASSERT_TRUE(script_page_perform(calendar, "go_today"));
+  script_page_t *audit = script_application_page(app, "day_close"); ASSERT_NOT_NULL(audit);
+  ASSERT_NOT_NULL(strstr(script_page_control(audit, "status")->title, "Resolve"));
+  ASSERT_FALSE(script_page_can_perform(audit, "close_day"));
+  ASSERT_TRUE(script_page_can_perform(audit, "export_overdue"));
+  script_page_t *reports = script_application_page(app, "reports"); ASSERT_NOT_NULL(reports);
+  ASSERT_TRUE(script_page_perform(reports, "export_csv"));
+  ASSERT_TRUE(file_contains(directory, "lodge-guests.csv", "Nora Walker"));
+  script_page_t *today = script_application_page(app, "today"); ASSERT_NOT_NULL(today);
+  ASSERT_TRUE(script_page_can_perform(today, "extend"));
+  ASSERT_FALSE(script_page_can_perform(today, "no_such_action"));
+  // The walk-in window opens over the main one and checks a guest in.
+  char error[1024];
+  ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "walk_in", error, sizeof(error)));
+  script_page_t *walk_in = script_application_page(app, "walk_in"); ASSERT_NOT_NULL(walk_in);
+  send_message(script_page_control(walk_in, "name"), edSetText, 0, "Ola Desk");
+  send_message(script_page_control(walk_in, "free"), RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(script_page_perform(walk_in, "check_in"));
+  ASSERT_NOT_NULL(strstr(script_page_control(walk_in, "notice")->title, "Ola Desk"));
+  ASSERT_FALSE(script_page_perform(walk_in, "check_in"));
+  // Opening the assistant twice brings the same window forward.
+  ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "assistant", error, sizeof(error)));
+  script_page_t *assistant = script_application_page(app, "assistant"); ASSERT_NOT_NULL(assistant);
+  ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "assistant", error, sizeof(error)));
+  ASSERT_TRUE(script_application_page(app, "assistant") == assistant);
+  send_message(script_page_control(assistant, "ask"), edSetText, 0, "check out Taylor");
+  ASSERT_TRUE(script_page_perform(assistant, "ask"));
+  ASSERT_NOT_NULL(strstr(script_page_control(assistant, "reply")->title, "Enter again"));
+  ASSERT_TRUE(script_page_perform(assistant, "ask"));
+  ASSERT_NOT_NULL(strstr(script_page_control(assistant, "done")->title, "checked out"));
+  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').search('taylor')[1].status=='checked_out')"));
+  close_sample(app, directory);
+  PASS();
+}
+static void test_assistant(void) {
+  TEST("assistant understands English, German and Russian requests and carries them out");
+  char directory[128];
+  script_application_t *app = open_sample("assistant", directory, sizeof(directory)); ASSERT_NOT_NULL(app);
+  ASSERT_TRUE(hotel_script(app, "assert(require('samples').load())"));
+  // LODGE_SAMPLE_OUT keeps a copy of the fresh sample hotel, for screenshots.
+  const char *keep = getenv("LODGE_SAMPLE_OUT");
+  if (keep) {
+    ASSERT_TRUE(send_db_message(hotel, dbSave, 0, NULL));
+    char from[256], to[256]; snprintf(from, sizeof(from), "%s/hotel.xml", directory); snprintf(to, sizeof(to), "%s/hotel.xml", keep);
+    FILE *in = fopen(from, "rb"), *out = fopen(to, "wb"); ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
+    int byte; while ((byte = fgetc(in)) != EOF) fputc(byte, out);
+    fclose(in); fclose(out);
+  }
+  ASSERT_TRUE(run_spec(app, "apps/lodge/tests/assistant_spec.lua"));
+  close_sample(app, directory);
+  PASS();
+}
+// Each language's examples must be requests the assistant understands there.
+static void test_assistant_languages(void) {
+  TEST("assistant examples work in German and Russian");
+  const char *languages[] = {"de", "ru"};
+  for (int i = 0; i < 2; i++) {
+    ui_set_language(languages[i]);
+    char directory[128];
+    script_application_t *app = open_sample(languages[i], directory, sizeof(directory)); ASSERT_NOT_NULL(app);
+    ASSERT_TRUE(hotel_script(app, "assert(require('samples').load())"));
+    ASSERT_TRUE(hotel_script(app,
+      "local orion,E=require('orion'),require('assistant_engine'); local misunderstood=orion.tr('I did not understand that. Try a guest\\'s name, a room number, or one of these examples.'); "
+      "assert(misunderstood~='I did not understand that. Try a guest\\'s name, a room number, or one of these examples.','catalog loaded'); "
+      "for _,example in ipairs(E.examples()) do local a=E.answer(example.arg); "
+      "assert(a.reply~=misunderstood and #a.rows>0 and a.rows[1].action~='ask', example.arg..' -> '..a.reply) end; "
+      "local pay=E.answer(orion.tr('Taylor paid 50 cash')); assert(pay.rows[1].action=='payment' and pay.rows[1].arg:match(':5000:[1-9]%d*$'), pay.rows[1].arg)"));
+    close_sample(app, directory);
+  }
+  ui_set_language("en");
+  PASS();
+}
+// The ribbon in the running application: its commands follow the selected
+// page, grey out where the page cannot run them, and run the page's actions.
+static uint32_t ribbon_ident(const form_ribbon_t *ribbon, const char *action, const char *page) {
+  for (int i = 0; i < ribbon->command_count; i++)
+    if (!strcmp(ribbon->commands[i].action, action) && !ribbon->commands[i].target &&
+        ((!page && !ribbon->commands[i].page) || (page && ribbon->commands[i].page && !strcmp(ribbon->commands[i].page, page))))
+      return ribbon->first_ident + (uint32_t)i;
+  return 0;
+}
+static void test_ribbon_host(void) {
+  TEST("the ribbon runs page actions, follows the selected page and greys out what it cannot do");
+  script_application_allow_ribbon(true);
+  char directory[128];
+  script_application_t *app = open_sample("ribbon", directory, sizeof(directory)); ASSERT_NOT_NULL(app);
+  ASSERT_TRUE(hotel_script(app, "assert(require('samples').load())"));
+  window_t *ribbon_win = script_application_menu_window(app); ASSERT_NOT_NULL(ribbon_win);
+  ASSERT_NOT_NULL(script_application_accelerators(app));
+  form_library_t *library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(library);
+  const form_ribbon_t *ribbon = form_library_ribbon(library); ASSERT_NOT_NULL(ribbon);
+  uint32_t check_in = ribbon_ident(ribbon, "check_in", NULL), confirmation = ribbon_ident(ribbon, "confirmation", NULL);
+  ASSERT_TRUE(check_in && confirmation);
+  // Today shows: Check in works there, Confirmation belongs to Reservations.
+  script_page_t *today = script_application_page(app, "today");
+  script_page_refresh(today);
+  ASSERT_EQUAL((int)send_message(ribbon_win, rbGetState, check_in, NULL) & TBSTATE_DISABLED, 0);
+  ASSERT_EQUAL((int)send_message(ribbon_win, rbGetState, confirmation, NULL) & TBSTATE_DISABLED, TBSTATE_DISABLED);
+  // Choose Alex Morgan's arrival (room 201 is ready) and check in from the ribbon.
+  window_t *arrivals = script_page_control(today, "arrivals");
+  int count = (int)send_message(arrivals, RVM_GETITEMCOUNT, 0, NULL), row = -1;
+  for (int i = 0; i < count; i++) {
+    db_arrival_t *record = (void *)send_message(arrivals, tvGetRecord, (uint32_t)i, NULL);
+    if (record && !strcmp(record->state, "ready")) row = i;
+  }
+  ASSERT_TRUE(row >= 0);
+  send_message(arrivals, RVM_SETSELECTION, (uint32_t)row, NULL);
+  send_message(ribbon_win, evCommand, MAKEDWORD(check_in, btnClicked), NULL);
+  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').search('morgan')[1].status=='checked_in')"));
+  ASSERT_NOT_NULL(strstr(script_page_control(today, "notice")->title, "Alex Morgan"));
+  // Choosing Reservations shows its tab's commands.
+  char error[512]; ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "reception", error, sizeof(error)));
+  ASSERT_EQUAL((int)send_message(ribbon_win, rbGetState, confirmation, NULL) & TBSTATE_DISABLED, 0);
+  form_library_free(library);
+  close_sample(app, directory);
+  script_application_allow_ribbon(false);
+  PASS();
+}
+static void test_ribbon(void) {
+  TEST("the application ribbon: commands, shortcuts and page tabs");
+  form_library_t *library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(library);
+  const form_ribbon_t *ribbon = form_library_ribbon(library); ASSERT_NOT_NULL(ribbon);
+  ASSERT_TRUE(ribbon->def.tab_count >= 8);
+  ASSERT_STR_EQUAL(ribbon->def.tabs[0].label, "Home");
+  ASSERT_EQUAL(ribbon->def.tabs[0].context, 0);
+  ASSERT_NOT_NULL(ribbon->def.quick_access);
+  ASSERT_TRUE(form_ribbon_context(ribbon, "reception") != 0);
+  ASSERT_EQUAL(form_ribbon_context(ribbon, "guests"), 0);
+  bool check_in = false, new_booking = false;
+  for (int i = 0; i < ribbon->accelerator_count; i++) {
+    const form_command_t *command = form_ribbon_command(ribbon, ribbon->accelerators[i].cmd); ASSERT_NOT_NULL(command);
+    if (!strcmp(command->action, "check_in") && ribbon->accelerators[i].key == AX_KEY_I && (ribbon->accelerators[i].fVirt & FCONTROL)) check_in = true;
+    if (!strcmp(command->action, "new_booking") && command->page && !strcmp(command->page, "reception")) new_booking = true;
+  }
+  ASSERT_TRUE(check_in); ASSERT_TRUE(new_booking);
+  // The Quick Access Toolbar's New reservation is the Home tab's: one command, one state.
+  ASSERT_EQUAL(ribbon->def.quick_access->items[0].ident, ribbon->def.tabs[0].groups[0].items[0].ident);
+  form_library_free(library);
+  const char *bad = "<orion><forms><form name=\"p\" role=\"page\" /></forms><ribbon><Tab label=\"Home\"><Group label=\"G\">"
+                    "<Button action=\"a\" text=\"A\" shortcut=\"Ctrl+Nope\" /></Group></Tab></ribbon></orion>";
+  library = form_library_parse(bad, strlen(bad), "bad-ribbon"); ASSERT_NOT_NULL(library);
+  ASSERT_NULL(form_library_ribbon(library));
+  form_library_free(library);
+  accel_t a = {0};
+  ASSERT_TRUE(accel_parse("Ctrl+Shift+K", &a)); ASSERT_EQUAL(a.key, AX_KEY_K); ASSERT_EQUAL(a.fVirt, FVIRTKEY | FCONTROL | FSHIFT);
+  ASSERT_TRUE(accel_parse("F5", &a)); ASSERT_EQUAL(a.key, AX_KEY_F5);
+  ASSERT_TRUE(accel_parse("alt+left", &a)); ASSERT_EQUAL(a.key, AX_KEY_LEFTARROW);
+  ASSERT_FALSE(accel_parse("Ctrl+", &a)); ASSERT_FALSE(accel_parse("Ctrl+A+B", &a));
+  PASS();
+}
 int main(void) {
   TEST_START("Orion Lodge");
   test_env_init(); DB_CLASS(db_schema_xml);
   snprintf(hotel_path, sizeof(hotel_path), "/tmp/orion-lodge-%ld.xml", (long)getpid());
   hotel = create_database_with_schema("lodge", "db_schema_xml", &lodge_lodge_schema, hotel_path);
   register_database("lodge", hotel);
-  test_hotel(); test_persistence_and_page(); test_refused_migration(); test_payment_form(); test_nightly_prices(); test_service(); test_group_form("DE", "EUR"); test_group_form("RU", "RUB"); test_currency_setup(); test_front_desk(); test_demo();
+  test_hotel(); test_persistence_and_page(); test_refused_migration(); test_payment_form(); test_nightly_prices(); test_service(); test_group_form("DE", "EUR"); test_group_form("RU", "RUB"); test_currency_setup(); test_front_desk(); test_demo(); test_ribbon(); test_desk_tools(); test_assistant(); test_assistant_languages(); test_ribbon_host();
   if (hotel) { unregister_database("lodge"); destroy_database(hotel); } unlink(hotel_path);
   test_env_shutdown(); TEST_END();
 }

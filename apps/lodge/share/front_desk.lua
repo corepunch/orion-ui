@@ -6,9 +6,10 @@ local Plugins = require("orion.plugins")
 local calendar, intervals, money = Plugins.use("calendar", 1), Plugins.use("intervals", 1), Plugins.use("money", 1)
 local FrontDesk = {}
 
-local function stay(row, detail)
+-- detail is the translated status a person reads; state the same, untranslated, for icons.
+local function stay(row, detail, state)
   return {reservation_id = row.id, room = row.room and row.room.name or "", guest = row.guest and row.guest.name or "",
-    arrival = row.arrival, departure = row.departure, detail = detail or "", balance = Hotel.balance(row)}
+    arrival = row.arrival, departure = row.departure, detail = detail or "", state = state or "", balance = Hotel.balance(row)}
 end
 
 -- Arrivals still to check in (today's and overdue), departures due (today's
@@ -18,15 +19,15 @@ function FrontDesk.movements(day)
   for _, row in ipairs(Hotel.reservations.model:select(nil, {order = "arrival, id"})) do
     if row.status == "reserved" and row.arrival <= day then
       local room = row.room
-      local detail = row.arrival < day and orion.tr("Overdue arrival") or
-        (room and room.cleaning_state ~= "clean" and orion.tr("Room not ready") or orion.tr("Room ready"))
-      arrivals[#arrivals + 1] = stay(row, detail)
+      local state = row.arrival < day and "overdue" or (room and room.cleaning_state ~= "clean" and "not_ready" or "ready")
+      local detail = ({overdue = orion.tr("Overdue arrival"), not_ready = orion.tr("Room not ready"), ready = orion.tr("Room ready")})[state]
+      arrivals[#arrivals + 1] = stay(row, detail, state)
     elseif row.status == "checked_in" then
       if row.departure <= day then
         local balance = money.minor(Hotel.balance(row))
-        local detail = row.departure < day and orion.tr("Overdue departure") or
-          (balance ~= 0 and orion.tr("Balance to settle") or orion.tr("Settled"))
-        departures[#departures + 1] = stay(row, detail)
+        local state = row.departure < day and "overdue" or (balance ~= 0 and "due" or "settled")
+        local detail = ({overdue = orion.tr("Overdue departure"), due = orion.tr("Balance to settle"), settled = orion.tr("Settled")})[state]
+        departures[#departures + 1] = stay(row, detail, state)
       end
       in_house[#in_house + 1] = stay(row, string.format(orion.tr("%d guests"), row.persons))
     end
@@ -34,35 +35,39 @@ function FrontDesk.movements(day)
   return arrivals, departures, in_house
 end
 
--- The tasks a shift must settle, most urgent first.
+-- The tasks a shift must settle, most urgent first. `target` is the page
+-- that settles a task.
 function FrontDesk.attention(day)
   local rows = {}
-  local function add(kind, title, detail) rows[#rows + 1] = {kind = kind, title = title, detail = detail or ""} end
-  if #Hotel.hotel_settings.model:all() == 0 then
-    add("error", orion.tr("Choose the hotel's country and currency"), orion.tr("Setup, before the first reservation"))
+  local function add(kind, title, detail, target) rows[#rows + 1] = {kind = kind, title = title, detail = detail or "", target = target or ""} end
+  local configured = #Hotel.hotel_settings.model:all() > 0
+  if not configured then
+    add("error", orion.tr("Choose the hotel's country and currency"), orion.tr("Setup, before the first reservation"), "hotel_setup")
   end
-  if #Hotel.rooms.model:all() == 0 then add("tip", orion.tr("Add the hotel's rooms"), orion.tr("Rooms page")) end
+  if #Hotel.rooms.model:all() == 0 then
+    add("tip", orion.tr("Add the hotel's rooms"), configured and orion.tr("Rooms page, or try the sample hotel in Setup") or orion.tr("Rooms page"), "rooms")
+  end
   local arrivals, departures = FrontDesk.movements(day)
   for _, row in ipairs(arrivals) do
-    if row.arrival < day then add("error", string.format(orion.tr("%s did not arrive"), row.guest), string.format(orion.tr("Room %s · check in or cancel"), row.room))
-    elseif row.detail == orion.tr("Room not ready") then add("warning", string.format(orion.tr("Prepare room %s"), row.room), string.format(orion.tr("%s arrives today"), row.guest)) end
+    if row.arrival < day then add("error", string.format(orion.tr("%s did not arrive"), row.guest), string.format(orion.tr("Room %s · check in or mark as a no-show"), row.room), "today")
+    elseif row.state == "not_ready" then add("warning", string.format(orion.tr("Prepare room %s"), row.room), string.format(orion.tr("%s arrives today"), row.guest), "rooms") end
   end
   for _, row in ipairs(departures) do
-    if row.departure < day then add("error", string.format(orion.tr("%s is past departure"), row.guest), string.format(orion.tr("Room %s · check out or extend"), row.room))
-    elseif money.minor(row.balance) ~= 0 then add("warning", string.format(orion.tr("Settle %s before departure"), row.guest), string.format(orion.tr("Balance %s"), orion.formatNumber(row.balance, 2))) end
+    if row.departure < day then add("error", string.format(orion.tr("%s is past departure"), row.guest), string.format(orion.tr("Room %s · check out or extend"), row.room), "today")
+    elseif money.minor(row.balance) ~= 0 then add("warning", string.format(orion.tr("Settle %s before departure"), row.guest), string.format(orion.tr("Balance %s"), orion.formatNumber(row.balance, 2)), "today") end
   end
   local dirty = 0
   for _, room in ipairs(Hotel.rooms.model:all()) do if room.cleaning_state ~= "clean" and not Hotel.room_occupied(room.id) then dirty = dirty + 1 end end
-  if dirty > 0 then add("info", string.format(orion.tr("%d rooms to clean or inspect"), dirty), orion.tr("Rooms page")) end
+  if dirty > 0 then add("info", string.format(orion.tr("%d rooms to clean or inspect"), dirty), orion.tr("Rooms page"), "rooms") end
   for _, block in ipairs(Hotel.room_blocks.model:all()) do
     if block.blocked_from <= day and day < block.blocked_until then
       add("info", string.format(orion.tr("Room %s is out of service"), block.room and block.room.name or "?"),
-        string.format(orion.tr("%s until %s"), block.reason, orion.formatDate(block.blocked_until)))
+        string.format(orion.tr("%s until %s"), block.reason, orion.formatDate(block.blocked_until)), "rooms")
     end
   end
   local yesterday = calendar.add(day, -1)
-  if #Hotel.hotel_settings.model:all() > 0 and #Hotel.day_closes.model:all() > 0 and not Hotel.day_closes.model:find({day = yesterday}) then
-    add("tip", orion.tr("Yesterday was not closed"), orion.tr("Close each day after the last departure"))
+  if configured and #Hotel.day_closes.model:all() > 0 and not Hotel.day_closes.model:find({day = yesterday}) then
+    add("tip", orion.tr("Yesterday was not closed"), orion.tr("Close each day after the last departure"), "day_close")
   end
   return rows
 end
@@ -164,5 +169,55 @@ function FrontDesk.period_rows(report)
   table.sort(sources)
   for _, source in ipairs(sources) do add(bookings, source, orion.formatNumber(report.sources[source], 0)) end
   return rows
+end
+-- The room calendar ("tape chart"): one row per room, one column per night
+-- from `from`. A night shows the guest's surname, • in house, › booked;
+-- × marks a room out of service. Free nights stay empty. (The marks are in
+-- the UI font, IBM Plex Sans.)
+FrontDesk.CALENDAR_DAYS = 14
+local weekdays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+function FrontDesk.calendar_titles(from)
+  local titles = {orion.tr("Room")}
+  for i = 0, FrontDesk.CALENDAR_DAYS - 1 do
+    local night = calendar.add(from, i)
+    local y, m, d = night:match("^(%d+)-(%d+)-(%d+)$")
+    local weekday = os.date("*t", os.time({year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12})).wday
+    titles[#titles + 1] = string.format("%s %d", orion.tr(weekdays[weekday]), tonumber(d))
+  end
+  return titles
+end
+local function surname(name)
+  return (name or ""):match("(%S+)%s*$") or ""
+end
+function FrontDesk.calendar(from)
+  local last = calendar.add(from, FrontDesk.CALENDAR_DAYS)
+  local rows = {}
+  for _, room in ipairs(Hotel.rooms.model:select(nil, {order = "name"})) do
+    local row = {room_id = room.id, name = room.name, free = 0}
+    for _, stay in ipairs(Hotel.reservations.model:select({room_id = room.id})) do
+      if (stay.status == "reserved" or stay.status == "checked_in") and intervals.overlap(from, last, stay.arrival, stay.departure) then
+        local mark = stay.status == "checked_in" and "• " or "› "
+        for i = 0, FrontDesk.CALENDAR_DAYS - 1 do
+          local night = calendar.add(from, i)
+          if night >= stay.arrival and night < stay.departure then row["d" .. (i + 1)] = mark .. surname(stay.guest and stay.guest.name) end
+        end
+      end
+    end
+    for _, block in ipairs(Hotel.room_blocks.model:select({room_id = room.id})) do
+      for i = 0, FrontDesk.CALENDAR_DAYS - 1 do
+        local night = calendar.add(from, i)
+        if night >= block.blocked_from and night < block.blocked_until then row["d" .. (i + 1)] = "× " .. block.reason end
+      end
+    end
+    for i = 1, FrontDesk.CALENDAR_DAYS do if not row["d" .. i] then row.free = row.free + 1 end end
+    rows[#rows + 1] = row
+  end
+  return rows
+end
+-- Rooms free on each night of the calendar, for its summary line.
+function FrontDesk.calendar_free(rows, night_index)
+  local free = 0
+  for _, row in ipairs(rows) do if not row["d" .. night_index] then free = free + 1 end end
+  return free
 end
 return FrontDesk

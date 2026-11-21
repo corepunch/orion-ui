@@ -12,6 +12,16 @@ th,td{border:1px solid #888;padding:5px;text-align:left}td.n,th.n{text-align:rig
 @page{size:A4;margin:15mm}</style>]]
 
 local function settings() return Hotel.hotel_settings.model:all()[1] or {currency = ""} end
+-- The hotel's letterhead from Setup: name, address and contacts, escaped.
+local function letterhead()
+  local p = Hotel.profile()
+  if not p.name or p.name == "" then return "" end
+  local contacts = {}
+  for _, value in ipairs({p.address, p.phone, p.email}) do if value and value ~= "" then contacts[#contacts + 1] = value end end
+  return template.render([[<header style="border-bottom:1px solid #888;margin-bottom:16px"><b style="font-size:18px">{{name}}</b><br>{{contacts}}</header>]],
+    {name = p.name, contacts = table.concat(contacts, " · ")})
+end
+Documents.letterhead = letterhead
 local function amount(minor) return orion.formatNumber(minor / 100, 2) end
 local function date(iso) return iso and iso ~= "" and orion.formatDate(iso) or "" end
 
@@ -19,14 +29,15 @@ local function date(iso) return iso and iso ~= "" and orion.formatDate(iso) or "
 -- Meldeschein, a registration card elsewhere): identity, stay and signature.
 function Documents.registration(row)
   local guest = row.guest or {}
-  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. [[
+  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. letterhead() .. [[
 <h1>{{title}}</h1><p>{{reservation_label}} {{id}} · {{room_label}} {{room}}</p>
 <table><tbody>
 <tr><th>{{name_label}}</th><td>{{name}}</td></tr><tr><th>{{birth_label}}</th><td>{{birth}}</td></tr>
 <tr><th>{{nationality_label}}</th><td>{{nationality}}</td></tr><tr><th>{{address_label}}</th><td>{{address}}</td></tr>
 <tr><th>{{document_label}}</th><td>{{document}}</td></tr><tr><th>{{arrival_label}}</th><td>{{arrival}}</td></tr>
 <tr><th>{{departure_label}}</th><td>{{departure}}</td></tr><tr><th>{{persons_label}}</th><td>{{persons}}</td></tr>
-</tbody></table><p>{{companions}}</p><div class="sign">{{signature}}</div></html>]], {
+</tbody></table><p>{{times}}</p><p>{{companions}}</p><div class="sign">{{signature}}</div></html>]], {
+    times = (Hotel.profile().check_out_time or "") ~= "" and string.format(orion.tr("Check-out is until %s on the day of departure."), Hotel.profile().check_out_time) or "",
     title = orion.tr("Guest registration form"), reservation_label = orion.tr("Reservation"), id = row.id,
     room_label = orion.tr("Room:"), room = row.room and row.room.name or "",
     name_label = orion.tr("Guest name:"), name = guest.name or "", birth_label = orion.tr("Date of birth:"), birth = date(guest.birth_date),
@@ -55,7 +66,7 @@ function Documents.bill(row)
     payments[#payments + 1] = {date = date(event.posted_on), text = event.amount_minor < 0 and orion.tr("Refund") or orion.tr("Payment"),
       method = method and method.name or "", amount = amount(event.amount_minor)}
   end
-  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. [[
+  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. letterhead() .. [[
 <h1>{{title}}</h1><p>{{guest_label}} {{guest}} · {{room_label}} {{room}}</p><p>{{arrival_label}} {{arrival}} — {{departure_label}} {{departure}}</p>
 <table><thead><tr><th>{{item_label}}</th><th class="n">{{amount_label}}</th></tr></thead><tbody>
 {{#lines}}<tr><td>{{text}}</td><td class="n">{{amount}}</td></tr>{{/lines}}
@@ -92,7 +103,7 @@ function Documents.cleaning_list(day)
     end
     rooms[#rooms + 1] = {name = room.name, state = orion.tr(labels[room.cleaning_state] or room.cleaning_state), tasks = table.concat(tasks, "; ")}
   end
-  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. [[
+  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. letterhead() .. [[
 <h1>{{title}}</h1><p>{{day}}</p><table><thead><tr><th>{{room_label}}</th><th>{{state_label}}</th><th>{{tasks_label}}</th><th>{{done_label}}</th></tr></thead>
 <tbody>{{#rooms}}<tr><td>{{name}}</td><td>{{state}}</td><td>{{tasks}}</td><td></td></tr>{{/rooms}}</tbody></table></html>]], {
     title = orion.tr("Cleaning list"), day = orion.formatDate(day), room_label = orion.tr("Room"), state_label = orion.tr("Cleaning status"),
@@ -100,8 +111,32 @@ function Documents.cleaning_list(day)
   })
 end
 
+-- The day's sheet for the desk: who arrives, who leaves and who stays, with
+-- rooms and balances, to keep at hand if the computer is busy or off.
+function Documents.front_desk_list(day)
+  local FrontDesk = require("front_desk")
+  local arrivals, departures, in_house = FrontDesk.movements(day)
+  local function rows(list)
+    local out = {}
+    for _, row in ipairs(list) do
+      out[#out + 1] = {room = row.room, guest = row.guest, dates = date(row.arrival) .. " – " .. date(row.departure),
+        detail = row.detail, balance = orion.formatNumber(row.balance, 2)}
+    end
+    return out
+  end
+  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. letterhead() .. [[
+<h1>{{title}}</h1><p>{{day}}</p>
+<h2>{{arrivals_title}}</h2><table><tbody>{{#arrivals}}<tr><td>{{room}}</td><td>{{guest}}</td><td>{{dates}}</td><td>{{detail}}</td><td class="n">{{balance}}</td></tr>{{/arrivals}}</tbody></table>
+<h2>{{departures_title}}</h2><table><tbody>{{#departures}}<tr><td>{{room}}</td><td>{{guest}}</td><td>{{dates}}</td><td>{{detail}}</td><td class="n">{{balance}}</td></tr>{{/departures}}</tbody></table>
+<h2>{{in_house_title}}</h2><table><tbody>{{#in_house}}<tr><td>{{room}}</td><td>{{guest}}</td><td>{{dates}}</td><td>{{detail}}</td><td class="n">{{balance}}</td></tr>{{/in_house}}</tbody></table>
+</html>]], {
+    title = orion.tr("Front desk list"), day = orion.formatDate(day), arrivals_title = orion.tr("Arrivals"), departures_title = orion.tr("Departures"),
+    in_house_title = orion.tr("In house"), arrivals = rows(arrivals), departures = rows(departures), in_house = rows(in_house),
+  })
+end
+
 function Documents.period(report, rows)
-  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. [[
+  return template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>]] .. style .. letterhead() .. [[
 <h1>{{title}}</h1><p>{{period}}</p><table><tbody>{{#rows}}<tr><td>{{section}}</td><td>{{label}}</td><td class="n">{{value}}</td></tr>{{/rows}}</tbody></table>
 <p>{{note}}</p></html>]], {
     title = orion.tr("Period report"), rows = rows,
