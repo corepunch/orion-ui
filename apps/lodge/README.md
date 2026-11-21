@@ -67,6 +67,7 @@ accounting.
 
 ## Design reports
 
+- [Lodge's web page](../../docs/lodge/index.html)
 - [Personas](../../docs/lodge/personas.md) and [user stories](../../docs/lodge/user-stories.md), with what is done and what is next
 - [What small hotels complain about](../../docs/lodge/research-hotel-software-complaints.md): the research behind the design
 - [UX audit and redesign report](../../docs/lodge/ux-audit.md), before and after
