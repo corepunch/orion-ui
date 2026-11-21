@@ -8,6 +8,10 @@ on:
       version:
         description: Version without v prefix
         required: true
+      desktop_checks_only:
+        description: Run the Git Client and Ledger checks in place of the full Linux suite
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,6 +37,7 @@ jobs:
     uses: ./.github/workflows/platform-builds.yml
     with:
       version: ${{ needs.version.outputs.version }}
+      desktop_checks_only: ${{ inputs.desktop_checks_only == true }}
 
   android:
     needs: version

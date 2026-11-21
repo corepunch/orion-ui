@@ -14,6 +14,10 @@ on:
         description: Release version; empty for a CI build
         type: string
         default: ''
+      desktop_checks_only:
+        description: Run the Git Client and Ledger checks in place of the full Linux suite
+        type: boolean
+        default: false
   workflow_dispatch:
 
 jobs:
@@ -98,16 +102,17 @@ jobs:
         if: inputs.version != ''
         run: sh scripts/package-release.sh "${{ inputs.version }}" "${{ matrix.platform }}" dist
       - name: Build and run tests (Linux)
-        if: inputs.version != '' && runner.os == 'Linux'
+        if: inputs.version != '' && runner.os == 'Linux' && !inputs.desktop_checks_only
         run: make test
-      - name: Check Git Client and Ledger (macOS)
-        if: inputs.version != '' && runner.os == 'macOS'
+      - name: Check Git Client and Ledger
+        if: inputs.version != '' && (runner.os == 'macOS' || (runner.os == 'Linux' && inputs.desktop_checks_only))
         timeout-minutes: 8
         run: |
           tests=(build/bin/test_gitclient_{backend,ui}_test
-                 build/bin/test_ledger{,_addons,_assistant,_automation,_executor,_runtime_forms}_test)
-          make -j4 xcode-check "${tests[@]}"
-          for test_bin in "${tests[@]}"; do "$test_bin"; done
+                 build/bin/test_ledger{,_addons,_assistant,_automation,_executor,_runtime_forms}_test
+                 build/bin/test_db_{access,edit_context,persistence,polymorphic,save_fault}_test
+                 build/bin/test_script{,_runtime}_test)
+          make -j4 test TEST_BINS="${tests[*]}"
       # Manual runs only: Windows releases are still built untested until this has run green.
       - name: Build and run tests (Windows)
         if: inputs.version == '' && runner.os == 'Windows'

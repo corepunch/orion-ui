@@ -196,6 +196,9 @@ platform regressions on macOS, then publishes the GitHub Release with every file
 | `orion-<package>-<version>-<platform>.tar.gz`, `packages-<platform>.tsv` | the `orion` package manager |
 | `<app>-<platform>.zip` / `.tar.gz`, `SHA256SUMS-<platform>.txt` | people downloading one app |
 
+For a Git Client or Ledger release, the manual workflow can run the app,
+database and scripting checks on Linux instead of the full suite.
+
 `docs.yml` publishes `docs/` to GitHub Pages for the same tags; it can also be
 started by hand from the Actions tab.
 
