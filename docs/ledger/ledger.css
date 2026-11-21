@@ -66,13 +66,21 @@ code, .mono { font-family: var(--mono); font-size: 0.88em; }
 
 /* top bar */
 .top { background: var(--navy); color: var(--navy-ink); }
-.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
+.top .wrap { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding-block: 14px; }
 .brand { display: flex; align-items: center; gap: 10px; font: 700 1rem/1 var(--display); text-decoration: none; }
 .brand-mark { width: 26px; height: 26px; border-radius: 6px; background: var(--amber); display: grid; place-items: center; color: #23262d; font: 700 0.8rem/1 var(--mono); }
-.top nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.top nav a { font: 500 0.85rem/1 var(--body); text-decoration: none; padding: 8px 12px; border-radius: 6px; color: var(--navy-muted); }
+.section-nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.section-nav a, .language-switch > * {
+  font: 500 0.875rem/1 var(--body); text-decoration: none; padding: 8px 12px; border-radius: 6px; color: var(--navy-muted);
+}
 .top nav a:hover { color: var(--navy-ink); background: rgb(255 255 255 / 0.08); }
-.top nav a[aria-current="true"] { color: #23262d; background: var(--amber); }
+.language-switch {
+  display: flex; gap: 3px; padding: 3px; border: 1px solid rgb(255 255 255 / 0.28); border-radius: 10px;
+}
+.language-switch > * {
+  display: grid; place-items: center; min-height: 36px; padding: 6px 10px; white-space: nowrap; color: var(--navy-ink);
+}
+.language-switch [aria-current="page"] { color: #23262d; background: var(--amber); font-weight: 600; }
 
 /* hero */
 .hero { background: var(--navy); color: var(--navy-ink); padding-block: 40px 0; overflow: hidden; }
@@ -239,7 +247,9 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 }
 @media (max-width: 560px) {
   body { font-size: 16px; }
-  .top nav a.hide-sm { display: none; }
+  .top .wrap { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .top .section-nav { display: none; }
+  .language-switch > * { min-height: 44px; padding-inline: 8px; }
   .facts .wrap { grid-template-columns: minmax(0, 1fr); }
   .fact { border-left: 0; padding-left: 0; }
 }
