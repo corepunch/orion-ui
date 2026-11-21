@@ -28,10 +28,12 @@
 #define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)                       // one beat
 #define GR_FRACTION_TICKS (GR_TICKS_BAR / (GR_BEATS_BAR * 4))    // a beat is four fractions
 #define GR_TRACKS       8
-#define GR_SHEET_HEADER_W 28 // track header column beside the sheet: colour stripe plus the mute/solo pair
 #define GR_RULER_H      22
 #define GR_MIN_ROW      26
 #define GR_MAX_ROW      64
+#define GR_TRACK_GUTTER  6  // colour stripe and track selection area beside the buttons
+#define GR_TRACK_BUTTON_MARGIN 2
+#define GR_SHEET_HEADER_W (GR_TRACK_GUTTER + GR_MAX_ROW / 2 + GR_TRACK_BUTTON_MARGIN)
 #define GR_SHEET_MAX_H  (GR_RULER_H + GR_TRACKS * GR_MAX_ROW) // ruler plus every lane at full height; the library takes the rest
 #define GR_BARS         128
 #define GR_MAX_BLOCKS   1024

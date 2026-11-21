@@ -56,11 +56,14 @@ static window_t *make_toggle(window_t *row, int id, const char *icon, const char
 static void row_layout(window_t *row) {
   track_row_t *tr = row->userdata;
   if (!tr) return;
-  int size = MAX(1, MIN(20, (row->frame.h - 2) / 2));
-  irect16_t pair = rect_center(rect_split_right(R(0, 0, row->frame.w, row->frame.h), size + 4), size, size * 2 + 2);
+  irect16_t bounds = rect_inset_edges(get_client_rect(row), R(GR_TRACK_GUTTER, 0, GR_TRACK_BUTTON_MARGIN, 0));
+  int size = MIN(bounds.w, bounds.h / 2);
+  if (size <= 0) return;
+  irect16_t pair = rect_split_right(bounds, size);
   irect16_t mute = rect_split_top(pair, size);
+  irect16_t solo = rect_split_bottom(pair, size);
   if (tr->mute) { move_window(tr->mute, mute.x, mute.y); resize_window(tr->mute, mute.w, mute.h); }
-  if (tr->solo) { move_window(tr->solo, mute.x, mute.y + size + 2); resize_window(tr->solo, mute.w, mute.h); }
+  if (tr->solo) { move_window(tr->solo, solo.x, solo.y); resize_window(tr->solo, solo.w, solo.h); }
 }
 
 static void track_popup(window_t *win, int track) {

@@ -277,7 +277,7 @@
           <Button command="file.export_audio" icon="phosphor-arrow-square-out" tooltip="Export Audio..." if="!GROOVE_SHARE_LINKS || !defined(GROOVE_USE_SHINE)" />
           <Button name="more" icon="phosphor-dots-three" tooltip="More actions" />
         </Toolbar>
-        <GrooveTracks name="tracks" width="28" />
+        <GrooveTracks name="tracks" width="40" />
         <GrooveArrangement name="arrangement" flags="WINDOW_FLEXSPACE" />
       </form>
 

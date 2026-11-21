@@ -1676,11 +1676,26 @@ static void test_track_selection(void) {
   ASSERT(g_app->selected_track == 0 && g_app->family == FAMILY_LOOP, "drums are selected initially");
   window_t *row = g_app->tracks->children->next;
   ASSERT_NOT_NULL(row);
+  window_t *mute = get_window_item(row, ID_MUTE(1)), *solo = get_window_item(row, ID_SOLO(1));
+  ASSERT_NOT_NULL(mute);
+  ASSERT_NOT_NULL(solo);
+  for (int height = GR_MIN_ROW; height <= GR_MAX_ROW; height++) {
+    resize_window(row, row->frame.w, height);
+    ASSERT_EQUAL(mute->frame.w, height / 2);
+    ASSERT_EQUAL(mute->frame.h, mute->frame.w);
+    ASSERT_EQUAL(solo->frame.w, mute->frame.w);
+    ASSERT_EQUAL(solo->frame.h, solo->frame.w);
+    ASSERT_EQUAL(mute->frame.y, 0);
+    ASSERT_EQUAL(solo->frame.y + solo->frame.h, height);
+    ASSERT_EQUAL(mute->frame.x, solo->frame.x);
+    ASSERT_TRUE(mute->frame.x >= GR_TRACK_GUTTER && mute->frame.x + mute->frame.w <= row->frame.w);
+  }
+  tracks_sync();
   tooltip_placement_t placement = TOOLTIP_PLACE_ABOVE;
   ASSERT_TRUE(send_message(row, evGetTooltipPlacement, MAKEDWORD(10, 10), &placement));
   ASSERT_EQUAL(placement, TOOLTIP_PLACE_RIGHT);
   ui_event_t e = { .message = kEventLeftButtonDown,
-    .x = (window_screen_x(row) + 12) * UI_WINDOW_SCALE,
+    .x = (window_screen_x(row) + GR_TRACK_GUTTER / 2) * UI_WINDOW_SCALE,
     .y = (window_screen_y(row) + row->frame.h / 2) * UI_WINDOW_SCALE };
   dispatch_message(&e);
   e.message = kEventLeftButtonUp;
