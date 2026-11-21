@@ -231,7 +231,7 @@
 &lt;<span class="k">closing_rule</span> kind=<span class="s">"revaluation"</span> name=<span class="s">"Курсовая разница"</span> /&gt;
 &lt;<span class="k">closing_rule</span> kind=<span class="s">"transfer"</span> name=<span class="s">"Закрытие счета 26"</span> /&gt;</pre>
       <figure class="shot natural">
-        <img src="img/ru/doctypes.png" width="637" height="216" alt="Список видов документов в карточке документа: поступление и реализация товаров, кассовые ордера, платёжное поручение, вычет НДС" loading="lazy">
+        <img src="img/ru/doctypes.png" width="1386" height="848" alt="Настройки Ledger, раздел «Виды документов» с префиксами, счетами проводок и формами" loading="lazy">
         <figcaption>Виды документов приходят из конфигурации вместе со своими проводками.</figcaption>
       </figure>
     </div>
@@ -243,7 +243,7 @@
     <div class="copy">
       <div class="eyebrow">Документы</div>
       <h2>Документ сам делает проводки</h2>
-      <p>Бухгалтер заполняет накладную, как привык: контрагент, товары, количество, цена. По «ОК и провести» Ledger считает НДС, выручку и себестоимость по средней цене и записывает проводки с аналитикой. Номер, итоги и заголовок вида «Реализация товаров РТ-0001 от 10.03.2003» появляются сами.</p>
+      <p>Бухгалтер заполняет накладную, как привык: контрагент, товары, количество, цена. По кнопке «Провести и закрыть» Ledger считает НДС, выручку и себестоимость по средней цене и записывает проводки с аналитикой. Номер, итоги и заголовок вида «Реализация товаров РТ-0001 от 10.03.2003» появляются сами.</p>
       <ul class="ticks">
         <li>Нумерация по префиксам, пересчёт итогов при каждой правке строки</li>
         <li>Документы в валюте проводятся по курсу дня и хранят обе суммы</li>
@@ -251,11 +251,11 @@
       </ul>
     </div>
     <div class="shots">
-      <figure class="shot"><img src="img/ru/document.png" width="637" height="467" alt="Карточка документа «Реализация товаров РТ-0001 от 10.03.2003» с двумя строками товаров, суммой 13 880,00, НДС 2 776,00 и кнопкой «ОК и провести»" loading="lazy"></figure>
+      <figure class="shot"><img src="img/ru/document.png" width="1640" height="1158" alt="Карточка документа «Реализация товаров РТ-0001 от 10.03.2003» с двумя строками товаров, суммой 13 880,00, НДС 2 776,00 и кнопкой «Провести и закрыть»" loading="lazy"></figure>
     </div>
   </div>
   <div class="wrap">
-    <figure class="shot wide"><img src="img/ru/doc-entries.png" width="1025" height="157" alt="Проводки документа РТ-0001: Дт 62.01 Кт 90.01 выручка, Дт 90.03 Кт 68.02 НДС, Дт 90.02 Кт 41.01 списание товаров по себестоимости" loading="lazy"><figcaption>Вкладка «Проводки» того же документа: выручка, НДС и себестоимость по каждой строке.</figcaption></figure>
+    <figure class="shot wide"><img src="img/ru/doc-entries.png" width="2054" height="436" alt="Проводки документа РТ-0001: Дт 62.01 Кт 90.01 выручка, Дт 90.03 Кт 68.02 НДС, Дт 90.02 Кт 41.01 списание товаров по себестоимости" loading="lazy"><figcaption>Вкладка «Проводки» в журнале документов показывает выручку, НДС и себестоимость по каждой строке реализации.</figcaption></figure>
   </div>
 </section>
 
@@ -273,7 +273,7 @@
         <li>Из любой проводки один клик до её документа</li>
       </ul>
     </div>
-    <figure class="shot wide"><img src="img/ru/entries.png" width="1010" height="260" alt="Журнал проводок с колонками Дт, Субконто Дт, Кт, Субконто Кт, количество, валюта и сумма: остатки, поступление товаров от ООО «Торговый дом Альфа», реализация ИП Иванову" loading="lazy"></figure>
+    <figure class="shot wide"><img src="img/ru/entries.png" width="2054" height="784" alt="Журнал проводок с колонками даты, документа, дебета, кредита, суммы и содержания. Видны начальные остатки и поступление товаров от ООО «Торговый дом Альфа»" loading="lazy"></figure>
   </div>
 </section>
 
@@ -290,11 +290,11 @@
       </ul>
     </div>
     <div class="shots">
-      <figure class="shot"><img src="img/ru/payroll.png" width="657" height="447" alt="Документ «Начисление зарплаты НЗ-0001 от 31.03.2003»: три сотрудника с суммой, удержанием, взносами и суммой к выплате, итого 36 000,00" loading="lazy"></figure>
+      <figure class="shot"><img src="img/ru/payroll.png" width="1280" height="894" alt="Документ «Начисление зарплаты НЗ-0001 от 31.03.2003»: три сотрудника с суммой, удержанием, взносами и суммой к выплате, итого 36 000,00" loading="lazy"></figure>
     </div>
   </div>
   <div class="wrap">
-    <figure class="shot wide"><img src="img/ru/payroll-entries.png" width="1008" height="241" alt="Проводки начисления зарплаты: Дт 26 Кт 70, НДФЛ Дт 70 Кт 68.01, ЕСН Дт 26 Кт 69.01, 69.02, 69.03 по каждому сотруднику" loading="lazy"><figcaption>НДФЛ и ЕСН расписаны по фондам и по каждому сотруднику.</figcaption></figure>
+    <figure class="shot wide"><img src="img/ru/payroll-entries.png" width="2054" height="436" alt="Проводки начисления зарплаты: Дт 26 Кт 70, НДФЛ Дт 70 Кт 68.01, ЕСН Дт 26 Кт 69.01, 69.02, 69.03 по каждому сотруднику" loading="lazy"><figcaption>НДФЛ и ЕСН расписаны по фондам и по каждому сотруднику.</figcaption></figure>
   </div>
 </section>
 
@@ -312,7 +312,7 @@
         <li>F5 перепроводит все документы по датам и пересобирает отчёты</li>
       </ul>
     </div>
-    <figure class="shot wide"><img src="img/ru/closing.png" width="1025" height="173" alt="Проводки документа «Закрытие месяца»: амортизация ОС, курсовые разницы, закрытие счетов 26 и 44, финансовый результат от продаж и сальдо прочих доходов и расходов" loading="lazy"></figure>
+    <figure class="shot wide"><img src="img/ru/closing.png" width="2054" height="436" alt="Проводки документа «Закрытие месяца»: амортизация ОС, курсовые разницы, закрытие счетов 26 и 44, финансовый результат от продаж и сальдо прочих доходов и расходов" loading="lazy"></figure>
   </div>
 </section>
 
@@ -330,7 +330,7 @@
         <li>Ведомость основных средств и расчётная ведомость</li>
       </ul>
     </div>
-    <figure class="shot wide"><img src="img/ru/reports.png" width="1010" height="372" alt="Раздел «Отчеты»: список отчётов слева и оборотно-сальдовая ведомость по счетам 000, 01, 02, 08, 19, 26, 41, 44, 50, 51, 52, 60, 62, 68, 69, 70, 80, 84, 90" loading="lazy"></figure>
+    <figure class="shot wide"><img src="img/ru/reports.png" width="2054" height="1242" alt="Оборотно-сальдовая ведомость с начальными и конечными сальдо, дебетовыми и кредитовыми оборотами по счетам" loading="lazy"></figure>
   </div>
 </section>
 
@@ -341,9 +341,9 @@
       <h2>ТОРГ-12 и счёт-фактура из HTML-шаблона</h2>
       <p>Печатная форма — обычный HTML-файл с подстановками. Сумма прописью, ФИО в нужном падеже и строки документа подставляются сами. Свой бланк делается в любом редакторе за вечер, без конфигуратора.</p>
     </div>
-    <figure class="shot natural"><img src="img/ru/print-torg12.png" width="1030" height="181" alt="Фрагмент товарной накладной ТОРГ-12 № РТ-0001: две строки товаров, итоги с НДС и сумма прописью «Шестнадцать тысяч шестьсот пятьдесят шесть рублей 00 копеек»" loading="lazy"><figcaption>ТОРГ-12: строки документа, итоги и сумма прописью.</figcaption></figure>
+    <figure class="shot natural"><img src="img/ru/print-torg12.png" width="1215" height="237" alt="Фрагмент товарной накладной ТОРГ-12 № РТ-0001: две строки товаров, итоги с НДС и сумма прописью «Шестнадцать тысяч шестьсот пятьдесят шесть рублей 00 копеек»" loading="lazy"><figcaption>ТОРГ-12: строки документа, итоги и сумма прописью.</figcaption></figure>
     <div class="two">
-      <figure class="shot natural"><img src="img/ru/print-faktura.png" width="716" height="218" alt="Шапка счёта-фактуры № РТ-0001 от 10.03.2003: продавец ООО «Ромашка», ИНН/КПП, грузополучатель и покупатель ИП Иванов" loading="lazy"><figcaption>Счёт-фактура: реквизиты подставлены из справочников.</figcaption></figure>
+      <figure class="shot natural"><img src="img/ru/print-faktura.png" width="690" height="211" alt="Шапка счёта-фактуры № РТ-0001 от 10.03.2003: продавец ООО «Ромашка», ИНН/КПП, грузополучатель и покупатель ИП Иванов" loading="lazy"><figcaption>Счёт-фактура: реквизиты подставлены из справочников.</figcaption></figure>
     <div class="tbl-wrap">
       <table class="tbl">
         <thead><tr><th>Подстановка</th><th>Что получится</th></tr></thead>
@@ -374,7 +374,7 @@
       </ul>
     </div>
     <div class="shots">
-      <figure class="shot natural"><img src="img/ru/menu-file.png" width="292" height="212" alt="Меню «Файл» с пунктом «Загрузить из 1С (EnterpriseData)...»" loading="lazy"><figcaption>Файл → Загрузить из 1С (EnterpriseData).</figcaption></figure>
+      <figure class="shot natural"><img src="img/ru/import-command.png" width="822" height="346" alt="В поиске команд Ledger выбран пункт «Загрузить из 1С»" loading="lazy"><figcaption>Команда «Загрузить из 1С» в поиске команд Ledger.</figcaption></figure>
     </div>
   </div>
 </section>
