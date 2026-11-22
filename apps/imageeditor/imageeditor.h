@@ -114,7 +114,7 @@ extern int g_bw_retina_scale;
 #define PALETTE_WIN_X   4
 #define IMAGEEDITOR_TOOL_ICON_PX 24
 #if IMAGEEDITOR_BW
-#define TOOL_PALETTE_BTN_SIZE 32
+#define TOOL_PALETTE_BTN_SIZE (IMAGEEDITOR_TOOL_ICON_PX + 4)
 #else
 #define TOOL_PALETTE_BTN_SIZE TB_SPACING
 #endif

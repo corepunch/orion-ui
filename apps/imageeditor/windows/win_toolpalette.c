@@ -29,8 +29,8 @@ static void pencil_palette_draw(int swatch, const toolbar_draw_item_t *draw) {
   }
 }
 
-// The rail's layer ladder: one slim rung per layer, front of the stack at the top.
-static const struct { int ident, layer; } kPencilRungs[] = {
+// Front of the stack first, matching the toolbar order.
+static const struct { int ident, layer; } kPencilLayerButtons[] = {
   {ID_PENCIL_TOOLS_LAYER_FX,     IE_LAYER_FX},
   {ID_PENCIL_TOOLS_LAYER_COLOR,  IE_LAYER_COLOR},
   {ID_PENCIL_TOOLS_LAYER_PENCIL, IE_LAYER_PENCIL},
@@ -47,20 +47,16 @@ static void pencil_draw_caption(const toolbar_draw_item_t *draw, const char *tex
   draw_text("Caption", text, r.x, r.y, ink);
 }
 
-// The canvas shows the stack up to the layer being drawn on, so the rungs above it rest:
-// their names go grey until a layer at or above them is chosen.
-static void pencil_draw_rung(window_t *win, int layer, const toolbar_draw_item_t *draw) {
-  canvas_doc_t *doc = g_app && pencil_has_layers(g_app->active_doc) ? g_app->active_doc : NULL;
-  toolbar_state_t *tb = window_toolbar_state(win);
-  int rung = 0, working = ARRAY_LEN(kPencilRungs);
-  for (int i = 0; i < ARRAY_LEN(kPencilRungs); i++) {
-    if (kPencilRungs[i].layer == layer) rung = i;
-    if (doc && kPencilRungs[i].layer == doc->layer.active) working = i;
+// Layers above the editing cutoff are muted but remain selectable.
+static void pencil_sync_layer_buttons(window_t *win, int layer) {
+  uint32_t muted = get_sys_color(brTextDisabled);
+  for (int i = 0; i < ARRAY_LEN(kPencilLayerButtons); i++) {
+    int current = kPencilLayerButtons[i].layer;
+    uint32_t ident = IE_PENCIL_LAYER_BASE + current;
+    if (current == layer) muted = 0;
+    send_message(win, tbCheckButton, ident, (void *)(intptr_t)(current == layer));
+    send_message(win, tbSetItemColor, ident, &muted);
   }
-  ctrl_state_t state = draw->state | (rung == working ? CTRL_SELECTED : 0);
-  theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, state);
-  const char *name = tb && draw->index < tb->item_count && tb->items[draw->index].text ? tb->items[draw->index].text : "";
-  pencil_draw_caption(draw, name, rung < working ? get_sys_color(brTextDisabled) : theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
 }
 
 // A readout says in a word what the control under it holds: "5px", "50%", "3/12", "12fps".
@@ -149,21 +145,18 @@ static void swatch_edit_fg(window_t *owner) {
 #if IMAGEEDITOR_BW
 static void pencil_toolbar_items(window_t *win) {
   canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
-  int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
+  int layer = pencil_has_layers(doc) ? doc->layer.active : -1;
+  bool pencil = layer < 0 || layer == IE_LAYER_PENCIL;
   toolbar_item_t items[ARRAY_LEN(imageeditor_pencil_tools_toolbar)];
   int count = 0;
   for (int i = 0; i < ARRAY_LEN(imageeditor_pencil_tools_toolbar); i++) {
     toolbar_item_t item = imageeditor_pencil_tools_toolbar[i];
-    if (layer == IE_LAYER_PENCIL && (item.ident == ID_TOOL_BRUSH || item.ident == ID_TOOL_FILL || item.ident == ID_TOOL_EYEDROPPER)) continue;
-    if (layer != IE_LAYER_PENCIL && (item.ident == ID_TOOL_PENCIL || item.ident == ID_PENCIL_TOOLS_OPACITY ||
-                                     item.ident == ID_PENCIL_TOOLS_OPACITY_VALUE)) continue;
-    // Rungs and readouts are drawn here as slim rows; a rung answers to its layer's command.
-    for (int r = 0; r < ARRAY_LEN(kPencilRungs); r++)
-      if (item.ident == kPencilRungs[r].ident) {
-        item.type = TOOLBAR_ITEM_CUSTOM;
-        item.ident = IE_PENCIL_LAYER_BASE + kPencilRungs[r].layer;
-        item.style |= TOOLBAR_ITEM_FLAG_SLIM;
-      }
+    if (pencil && (item.ident == ID_TOOL_BRUSH || item.ident == ID_TOOL_FILL || item.ident == ID_TOOL_EYEDROPPER)) continue;
+    if (!pencil && (item.ident == ID_TOOL_PENCIL || item.ident == ID_PENCIL_TOOLS_OPACITY ||
+                    item.ident == ID_PENCIL_TOOLS_OPACITY_VALUE)) continue;
+    for (int r = 0; r < ARRAY_LEN(kPencilLayerButtons); r++)
+      if (item.ident == kPencilLayerButtons[r].ident)
+        item.ident = IE_PENCIL_LAYER_BASE + kPencilLayerButtons[r].layer;
     if (pencil_readout(item.ident)) {
       item.type = TOOLBAR_ITEM_CUSTOM;
       item.style |= TOOLBAR_ITEM_FLAG_SLIM;
@@ -172,6 +165,7 @@ static void pencil_toolbar_items(window_t *win) {
     items[count++] = item;
   }
   send_message(win, tbSetItems, count, items);
+  pencil_sync_layer_buttons(win, layer);
   imageeditor_sync_brush_sliders(win);
   win->value = layer + 1;
 }
@@ -219,10 +213,11 @@ void imageeditor_sync_tool_palette(void) {
 #if IMAGEEDITOR_BW
   if (!g_app || !g_app->tool_win) return;
   canvas_doc_t *doc = g_app->active_doc;
-  int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
+  bool has_layers = pencil_has_layers(doc);
+  int layer = has_layers ? doc->layer.active : IE_LAYER_PENCIL;
   int tool = imageeditor_layer_tool(g_app->current_tool);
   if (tool != g_app->current_tool) handle_menu_command(tool);
-  if (g_app->tool_win->value != (uint32_t)(layer + 1)) pencil_toolbar_items(g_app->tool_win);
+  if (g_app->tool_win->value != (uint32_t)(has_layers ? layer + 1 : 0)) pencil_toolbar_items(g_app->tool_win);
   if (layer != IE_LAYER_PENCIL) send_message(g_app->tool_win, tbSetItemColor, ID_TOOL_BRUSH, &g_app->fg_color);
   imageeditor_sync_frame_controls();
   window_t *colors = g_app->color_win;
@@ -278,14 +273,15 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #endif
       return true;
     }
+#if IMAGEEDITOR_BW
+    case evThemeChanged:
+      pencil_sync_layer_buttons(win, (int)win->value - 1);
+      return false;
+#endif
     case tbDrawItem:
 #if IMAGEEDITOR_BW
       if (g_app && pencil_readout((int)wparam) && lparam) {
         pencil_draw_readout((int)wparam, lparam);
-        return true;
-      }
-      if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT && lparam) {
-        pencil_draw_rung(win, (int)wparam - IE_PENCIL_LAYER_BASE, lparam);
         return true;
       }
 #endif

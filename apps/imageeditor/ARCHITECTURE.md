@@ -176,13 +176,11 @@ resizing/cropping, and history preserve all cels and the shared background.
 Rendering and export compose against the live shared background,
 rather than trusting a preview from before the background changed.
 
-The tool strip stays one column wide, and nothing added to it may widen it. At its top is the
-layer ladder: four slim rungs (`TOOLBAR_ITEM_FLAG_SLIM`, a cell wide and half a cell tall) that
-spell the layers out, front of the stack first: FX, Color, Pencil, Back. Together they take the
-height of two buttons. The working layer's rung is selected, and the rungs above it are drawn in
-the disabled text color, because the canvas leaves those layers out (see the editing cutoff
-below). The rungs and their tooltips are declared in `pencil_tools`; the window turns them into
-the layer commands. The floating color toolbar uses half-size swatches (`TOOLBAR_ITEM_FLAG_SMALL`),
+The tool strip stays one column wide with equal padding on both sides. Four icon buttons
+select the layers from front to back: FX, Color, Pencil, Background. The selected layer
+uses the filled icon. Icons above it are muted because the canvas leaves those layers
+out (see the editing cutoff below). The icons and tooltips are declared in `pencil_tools`.
+The floating color toolbar uses half-size swatches (`TOOLBAR_ITEM_FLAG_SMALL`),
 two per row. Pencil hides the color palette and
 uses a fixed configurable pencil color; painting paper on it erases to transparency. Background,
 Color, and FX use the solid indexed-color brush and expose the document palette,

@@ -8,3 +8,10 @@ Copied from Jamsheet's vendored upstream asset. Original path geometry and
 Asset: assets/fill/circle-fill.svg
 Used by Pencil Test for the indexed-color brush. Original path geometry and
 256-unit viewBox preserved; 24px dimensions and currentColor fill.
+
+Assets used by Pencil Test for the layer buttons, with their original paths
+and viewBoxes, 24px dimensions, and currentColor fill:
+  assets/regular/sparkle.svg       assets/fill/sparkle-fill.svg
+  assets/regular/palette.svg       assets/fill/palette-fill.svg
+  assets/regular/pencil-simple.svg assets/fill/pencil-simple-fill.svg
+  assets/regular/image-square.svg  assets/fill/image-square-fill.svg
