@@ -243,7 +243,8 @@ typedef struct {
   const char        *control;      // RIBBON_ITEM_CONTROL: window class of the hosted control; its id is ident
   int                w;            // the hosted control's width; 0 = what it measures for the cell's height
   const char        *value;        // the widest readout, which reserves its room; rbSetValue replaces the text
-  uint32_t           control_flags; // window flags for the hosted control (SLIDER_TROUGH, ...)
+  flags_t            control_flags; // window flags for the hosted control (SLIDER_TROUGH, WINDOW_NOFOCUS, ...)
+  const char        *content;      // the hosted control's window title: a SegmentedControl's "One|Two|Three"
 } ribbon_item_t;
 
 typedef struct { const char *label; const ribbon_item_t *items; int count; } ribbon_group_t;

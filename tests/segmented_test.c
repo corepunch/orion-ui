@@ -245,11 +245,56 @@ static void test_color_dots_and_nofocus(void) {
   PASS();
 }
 
+static void test_glyphs_and_tall_form(void) {
+  TEST("named icons follow the selection, and a tall control stands each over its label");
+  test_env_init();
+  window_t *host = create_window("host", WINDOW_NOTITLE | WINDOW_NORESIZE, MAKERECT(0, 0, 400, 120), NULL, win_segmented, 0, NULL);
+  window_t *seg = create_window("FX|Color|Pencil", WINDOW_NOTITLE, MAKERECT(10, 10, 0, 0), host, win_segmented, 0, NULL);
+  ASSERT_NOT_NULL(seg);
+  segment_glyph_t glyph = {"palette", "palette"};
+  int row = control_predefined_height(seg->flags);
+  layout_measure_t roomy = {.avail_h = 80};
+  send_message(seg, evMeasure, 0, &roomy);
+  ASSERT_EQUAL(roomy.desired_h, row);   // labels alone stay one row however much height is offered
+  ASSERT_TRUE(send_message(seg, sgSetSegmentGlyph, 0, &glyph));
+  ASSERT_TRUE(send_message(seg, sgSetSegmentGlyph, 1, &glyph));
+  roomy = (layout_measure_t){.avail_h = 80};
+  send_message(seg, evMeasure, 0, &roomy);
+  ASSERT_EQUAL(roomy.desired_h, row);   // one segment still has no icon
+  ASSERT_TRUE(send_message(seg, sgSetSegmentGlyph, 2, &glyph));
+  ASSERT(!send_message(seg, sgSetSegmentGlyph, 3, &glyph) && !send_message(seg, sgSetSegmentGlyph, 0, &(segment_glyph_t){NULL, NULL}),
+         "a missing segment or a nameless icon is rejected");
+  roomy = (layout_measure_t){.avail_h = 80};
+  layout_measure_t tight = {.avail_h = row};
+  send_message(seg, evMeasure, 0, &roomy);
+  send_message(seg, evMeasure, 0, &tight);
+  ASSERT(roomy.desired_h == 80 && tight.desired_h == row, "offered the height, the control takes the tall form");
+  int large = ui_px("SegmentedControl::segment", "--large-icon-size");
+  ASSERT(roomy.desired_w >= 3 * (large + 2 * SEGMENTED_PADDING), "a tall segment is at least its large icon wide");
+  // Icons only in a row, with the label as the tooltip; tall, the label shows and the tooltip goes.
+  send_message(seg, sgSetStyle, SEGMENTED_STYLE_ICONS_ONLY, NULL);
+  resize_window(seg, tight.desired_w, row);
+  irect16_t r; char tip[256] = "";
+  send_message(seg, sgGetSegmentRect, 1, &r);
+  ASSERT_TRUE(send_message(seg, evGetTooltipText, MAKEDWORD(r.x + 2, r.y + 2), tip) && strcmp(tip, "Color") == 0);
+  resize_window(seg, roomy.desired_w, 80);
+  send_message(seg, sgGetSegmentRect, 1, &r);
+  ASSERT(!send_message(seg, evGetTooltipText, MAKEDWORD(r.x + 2, r.y + 2), tip), "a tall segment shows its label");
+  ASSERT_TRUE(send_message(seg, sgSetSegmentGlyph, 1, NULL));   // cleared: back to one row
+  roomy = (layout_measure_t){.avail_h = 80};
+  send_message(seg, evMeasure, 0, &roomy);
+  ASSERT_EQUAL(roomy.desired_h, row);
+  destroy_window(host);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("SegmentedControl");
   test_color_dots_and_nofocus();
   test_selection();
   test_radio_input();
+  test_glyphs_and_tall_form();
   test_long_utf8_label();
   test_toolbar_item();
   test_icons();

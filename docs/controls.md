@@ -682,6 +682,13 @@ icon shows the icon alone, hugging it (never narrower than tall), and answers
 `evGetTooltipText` with its label. Segments without an icon keep their label,
 so an "All" segment can lead a row of icons. `sgSetSegments` clears the icons.
 
+A named icon (`sgSetSegmentGlyph`, a `segment_glyph_t` of icon and optional
+`checked_icon`) is drawn in the segment's own colour, so it follows the theme
+and the selection; the selected segment shows `checked_icon`. When every
+segment has one and the control is tall enough for `--large-icon-size` over a
+line of text, each segment stands its large icon over its label. `evMeasure`
+answers with that height when it is offered, and one row otherwise.
+
 A colour dot (`sgSetSegmentColor`) marks a segment the way a status bullet
 does, so a row of category filters can be told apart without reading. The
 selected segment draws its dot in the label colour: the content it filters

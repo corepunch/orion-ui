@@ -317,14 +317,16 @@ static void test_ribbon_hosted_controls(void) {
     "<Slider name=\"size\" text=\"Size\" value=\"00px\" width=\"56\" flags=\"SLIDER_TROUGH\"/>"
     "<Label name=\"frame\" text=\"Frame\" value=\"000/000\"/>"
     "<Control name=\"colors\" class=\"SwatchGrid\" size=\"large\"/>"
+    "<Control name=\"layer\" class=\"SegmentedControl\" title=\"FX|Color\" flags=\"WINDOW_NOFOCUS\"/>"
     "<Button command=\"file.new\" icon=\"plus\" if=\"!defined(APP_TOUCH)\"/>"
     "</Group></Tab></ribbon></orion>";
   ASSERT_EQUAL(run_orionc(fixture, "ribbon_hosted", out, sizeof(out)), 0);
   ASSERT_TRUE(contains(out, "#define ID_RIBBON_SIZE"));
   ASSERT_TRUE(contains(out, "#define ID_RIBBON_COLORS"));
-  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_SIZE, NULL, \"Size\", NULL, 0, NULL, 0, NULL, \"Slider\", 56, \"00px\", SLIDER_TROUGH }"));
-  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_FRAME, NULL, \"Frame\", NULL, 0, NULL, 0, NULL, NULL, 0, \"000/000\", 0 }"));
-  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_COLORS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, \"SwatchGrid\", 0, NULL, 0 }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_SIZE, NULL, \"Size\", NULL, 0, NULL, 0, NULL, \"Slider\", 56, \"00px\", SLIDER_TROUGH, NULL }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_FRAME, NULL, \"Frame\", NULL, 0, NULL, 0, NULL, NULL, 0, \"000/000\", 0, NULL }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_COLORS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, \"SwatchGrid\", 0, NULL, 0, NULL }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_LAYER, NULL, NULL, NULL, 0, NULL, 0, NULL, \"SegmentedControl\", 0, NULL, WINDOW_NOFOCUS, \"FX|Color\" }"));
   ASSERT_TRUE(contains(out, "#if !defined(APP_TOUCH)\n  { RIBBON_ITEM_BUTTON, ID_FILE_NEW, \"plus\", \"New\", NULL, 0, NULL, 0, NULL },\n#endif"));
   ASSERT_TRUE(contains(out, "#if APP_PENCIL\n"));
   ASSERT_TRUE(contains(out, ".layout = RIBBON_LAYOUT_CLASSIC };\n#endif"));
