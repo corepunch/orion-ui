@@ -194,12 +194,12 @@ function FrontDesk.calendar(from)
   local rows = {}
   for _, room in ipairs(Hotel.rooms.model:select(nil, {order = "name"})) do
     local row = {room_id = room.id, name = room.name, free = 0}
-    for _, stay in ipairs(Hotel.reservations.model:select({room_id = room.id})) do
-      if (stay.status == "reserved" or stay.status == "checked_in") and intervals.overlap(from, last, stay.arrival, stay.departure) then
-        local mark = stay.status == "checked_in" and "• " or "› "
+    for _, booking in ipairs(Hotel.reservations.model:select({room_id = room.id})) do
+      if (booking.status == "reserved" or booking.status == "checked_in") and intervals.overlap(from, last, booking.arrival, booking.departure) then
+        local mark = booking.status == "checked_in" and "• " or "› "
         for i = 0, FrontDesk.CALENDAR_DAYS - 1 do
           local night = calendar.add(from, i)
-          if night >= stay.arrival and night < stay.departure then row["d" .. (i + 1)] = mark .. surname(stay.guest and stay.guest.name) end
+          if night >= booking.arrival and night < booking.departure then row["d" .. (i + 1)] = mark .. surname(booking.guest and booking.guest.name) end
         end
       end
     end
