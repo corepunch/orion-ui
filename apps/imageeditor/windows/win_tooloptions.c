@@ -53,20 +53,20 @@ void imageeditor_sync_brush_sliders(window_t *win) {
   }
 }
 
-static int fill_gap_to_index(int gap) {
+int fill_gap_to_index(int gap) {
   if (gap >= IE_FILL_GAP_LARGE) return 3;
   if (gap >= IE_FILL_GAP_MEDIUM) return 2;
   if (gap > IE_FILL_GAP_OFF) return 1;
   return 0;
 }
 
-static int fill_gap_from_index(int idx) {
+int fill_gap_from_index(int idx) {
   static const int kGapPx[4] = {IE_FILL_GAP_OFF, IE_FILL_GAP_SMALL,
                                 IE_FILL_GAP_MEDIUM, IE_FILL_GAP_LARGE};
   return kGapPx[CLAMP(idx, 0, 3)];
 }
 
-static const char *fill_gap_name(int idx) {
+const char *fill_gap_name(int idx) {
   static const char *kGapNames[4] = {"Off", "Small", "Medium", "Large"};
   return kGapNames[CLAMP(idx, 0, 3)];
 }

@@ -265,6 +265,7 @@ void imageeditor_sync_main_toolbar(void) {
   }
 #endif
   publish_dynamic_menus();
+  pencil_ribbon_sync();
   if (!g_app->main_toolbar_win) return;
   send_message(g_app->main_toolbar_win, tbEnableItem, ID_EDIT_UNDO, (void *)(intptr_t)undo);
   send_message(g_app->main_toolbar_win, tbEnableItem, ID_EDIT_REDO, (void *)(intptr_t)redo);
@@ -491,6 +492,14 @@ void handle_menu_command(uint16_t id) {
   // If no document has focus, fall back to the first available document
   if (!doc) doc = g_app->docs;
 
+#if IMAGEEDITOR_BW
+  switch (id) {   // the four layers as commands: the ribbon's Layers group
+    case ID_LAYER_FX:     id = IE_PENCIL_LAYER_BASE + IE_LAYER_FX;     break;
+    case ID_LAYER_COLOR:  id = IE_PENCIL_LAYER_BASE + IE_LAYER_COLOR;  break;
+    case ID_LAYER_PENCIL: id = IE_PENCIL_LAYER_BASE + IE_LAYER_PENCIL; break;
+    case ID_LAYER_BACK:   id = IE_PENCIL_LAYER_BASE + IE_LAYER_BG;     break;
+  }
+#endif
   if (IMAGEEDITOR_BW && id >= IE_PENCIL_LAYER_BASE && id < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
     cmd_pencil_layer(doc, id - IE_PENCIL_LAYER_BASE);
     return;
@@ -816,6 +825,7 @@ void handle_menu_command(uint16_t id) {
     }
 
     case ID_WINDOW_TOOLS:
+      if (g_app->ribbon_win) break;   // the ribbon holds the tools
       if (g_app->tool_win) {
         show_window(g_app->tool_win, true);
       } else {
@@ -825,6 +835,7 @@ void handle_menu_command(uint16_t id) {
       break;
 
     case ID_WINDOW_COLORS:
+      if (g_app->ribbon_win) break;
       if (g_app->color_win) {
         show_window(g_app->color_win, true);
       } else {

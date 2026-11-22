@@ -80,3 +80,38 @@ The floating color palette, drawing tools and frame controls remain available in
 `ladder-light.png` and `ladder-dark.png` show `bouncing-ball.ptf` at 1070 × 810. The viewport matches the drawing's aspect ratio. The comparison crops each rail at its actual edge before scaling it up, excluding any fitted canvas margin.
 
 Validation: Pencil Test layout 11/11, layers 6/6, rendering 4/4, toolbar 42/42, generator contract 20/20. The iPad layout test checks equal left and right padding on every layer. Physical iPad input remains unverified.
+
+## Ribbon
+
+Pencil Test as its own application now has a ribbon and nothing else: no tool
+strip, no floating colour strip, no options strip. The drawing reaches both
+sides and the bottom of the window.
+
+| One row (default) | Three rows |
+|---|---|
+| ![One row](ribbon-one-row.png) | ![Three rows](ribbon-three-rows.png) |
+| **Folded** | **Animation tab** |
+| ![Folded](ribbon-folded.png) | ![Animation tab](ribbon-animation.png) |
+
+![Dark](ribbon-dark.png)
+
+Drawing area in the same 1080×810 window:
+
+| Layout | Chrome | Drawing area |
+|---|---|---|
+| Tool strip (before) | 24 px row, one-column strip at the left | 786 high, less the strip's width |
+| Ribbon, one row | 70 px | 1080×740 |
+| Ribbon, three rows | 120 px | 1080×690 |
+| Ribbon, folded | 24 px | 1080×786 |
+
+At 1080 px the one-row Draw tab shows every control; the sliders give up their
+readouts ("5px", "50%", "Small") to fit, and three rows show them.
+
+Captures: `build/bin/penciltest FILE --screenshot OUT.png` under Xvfb at
+1080×810, with the Color layer of the bouncing-ball project active. The
+three-row, folded, Animation and dark captures needed the layout, the fold and
+the tab set at startup (`rbSetLayout`, `rbSetMinimized`, `rbSetActiveTab`); that
+was a temporary hook in `create_pencil_ribbon`, not part of the tree.
+
+Checks: `test_ribbon_test` 8/8 (hosted controls), `test_swatchgrid_test` 2/2,
+`test_orionc_contract_test` 21/21, `test_penciltest_ribbon_test` 4/4.

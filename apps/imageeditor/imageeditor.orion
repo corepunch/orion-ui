@@ -81,6 +81,10 @@
         <Separator />
         <item name="merge_down" label="Merge Down" />
         <item name="flatten" label="Flatten Image" />
+        <item name="fx" label="FX" if="IMAGEEDITOR_BW" />
+        <item name="color" label="Color" if="IMAGEEDITOR_BW" />
+        <item name="pencil" label="Pencil" if="IMAGEEDITOR_BW" />
+        <item name="back" label="Background" if="IMAGEEDITOR_BW" />
         <item name="fill_foreground" label="Fill with Foreground Color" shortcut="Alt+Backspace" />
         <item name="fill_background" label="Fill with Background Color" shortcut="Ctrl+Backspace" />
         <item name="background_stock" label="Background Image..." if="IMAGEEDITOR_BW" />
@@ -198,6 +202,138 @@
         <Button name="show_background" command="view.show_background" icon="eye" flags="BUTTON_PUSHLIKE" text="BG" tooltip="Toggle background" />
         <Button name="mask_only" command="view.mask_only" icon="square-dashed" flags="BUTTON_PUSHLIKE" text="Mask" tooltip="Toggle mask view" />
     </toolbar>
+
+    <!-- Pencil Test as its own application: the ribbon is its whole command surface.
+         Hosted in a shell it keeps the menus and the pencil_tools rail below. -->
+    <ribbon if="IMAGEEDITOR_BW" layout="simplified">
+      <ApplicationMenu menu="file" />
+      <QuickAccessToolbar>
+        <Button name="save" command="file.save" icon="floppy-disk" tooltip="Save" />
+        <Button name="undo" command="edit.undo" icon="undo" tooltip="Undo" />
+        <Button name="redo" command="edit.redo" icon="redo" tooltip="Redo" />
+        <spacer w="10" />
+        <Button name="prev" command="anim.prev_frame" icon="fast-arrow-left" tooltip="Previous frame" />
+        <Button name="play" command="anim.play" icon="play" checked-icon="phosphor-pause-fill" tooltip="Play / pause" />
+        <Button name="next" command="anim.next_frame" icon="fast-arrow-right" tooltip="Next frame" />
+      </QuickAccessToolbar>
+      <Tab label="Draw">
+        <Group label="Layers">
+          <Button command="layer.fx" icon="phosphor-sparkle" checked-icon="phosphor-sparkle-fill" text="FX" tooltip="FX: in front of everything" />
+          <Button command="layer.color" icon="phosphor-palette" checked-icon="phosphor-palette-fill" text="Color" tooltip="Color: ink and paint, over the pencil" />
+          <Button command="layer.pencil" icon="phosphor-pencil-simple" checked-icon="phosphor-pencil-simple-fill" text="Pencil" tooltip="Pencil: the rough sketch" />
+          <Button command="layer.back" icon="phosphor-image-square" checked-icon="phosphor-image-square-fill" text="Background" tooltip="Background: the same on every frame" />
+        </Group>
+        <Group label="Tools">
+          <Button command="tool.pencil" icon="ie-pencil" text="Pencil" />
+          <Button command="tool.brush" icon="phosphor-circle-fill" text="Brush" />
+          <Button command="tool.eraser" icon="ie-eraser" text="Eraser" />
+          <Button command="tool.fill" icon="ie-fill" text="Fill" />
+          <Button command="tool.eyedropper" icon="ie-eyedropper" text="Pick Color" />
+          <Button command="tool.select" icon="ie-select" text="Select" />
+          <Button command="tool.move" icon="ie-move" text="Move" />
+          <Button command="tool.hand" icon="ie-hand" text="Pan" if="!defined(AX_PLATFORM_IOS)" />
+        </Group>
+        <Group label="Brush">
+          <Slider name="size" text="Size" value="00px" width="56" flags="SLIDER_TROUGH" />
+          <Slider name="opacity" text="Opacity" value="100%" width="56" flags="SLIDER_TROUGH" />
+          <Slider name="gaps" text="Gaps" value="Medium" width="56" flags="SLIDER_TROUGH" />
+        </Group>
+        <Group label="Colors">
+          <Control name="colors" class="SwatchGrid" size="large" />
+        </Group>
+        <Group label="Frame">
+          <Label name="frame" text="Frame" value="000/000" />
+          <Button command="anim.new_frame" icon="plus" text="New" tooltip="New frame" />
+        </Group>
+      </Tab>
+      <Tab label="Animation">
+        <Group label="Frames">
+          <Button command="anim.new_frame" icon="plus" text="New Frame" size="large" />
+          <Button command="anim.duplicate_frame" icon="copy" text="Duplicate" />
+          <Button command="anim.delete_frame" icon="trash" text="Delete" />
+          <Button command="anim.reuse_cel" icon="repeat" text="Repeat Cel" />
+        </Group>
+        <Group label="Playback">
+          <Button command="anim.play" icon="play" checked-icon="phosphor-pause-fill" text="Play" size="large" />
+          <Button command="anim.first_frame" icon="rewind" text="First" />
+          <Button command="anim.prev_frame" icon="fast-arrow-left" text="Previous" />
+          <Button command="anim.next_frame" icon="fast-arrow-right" text="Next" />
+          <Button command="anim.last_frame" icon="forward" text="Last" />
+          <Button command="anim.loop" icon="refresh" text="Loop" />
+        </Group>
+        <Group label="Timing">
+          <Label name="speed" text="Speed" value="0000 fps" />
+          <Button command="anim.set_fps" icon="clock" text="Set Speed" />
+          <Button command="anim.frame_duration" icon="hourglass" text="Frame Duration" />
+          <Button command="anim.exposure_sheet" icon="list" text="Exposure Sheet" />
+          <Button command="anim.make_unique" icon="page-plus" text="Make Cel Unique" />
+        </Group>
+        <Group label="Onion Skin">
+          <Button command="anim.trace" icon="eye" text="Onion Skin" size="large" />
+          <Button command="anim.onion_skin" icon="settings" text="Settings" />
+        </Group>
+        <Group label="Export">
+          <Button command="anim.export_gif" icon="upload" text="GIF" />
+          <Button command="anim.export_apng" icon="upload" text="APNG" />
+          <Button command="anim.export_spritesheet" icon="view-grid" text="Sprite Sheet" />
+        </Group>
+      </Tab>
+      <Tab label="Picture">
+        <Group label="Clipboard">
+          <Button command="edit.paste" icon="paste-clipboard" text="Paste" size="large" />
+          <Button command="edit.cut" icon="cut" text="Cut" />
+          <Button command="edit.copy" icon="copy" text="Copy" />
+        </Group>
+        <Group label="Selection">
+          <Button command="select.all" icon="select-window" text="Select All" />
+          <Button command="select.deselect" icon="square-dashed" text="Deselect" />
+          <Button command="select.clear" icon="erase" text="Clear" />
+          <Button command="select.expand" icon="expand" text="Expand" />
+          <Button command="select.contract" icon="collapse" text="Contract" />
+        </Group>
+        <Group label="Image">
+          <Button command="image.crop" icon="crop" text="Crop" />
+          <Button command="image.resize" icon="scale-frame-enlarge" text="Image Size" />
+          <Button command="image.canvas_size" icon="frame" text="Canvas Size" />
+          <Button command="image.flip_h" icon="mirror" text="Flip Horizontal" />
+          <Button command="image.flip_v" icon="arrow-separate-vertical" text="Flip Vertical" />
+          <Button command="image.invert" icon="color-filter" text="Invert Colors" />
+        </Group>
+        <Group label="Background">
+          <Button command="layer.background_stock" icon="media-image-list" text="Choose Picture" size="large" />
+          <Button command="layer.background_photo" icon="camera" text="From Photo" />
+          <Button command="layer.background_remove" icon="trash" text="Remove" />
+          <Button command="view.show_background" icon="eye" text="Show" />
+        </Group>
+        <Group label="Fill Layer">
+          <Button command="layer.fill_foreground" icon="fill-color" text="With Color" />
+          <Button command="layer.fill_background" icon="page" text="With Paper" />
+        </Group>
+      </Tab>
+      <Tab label="View">
+        <Group label="Zoom">
+          <Button command="view.zoom_fit" icon="lucide-maximize" text="Fit" size="large" />
+          <Button command="view.zoom_in" icon="zoom-in" text="Zoom In" />
+          <Button command="view.zoom_out" icon="zoom-out" text="Zoom Out" />
+          <Button command="view.zoom_1x" icon="frame" text="Actual Size" />
+          <Button command="view.zoom_2x" text="2x" />
+          <Button command="view.zoom_4x" text="4x" />
+          <Button command="view.zoom_6x" text="6x" />
+          <Button command="view.zoom_8x" text="8x" />
+        </Group>
+        <Group label="Window">
+          <Button command="view.window_mode" icon="select-window" text="Maximize / Restore" />
+        </Group>
+        <Group label="Grid">
+          <Button command="view.show_grid" icon="view-grid" text="Show Grid" />
+          <Button command="view.snap_grid" icon="magnet" text="Snap to Grid" />
+          <Button command="view.grid_options" icon="settings" text="Grid Options" />
+        </Group>
+        <Group label="Help">
+          <Button command="help.about" icon="info-circle" text="About" size="large" />
+        </Group>
+      </Tab>
+    </ribbon>
 
     <databases>
       <database name="animation" class="animation_db">

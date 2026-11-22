@@ -29,7 +29,11 @@ static bool image_editor_open_file_handler(const char *path) {
 // ============================================================
 
 static void create_app_windows(hinstance_t hinstance) {
-#ifdef BUILD_AS_GEM
+#if IMAGEEDITOR_RIBBON
+  // The ribbon is the whole command surface: no rail, no options strip, no colour strip.
+  create_pencil_ribbon(hinstance);
+  return;
+#elif defined(BUILD_AS_GEM)
   g_app->menubar_win = set_app_menu(editor_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
   g_app->chrome_win = create_application_chrome("Image Editor Chrome", NULL, NULL, 0,

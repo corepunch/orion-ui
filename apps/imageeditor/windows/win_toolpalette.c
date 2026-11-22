@@ -211,6 +211,7 @@ static void pencil_color_items(window_t *win) {
 
 void imageeditor_sync_tool_palette(void) {
 #if IMAGEEDITOR_BW
+  pencil_ribbon_sync();
   if (!g_app || !g_app->tool_win) return;
   canvas_doc_t *doc = g_app->active_doc;
   bool has_layers = pencil_has_layers(doc);
@@ -341,6 +342,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 
 #if IMAGEEDITOR_BW
 void imageeditor_sync_frame_controls(void) {
+  pencil_ribbon_sync();
   if (!g_app || !g_app->tool_win) return;
   window_t *win = g_app->tool_win;
   canvas_doc_t *doc = g_app->active_doc;

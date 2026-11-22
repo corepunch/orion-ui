@@ -188,6 +188,13 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #include "render_effects.h"
 #include "build/generated/apps/imageeditor/imageeditor.h"
 
+// Pencil Test as its own application wears a ribbon; hosted in a shell it keeps the menus and the tool rail.
+#if IMAGEEDITOR_BW && !defined(BUILD_AS_GEM)
+#define IMAGEEDITOR_RIBBON 1
+#else
+#define IMAGEEDITOR_RIBBON 0
+#endif
+
 // ============================================================
 // Color helpers
 // ============================================================
@@ -408,6 +415,7 @@ typedef struct {
   window_t      *chrome_win;
   window_t      *menubar_win;
   window_t      *main_toolbar_win;
+  window_t      *ribbon_win;     // Pencil Test's ribbon; NULL where the rail and menus serve instead
   window_t      *tool_win;
   window_t      *tool_options_win;
   window_t      *color_win;
@@ -714,6 +722,9 @@ enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_FILLED, IE_OPT_GAP 
 #define IE_OPT_OPACITY ID_PENCIL_TOOLS_OPACITY
 void imageeditor_sync_brush_sliders(window_t *win);
 void imageeditor_sync_tool_options(void);
+int fill_gap_to_index(int gap);          // fill.gap as one of four steps: off, small, medium, large
+int fill_gap_from_index(int idx);
+const char *fill_gap_name(int idx);
 int imageeditor_tool_group(int tool);
 int imageeditor_layer_tool(int tool);
 result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -1031,6 +1042,13 @@ bool cmd_pencil_color(canvas_doc_t *doc, int index);
 bool pencil_has_layers(const canvas_doc_t *doc);
 bool cmd_pencil_layer(canvas_doc_t *doc, int layer);
 void imageeditor_sync_tool_palette(void);
+#if IMAGEEDITOR_RIBBON
+window_t *create_pencil_ribbon(hinstance_t hinstance);   // the application chrome with the ribbon as its top row
+result_t pencil_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+void pencil_ribbon_sync(void);   // brings the ribbon up to date with the document; nothing without a ribbon
+#else
+static inline void pencil_ribbon_sync(void) {}
+#endif
 #if IMAGEEDITOR_BW
 void imageeditor_sync_frame_controls(void);
 window_t *create_pencil_color_toolbar(void);

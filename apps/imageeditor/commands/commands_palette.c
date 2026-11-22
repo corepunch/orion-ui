@@ -36,6 +36,7 @@ bool cmd_pencil_color(canvas_doc_t *doc, int index) {
     invalidate_window(g_app->tool_win);
   }
   if (g_app->color_win) invalidate_window(g_app->color_win);
+  pencil_ribbon_sync();
   return true;
 #else
   (void)doc; (void)index;
