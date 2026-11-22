@@ -203,7 +203,7 @@ void timeline_win_refresh(void) { imageeditor_sync_frame_controls(); }
 window_t *imageeditor_animation_timer_window(void) {
   if (!g_app) return NULL;
 #if IMAGEEDITOR_BW
-  return g_app->tool_win;
+  return g_app->ribbon_win ? g_app->ribbon_win : g_app->tool_win;
 #else
   return g_app->timeline_win;
 #endif

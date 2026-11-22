@@ -176,6 +176,26 @@ resizing/cropping, and history preserve all cels and the shared background.
 Rendering and export compose against the live shared background,
 rather than trusting a preview from before the background changed.
 
+Pencil Test as its own application has one piece of chrome, a ribbon
+(`<ribbon if="IMAGEEDITOR_BW">` in `imageeditor.orion`, `windows/win_pencil_ribbon.c`).
+The drawing takes everything under it. The ribbon opens in one row; its switch
+gives three captioned rows, and a double click on a tab folds it to the tab row.
+**Draw** holds the layers, the tools, the Size, Opacity and Gaps sliders, the
+palette (a `SwatchGrid`) and the frame counter; **Animation** the frame,
+playback, timing, onion-skin and export commands; **Picture** clipboard,
+selection, image and background commands; **View** zoom and grid. The Quick
+Access Toolbar repeats Save, Undo, Redo and the transport, so stepping and
+playing work from any tab and with the ribbon folded. The four layers are
+commands (`layer.fx`, `layer.color`, `layer.pencil`, `layer.back`).
+`pencil_ribbon_sync()` brings checks, disabled states, sliders, swatches and
+readouts up to date; the existing sync points call it. What a layer cannot use
+is disabled, not removed: paint tools, Gaps and the palette on Pencil; the
+pencil and Opacity on the painted layers. Playback ticks on the ribbon window.
+
+Hosted in a shell (`BUILD_AS_GEM`) there is no ribbon: the shell owns the menu
+row, and the tool strip below serves instead. The strip is also what the layout
+and layer tests exercise.
+
 The tool strip stays one column wide with equal padding on both sides. Four icon buttons
 select the layers from front to back: FX, Color, Pencil, Background. The selected layer
 uses the filled icon. Icons above it are muted because the canvas leaves those layers

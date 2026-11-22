@@ -10,9 +10,10 @@ A workspace owns document and utility windows. Document content uses `DOCK_FILL`
 menus, toolbars, and utility panes reserve bands at its edges. Floating panes remain
 children of the same workspace. Docking changes geometry and presentation without
 recreating controls, transferring ownership, or losing text, selection, or focus.
-Jamsheet uses a fill arrangement and a bottom Library pane. Pencil Test uses the same
+Jamsheet uses a fill arrangement and a bottom Library pane. Image Editor uses the same
 manager through application chrome for its menu, command toolbar, tools, options,
-and floating color palette. Its frame controls share the left tool strip.
+and floating color palette. Pencil Test's chrome docks one band, its ribbon, and the
+drawing takes the rest; hosted in a shell it keeps a left tool strip instead.
 Ledger uses the same chrome with a docked menu and no toolbar band, passing
 `NULL` for `create_app_chrome()`'s toolbar procedure. The bar spans the top edge
 with square corners and no floating-window border or shadow.
