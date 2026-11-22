@@ -32,6 +32,15 @@ static void ribbon_teardown(void) {
 static int state(int ident) { return (int)send_message(g_app->ribbon_win, rbGetState, ident, NULL); }
 static window_t *hosted(int ident) { return (window_t *)send_message(g_app->ribbon_win, rbGetControl, ident, NULL); }
 
+// Choose a segment of the Layers radio group as a tap on it does.
+static void choose_layer(int segment) {
+  window_t *layers = hosted(ID_RIBBON_LAYER);
+  send_message(layers, sgSetSelection, (uint32_t)segment, NULL);
+  send_message(g_app->ribbon_win, evCommand, MAKEDWORD(ID_RIBBON_LAYER, sgnSelChange), layers);
+}
+static int chosen_layer(void) { return (int)send_message(hosted(ID_RIBBON_LAYER), sgGetSelection, 0, NULL); }
+enum { SEG_FX, SEG_COLOR, SEG_PENCIL, SEG_BACK };
+
 static void click_item(int ident) {
   irect16_t r = {0};
   window_t *rb = g_app->ribbon_win;
@@ -79,7 +88,10 @@ static void test_layers_and_tools(void) {
   window_t *grid = hosted(ID_RIBBON_COLORS);
   ASSERT_NOT_NULL(grid);
   ASSERT_EQUAL(doc->layer.active, IE_LAYER_PENCIL);
-  ASSERT_EQUAL(state(ID_LAYER_PENCIL), TBSTATE_CHECKED);
+  window_t *layers = hosted(ID_RIBBON_LAYER);
+  ASSERT_NOT_NULL(layers);
+  ASSERT_EQUAL(send_message(layers, sgGetCount, 0, NULL), IE_LAYER_COUNT);   // one of four, always
+  ASSERT_EQUAL(chosen_layer(), SEG_PENCIL);
   ASSERT_EQUAL(state(ID_TOOL_PENCIL), TBSTATE_CHECKED);
   ASSERT(state(ID_TOOL_BRUSH) == TBSTATE_DISABLED && state(ID_TOOL_FILL) == TBSTATE_DISABLED && state(ID_TOOL_EYEDROPPER) == TBSTATE_DISABLED,
          "the pencil layer takes no paint");
@@ -87,9 +99,17 @@ static void test_layers_and_tools(void) {
          "pencil has an opacity, and neither gaps to close nor colours to choose");
   ASSERT_TRUE(window_has_state(grid, WINDOW_STATE_DISABLED));
 
-  click_item(ID_LAYER_COLOR);
+  // A tap on a segment, through the window system.
+  irect16_t seg = {0};
+  send_message(layers, sgGetSegmentRect, SEG_COLOR, &seg);
+  ui_event_t tap = {.message = kEventLeftButtonDown, .x = (window_screen_x(layers) + seg.x + seg.w / 2) * UI_WINDOW_SCALE,
+                    .y = (window_screen_y(layers) + seg.y + seg.h / 2) * UI_WINDOW_SCALE};
+  dispatch_message(&tap);
+  tap.message = kEventLeftButtonUp;
+  dispatch_message(&tap);
   ASSERT_EQUAL(doc->layer.active, IE_LAYER_COLOR);
-  ASSERT(state(ID_LAYER_COLOR) == TBSTATE_CHECKED && state(ID_LAYER_PENCIL) == 0, "the Layers group shows the working layer");
+  ASSERT_EQUAL(chosen_layer(), SEG_COLOR);
+  ASSERT(g_ui_runtime.focused != layers, "the group does not take the keyboard from the drawing");
   ASSERT(g_app->current_tool == ID_TOOL_BRUSH && state(ID_TOOL_BRUSH) == TBSTATE_CHECKED && state(ID_TOOL_PENCIL) == TBSTATE_DISABLED,
          "the drawing tool becomes the brush");
   ASSERT(state(ID_RIBBON_OPACITY) == TBSTATE_DISABLED && state(ID_RIBBON_GAPS) == 0 && state(ID_RIBBON_COLORS) == 0, "paint has gaps and colours");
@@ -115,9 +135,13 @@ static void test_layers_and_tools(void) {
 
   // The layer remembers its colour.
   int color = g_app->fg_palette_idx;
-  click_item(ID_LAYER_FX);
-  click_item(ID_LAYER_COLOR);
+  choose_layer(SEG_FX);
+  ASSERT_EQUAL(doc->layer.active, IE_LAYER_FX);
+  choose_layer(SEG_COLOR);
   ASSERT_EQUAL(g_app->fg_palette_idx, color);
+  // The group follows a layer chosen elsewhere, and Background is the fourth.
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_BG));
+  ASSERT_EQUAL(chosen_layer(), SEG_BACK);
   ribbon_teardown();
   PASS();
 }

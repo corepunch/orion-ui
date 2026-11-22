@@ -81,10 +81,6 @@
         <Separator />
         <item name="merge_down" label="Merge Down" />
         <item name="flatten" label="Flatten Image" />
-        <item name="fx" label="FX" if="IMAGEEDITOR_BW" />
-        <item name="color" label="Color" if="IMAGEEDITOR_BW" />
-        <item name="pencil" label="Pencil" if="IMAGEEDITOR_BW" />
-        <item name="back" label="Background" if="IMAGEEDITOR_BW" />
         <item name="fill_foreground" label="Fill with Foreground Color" shortcut="Alt+Backspace" />
         <item name="fill_background" label="Fill with Background Color" shortcut="Ctrl+Backspace" />
         <item name="background_stock" label="Background Image..." if="IMAGEEDITOR_BW" />
@@ -218,10 +214,8 @@
       </QuickAccessToolbar>
       <Tab label="Draw">
         <Group label="Layers">
-          <Button command="layer.fx" icon="phosphor-sparkle" checked-icon="phosphor-sparkle-fill" text="FX" tooltip="FX: in front of everything" />
-          <Button command="layer.color" icon="phosphor-palette" checked-icon="phosphor-palette-fill" text="Color" tooltip="Color: ink and paint, over the pencil" />
-          <Button command="layer.pencil" icon="phosphor-pencil-simple" checked-icon="phosphor-pencil-simple-fill" text="Pencil" tooltip="Pencil: the rough sketch" />
-          <Button command="layer.back" icon="phosphor-image-square" checked-icon="phosphor-image-square-fill" text="Background" tooltip="Background: the same on every frame" />
+          <!-- One of four, always: a radio group. Icons are set in win_pencil_ribbon.c. -->
+          <Control name="layer" class="SegmentedControl" size="large" title="FX|Color|Pencil|Background" flags="WINDOW_NOFOCUS | CONTROL_SIZE_LARGE" />
         </Group>
         <Group label="Tools">
           <Button command="tool.pencil" icon="ie-pencil" text="Pencil" />
