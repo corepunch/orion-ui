@@ -4,7 +4,12 @@ Lodge's ribbon is declared in
 [`apps/lodge/share/application.orion`](../../apps/lodge/share/application.orion)
 and built at run time by the declarative host (see
 [Ribbon → Declarative applications](../ribbon.md#declarative-applications)).
-This page records why it looks the way it does.
+It uses the same technique as Git Client and Ledger, after the Windows Ribbon
+framework: every command is declared once in `<menus>` with its label,
+shortcut and the script action it runs, and the ribbon only places commands
+(`command="desk.check_in"`). The menus are the File application menu and the
+operating system's menu bar where there is one. This page records why it
+looks the way it does.
 
 ![The ribbon on the Reservations page](images/reservations.jpg)
 
@@ -43,6 +48,13 @@ This page records why it looks the way it does.
 The Guests page has no tab: its record commands (Add, Edit, Delete) act on
 its table directly.
 
+## File menu
+
+New reservation, Walk-in guest, Group booking; Export all data, Add sample
+hotel; Exit. The other menus (Front desk, Calendar, Reservation,
+Housekeeping, Reports, Night audit, Setup, Help) hold every command once and
+appear in the operating system's menu bar where it has one.
+
 ## Quick Access Toolbar
 
 New reservation, Walk-in guest and Assistant: the three things a desk starts
@@ -59,8 +71,8 @@ from any page, beside the tabs even when the ribbon is folded.
 | Ctrl+E | Extend stay | Ctrl+K | Assistant |
 | Ctrl+M | Payment | Ctrl+B | Guest bill |
 
-The host rejects a ribbon whose shortcut is used twice, so the table cannot
-drift into conflicts.
+Shortcuts are declared on the menu items. The host rejects a ribbon whose
+shortcut is used twice, so the table cannot drift into conflicts.
 
 ## Icons
 

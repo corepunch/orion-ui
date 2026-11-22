@@ -161,11 +161,14 @@ arrivals; persistent tables are never filled this way.
 
 ### The ribbon and secondary windows
 
-An application's `<ribbon>` replaces a menu bar in the standalone app, as
-[Ribbon](ribbon.md#declarative-applications) describes: its buttons run Lua
-actions on the selected page, a `<Tab context="form">` shows while that page
-is selected, and `shortcut=` makes a key run the command. A command greys out
-when the page has no such action or its `data()` turns it off.
+An application declares its commands in `<menus>` and places them in a
+`<ribbon>`, with the same markup a compiled application uses, as
+[Ribbon](ribbon.md#declarative-applications) describes. A menu `<item>` names
+the Lua action its command runs (`action=`, on the selected page or `page=`)
+and its `shortcut=`; a `<Tab context="form">` shows while that page is
+selected; a command greys out when the page has no such action or its
+`data()` turns it off. `orion.application.quit()` closes the main window as
+its close box does, for File → Exit.
 
 A form the application opens in its own window (`application.open("payment")`)
 is centred over the main window. `placement="right"` puts it along the right

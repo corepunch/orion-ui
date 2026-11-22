@@ -296,16 +296,16 @@ static bool app_open_ribbon(script_application_t *app, const char *title, char *
   if (app->ribbon->accelerator_count)
     app->accel = load_accelerators(app->ribbon->accelerators, app->ribbon->accelerator_count);
   if (app->accel) send_message(app->ribbon_win, kMenuBarMessageSetAccelerators, 0, app->accel);
+  // Every menu goes to the operating system's menu bar where it has one; the ribbon keeps the rest.
+  send_message(app->ribbon_win, kMenuBarMessageSetMenus, (uint32_t)app->ribbon->menu_count, (void *)app->ribbon->menus);
   return true;
 }
-// The host window fills the workspace under the ribbon, and tells it which page shows.
+// The host window is maximized into the workspace under the ribbon, as a
+// compiled application's main window is, and tells it which page shows.
 static void app_place_host(script_application_t *app) {
   window_t *host = app_host_window(app);
   if (!host || !app->chrome) return;
-  irect16_t workspace = R(0, MENUBAR_HEIGHT, 0, 0);
-  get_application_workspace(0, &workspace);
-  move_window(host, workspace.x, workspace.y);
-  if (workspace.w > 0 && workspace.h > 0) resize_window(host, workspace.w, workspace.h);
+  maximize_window(host);
   for (int i = 0; i < app->page_count; i++) script_page_on_render(app->pages[i], app_page_rendered, app);
   // Windows a page opened while the application started follow the main window.
   for (int i = 1; i < app->page_count; i++) {
@@ -317,6 +317,14 @@ static void app_place_host(script_application_t *app) {
 window_t *script_application_menu_window(script_application_t *app) { return app ? app->ribbon_win : NULL; }
 accel_table_t *script_application_accelerators(script_application_t *app) { return app ? app->accel : NULL; }
 
+// File → Exit: closes the main window as its close box does, saving first.
+static bool application_api_quit(lua_State *L) {
+  script_application_t *app = application_context(L);
+  window_t *host = app->page_count ? script_page_window(app->pages[0]) : NULL;
+  if (!host) return false;
+  post_message(host, evClose, 0, NULL);
+  return true;
+}
 static int application_api_open(lua_State *L, const char *form) {
   char error[1024];
   script_page_t *page = app_hosted_page(application_context(L), form);

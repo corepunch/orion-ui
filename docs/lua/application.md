@@ -32,6 +32,10 @@ Atomically write a named document inside the application's data directory.
 | `filename` | string |  |
 | `text` | string |  |
 
+## `application.quit()`
+
+Close the application's main window as its close box does, saving its data first.
+
 ## `application.open(form)`
 
 Open a form from the application's declarative object graph.

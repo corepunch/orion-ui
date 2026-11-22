@@ -66,28 +66,52 @@ int form_library_schema_count(const form_library_t *lib);
 const db_schema_def_t *form_library_schema_at(const form_library_t *lib, int index);
 const db_schema_def_t *form_library_schema(const form_library_t *lib, const char *name);
 
-// The application's <ribbon>, as Windows Ribbon markup but with script
-// commands: a <Button> names action= (run on the selected page, or on page=
-// after selecting it) or target="orion.application" action= argument=, and
-// may carry shortcut="Ctrl+N". A <Tab context="form"> shows while that page
-// is selected. Commands with the same action, page, target and argument share
-// one ident, so their state is one. NULL when the document declares none.
+// The application's <ribbon>, read exactly as orionc reads it for a compiled
+// application, after the Windows Ribbon framework: <menus> is the command
+// registry (Application.Commands) and the ribbon only places its commands.
+//
+//   <menus>
+//     <menu name="desk" label="Front Desk">
+//       <item name="check_in" label="Check In" shortcut="Ctrl+I" action="check_in" />
+//       <item name="new" label="New Reservation..." action="new_booking" page="reception" />
+//       <item name="exit" label="Exit" target="orion.application" action="quit" />
+//     </menu>
+//   </menus>
+//   <ribbon>
+//     <ApplicationMenu menu="file" />
+//     <QuickAccessToolbar><Button command="desk.new" icon="..." /></QuickAccessToolbar>
+//     <Tab label="Home"><Group label="Arrive and Leave">
+//       <Button command="desk.check_in" icon="..." size="large" />
+//     </Group></Tab>
+//     <Tab label="Reservation" context="reception">...</Tab>
+//   </ribbon>
+//
+// Where a compiled application handles a command in C, a declarative one names
+// it on the menu <item>: action= runs on the selected page, or on page= after
+// selecting it; target="orion.application" action= argument= is an application
+// action. A <Tab context="form"> is a contextual tab, shown while that page is
+// selected. NULL when the document declares no ribbon, or a malformed one.
 typedef struct {
   const char *action, *page, *target, *argument;
 } form_command_t;
 typedef struct {
   ribbon_def_t          def;
-  const form_command_t *commands;      // commands[ident - first_ident]
+  const menu_def_t     *menus;           // the declared <menus>, for the operating system's menu bar
+  const char *const    *menu_names;      // name= of each menu
+  int                   menu_count;
+  const form_command_t *commands;        // commands[ident - first_ident]
+  const char *const    *command_names;   // "menu.item"
   int                   command_count;
   uint16_t              first_ident;
-  const accel_t        *accelerators;  // from shortcut=
+  const accel_t        *accelerators;    // from the items' shortcut=
   int                   accelerator_count;
-  const char *const    *contexts;      // a tab's context bit i is the page contexts[i]
+  const char *const    *contexts;        // a tab's context bit i is the page contexts[i]
   int                   context_count;
 } form_ribbon_t;
 const form_ribbon_t *form_library_ribbon(const form_library_t *lib);
-// The command a ribbon ident runs, or NULL.
+// The command a ribbon or menu ident runs, or NULL; the ident of "menu.item", or 0.
 const form_command_t *form_ribbon_command(const form_ribbon_t *ribbon, uint32_t ident);
+uint32_t form_ribbon_command_id(const form_ribbon_t *ribbon, const char *name);
 // The context bit of the page named `form` (0 when no tab names it).
 uint32_t form_ribbon_context(const form_ribbon_t *ribbon, const char *form);
 

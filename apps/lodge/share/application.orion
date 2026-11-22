@@ -2,121 +2,202 @@
   <include file="schema.orion" />
   <application runtime-api="1" name="lodge" form="main" model="model" />
   <display-groups><DisplayGroup name="bookings" source="lodge.reservations" /><DisplayGroup name="housekeeping_rooms" source="lodge.rooms" /><DisplayGroup name="guest_list" source="lodge.guests" /></display-groups>
+  <!-- Commands, as a compiled application and the Windows Ribbon framework
+       declare them: <menus> is the registry (label, shortcut and the script
+       action each runs); the ribbon only places commands. They show in the
+       operating system's menu bar where it has one, and under File. -->
+  <menus>
+    <menu name="file" label="File">
+      <item name="new" label="New reservation" shortcut="Ctrl+N" action="new_booking" page="reception" />
+      <item name="walk_in" label="Walk-in guest..." shortcut="Ctrl+Shift+N" target="orion.application" action="open" argument="walk_in" />
+      <item name="group" label="Group booking..." target="orion.application" action="open" argument="group_reservation" />
+      <Separator />
+      <item name="export" label="Export all data" action="export_data" page="hotel_setup" />
+      <item name="sample" label="Add sample hotel" action="sample" page="hotel_setup" />
+      <Separator />
+      <item name="exit" label="Exit" target="orion.application" action="quit" />
+    </menu>
+    <menu name="desk" label="Front desk">
+      <item name="check_in" label="Check in" shortcut="Ctrl+I" action="check_in" />
+      <item name="check_out" label="Check out" shortcut="Ctrl+O" action="check_out" />
+      <item name="extend" label="Extend stay" shortcut="Ctrl+E" action="extend" />
+      <item name="no_show" label="No-show" action="no_show" />
+      <Separator />
+      <item name="payment" label="Payment..." shortcut="Ctrl+M" action="payment" />
+      <item name="settle" label="Settle balance..." action="settle" />
+      <item name="invoice" label="Guest bill" shortcut="Ctrl+B" action="invoice" />
+      <item name="registration" label="Registration form" action="registration" />
+      <item name="confirmation" label="Confirmation" action="confirmation" />
+      <Separator />
+      <item name="open_reservation" label="Open reservation" action="open_reservation" />
+      <item name="list" label="Front desk list" action="arrivals_list" />
+      <item name="refresh" label="Refresh" shortcut="F5" action="refresh" />
+    </menu>
+    <menu name="calendar" label="Calendar">
+      <item name="previous" label="Previous week" shortcut="Alt+Left" action="previous_week" />
+      <item name="today" label="Today" action="go_today" />
+      <item name="next" label="Next week" shortcut="Alt+Right" action="next_week" />
+      <Separator />
+      <item name="book" label="Book selected room" action="book" />
+      <item name="free" label="Show free rooms" action="search" />
+    </menu>
+    <menu name="reservation" label="Reservation">
+      <item name="save" label="Save reservation" shortcut="Ctrl+S" action="reserve" />
+      <item name="edit" label="Edit selected" action="edit" />
+      <item name="room_rate" label="Use room rate" action="room_rate" />
+      <item name="find" label="Find next" shortcut="F3" action="find" />
+      <Separator />
+      <item name="shorten" label="Shorten stay" action="shorten" />
+      <item name="night_prices" label="Nightly prices..." action="night_prices" />
+      <Separator />
+      <item name="preview_cancel" label="Preview cancellation" action="preview_cancel" />
+      <item name="confirm_cancel" label="Confirm cancellation" action="confirm_cancel" />
+      <Separator />
+      <item name="group_statement" label="Group statement" action="group_statement" />
+      <item name="preview_group_settlement" label="Preview group settlement" action="preview_group_settlement" />
+      <item name="confirm_group_settlement" label="Confirm group settlement" action="confirm_group_settlement" />
+      <item name="preview_group_cancel" label="Preview group cancellation" action="preview_group_cancel" />
+      <item name="confirm_group_cancel" label="Confirm group cancellation" action="confirm_group_cancel" />
+    </menu>
+    <menu name="rooms" label="Housekeeping">
+      <item name="clean" label="Mark clean" action="mark_clean" />
+      <item name="dirty" label="Mark dirty" action="mark_dirty" />
+      <item name="inspection" label="Needs inspection" action="mark_inspection" />
+      <item name="cleaning_list" label="Cleaning list" action="cleaning_list" />
+    </menu>
+    <menu name="reports" label="Reports">
+      <item name="this_month" label="This month" action="this_month" />
+      <item name="last_month" label="Last month" action="last_month" />
+      <item name="export" label="Export report" action="export" />
+      <item name="export_csv" label="Export data as CSV" action="export_csv" />
+    </menu>
+    <menu name="audit" label="Night audit">
+      <item name="close_day" label="Close today" action="close_day" />
+      <item name="overdue" label="Overdue stays" action="export_overdue" />
+    </menu>
+    <menu name="setup" label="Setup">
+      <item name="save_profile" label="Save hotel details" action="save_profile" />
+    </menu>
+    <menu name="help" label="Help">
+      <item name="assistant" label="Assistant..." shortcut="Ctrl+K" target="orion.application" action="open" argument="assistant" />
+    </menu>
+  </menus>
   <!-- The command surface. Home holds the desk's everyday commands and acts on
        the page that shows (Today or Reservations); each page's own commands are
        its contextual tab. Pages are switched only in the sidebar. -->
   <ribbon>
+    <ApplicationMenu menu="file" />
     <QuickAccessToolbar>
-      <Button action="new_booking" page="reception" icon="lodge-new-reservation" text="New reservation" />
-      <Button target="orion.application" action="open" argument="walk_in" icon="lodge-walk-in" text="Walk-in guest" />
-      <Button target="orion.application" action="open" argument="assistant" icon="lodge-assistant" text="Assistant" />
+      <Button command="file.new" icon="lodge-new-reservation" />
+      <Button command="file.walk_in" icon="lodge-walk-in" />
+      <Button command="help.assistant" icon="lodge-assistant" />
     </QuickAccessToolbar>
     <Tab label="Home">
       <Group label="New">
-        <Button action="new_booking" page="reception" icon="lodge-new-reservation" text="New reservation" size="large" shortcut="Ctrl+N" tooltip="Start a reservation in the editor" />
-        <Button target="orion.application" action="open" argument="walk_in" icon="lodge-walk-in" text="Walk-in guest" size="large" shortcut="Ctrl+Shift+N" tooltip="Book, check in and take payment for a guest without a booking" />
-        <Button target="orion.application" action="open" argument="group_reservation" icon="lodge-group" text="Group booking" tooltip="Several rooms under one group" />
+        <Button command="file.new" icon="lodge-new-reservation" size="large" tooltip="Start a reservation in the editor" />
+        <Button command="file.walk_in" icon="lodge-walk-in" size="large" tooltip="Book, check in and take payment for a guest without a booking" />
+        <Button command="file.group" icon="lodge-group" tooltip="Several rooms under one group" />
       </Group>
       <Group label="Arrive and leave">
-        <Button action="check_in" icon="lodge-check-in" text="Check in" size="large" shortcut="Ctrl+I" tooltip="Check in the selected arrival or reservation" />
-        <Button action="check_out" icon="lodge-check-out" text="Check out" size="large" shortcut="Ctrl+O" tooltip="Check out the selected departure or reservation; the balance must be settled" />
-        <Button action="extend" icon="lodge-extend" text="Extend stay" shortcut="Ctrl+E" tooltip="One more night for the selected stay" />
-        <Button action="no_show" icon="lodge-no-show" text="No-show" tooltip="The selected arrival did not come: cancel it and free the room" />
+        <Button command="desk.check_in" icon="lodge-check-in" size="large" tooltip="Check in the selected arrival or reservation" />
+        <Button command="desk.check_out" icon="lodge-check-out" size="large" tooltip="Check out the selected departure or reservation; the balance must be settled" />
+        <Button command="desk.extend" icon="lodge-extend" tooltip="One more night for the selected stay" />
+        <Button command="desk.no_show" icon="lodge-no-show" tooltip="The selected arrival did not come: cancel it and free the room" />
       </Group>
       <Group label="Money">
-        <Button action="payment" icon="lodge-payment" text="Payment" size="large" shortcut="Ctrl+M" tooltip="Record a payment or refund for the selected stay" />
-        <Button action="invoice" icon="lodge-bill" text="Guest bill" shortcut="Ctrl+B" tooltip="Print the bill of the selected stay" />
+        <Button command="desk.payment" icon="lodge-payment" size="large" tooltip="Record a payment or refund for the selected stay" />
+        <Button command="desk.invoice" icon="lodge-bill" tooltip="Print the bill of the selected stay" />
       </Group>
       <Group label="Documents">
-        <Button action="registration" icon="lodge-registration" text="Registration form" tooltip="The form the guest signs on arrival" />
-        <Button action="confirmation" icon="lodge-confirmation" text="Confirmation" tooltip="Booking confirmation to send to the guest" />
+        <Button command="desk.registration" icon="lodge-registration" tooltip="The form the guest signs on arrival" />
+        <Button command="desk.confirmation" icon="lodge-confirmation" tooltip="Booking confirmation to send to the guest" />
       </Group>
       <Group label="Help">
-        <Button target="orion.application" action="open" argument="assistant" icon="lodge-assistant" text="Assistant" size="large" shortcut="Ctrl+K" tooltip="Ask in your own words: check in Morgan, free rooms friday, who owes" />
+        <Button command="help.assistant" icon="lodge-assistant" size="large" tooltip="Ask in your own words: check in Morgan, free rooms friday, who owes" />
       </Group>
     </Tab>
     <Tab label="Today" context="today">
       <Group label="Selected guest">
-        <Button action="settle" icon="lodge-payment" text="Settle balance" size="large" tooltip="Take the balance of the selected departure" />
-        <Button action="open_reservation" icon="lodge-open" text="Open reservation" tooltip="Show the selected stay on the Reservations page" />
+        <Button command="desk.settle" icon="lodge-payment" size="large" tooltip="Take the balance of the selected departure" />
+        <Button command="desk.open_reservation" icon="lodge-open" tooltip="Show the selected stay on the Reservations page" />
       </Group>
       <Group label="Print">
-        <Button action="arrivals_list" icon="lodge-print" text="Front desk list" size="large" tooltip="Today's arrivals, departures and guests in house on paper" />
+        <Button command="desk.list" icon="lodge-print" size="large" tooltip="Today's arrivals, departures and guests in house on paper" />
       </Group>
       <Group label="View">
-        <Button action="refresh" icon="lodge-refresh" text="Refresh" size="large" shortcut="F5" />
+        <Button command="desk.refresh" icon="lodge-refresh" size="large" />
       </Group>
     </Tab>
     <Tab label="Calendar" context="availability">
       <Group label="Dates">
-        <Button action="previous_week" icon="lodge-previous" text="Previous week" shortcut="Alt+Left" />
-        <Button action="go_today" icon="lodge-today" text="Today" size="large" />
-        <Button action="next_week" icon="lodge-next" text="Next week" shortcut="Alt+Right" />
+        <Button command="calendar.previous" icon="lodge-previous" />
+        <Button command="calendar.today" icon="lodge-today" size="large" />
+        <Button command="calendar.next" icon="lodge-next" />
       </Group>
       <Group label="Book">
-        <Button action="book" icon="lodge-new-reservation" text="Book selected room" size="large" tooltip="A reservation for the selected room from its first free night" />
-        <Button action="search" icon="lodge-find" text="Show free rooms" size="large" tooltip="Rooms free for the stay entered below, cheapest first" />
+        <Button command="calendar.book" icon="lodge-new-reservation" size="large" tooltip="A reservation for the selected room from its first free night" />
+        <Button command="calendar.free" icon="lodge-find" size="large" tooltip="Rooms free for the stay entered below, cheapest first" />
       </Group>
     </Tab>
     <Tab label="Reservation" context="reception">
       <Group label="Editor">
-        <Button action="reserve" icon="lodge-save" text="Save reservation" size="large" shortcut="Ctrl+S" />
-        <Button action="edit" icon="lodge-edit" text="Edit selected" tooltip="Load the selected reservation into the editor" />
-        <Button action="room_rate" icon="lodge-rate" text="Use room rate" tooltip="Copy the room's nightly rate into the editor" />
-        <Button action="find" icon="lodge-find" text="Find next" shortcut="F3" tooltip="The next reservation whose guest or room matches the search box" />
+        <Button command="reservation.save" icon="lodge-save" size="large" />
+        <Button command="reservation.edit" icon="lodge-edit" tooltip="Load the selected reservation into the editor" />
+        <Button command="reservation.room_rate" icon="lodge-rate" tooltip="Copy the room's nightly rate into the editor" />
+        <Button command="reservation.find" icon="lodge-find" tooltip="The next reservation whose guest or room matches the search box" />
       </Group>
       <Group label="Stay">
-        <Button action="shorten" icon="lodge-shorten" text="Shorten stay" tooltip="One night less for the selected stay" />
-        <Button action="night_prices" icon="lodge-prices" text="Nightly prices" tooltip="A different price for single nights" />
+        <Button command="reservation.shorten" icon="lodge-shorten" tooltip="One night less for the selected stay" />
+        <Button command="reservation.night_prices" icon="lodge-prices" tooltip="A different price for single nights" />
       </Group>
       <Group label="Cancel">
-        <Button action="preview_cancel" icon="lodge-cancel" text="Preview cancellation" size="large" tooltip="See the guest, dates and payments held before cancelling" />
-        <Button action="confirm_cancel" icon="lodge-confirm" text="Confirm cancellation" size="large" />
+        <Button command="reservation.preview_cancel" icon="lodge-cancel" size="large" tooltip="See the guest, dates and payments held before cancelling" />
+        <Button command="reservation.confirm_cancel" icon="lodge-confirm" size="large" />
       </Group>
       <Group label="Group">
-        <Button action="group_statement" icon="lodge-statement" text="Group statement" tooltip="Every reservation of the selected group, with balances" />
-        <Button action="preview_group_settlement" icon="lodge-group-settle" text="Preview group settlement" />
-        <Button action="confirm_group_settlement" icon="lodge-confirm" text="Confirm group settlement" />
-        <Button action="preview_group_cancel" icon="lodge-group-cancel" text="Preview group cancellation" />
-        <Button action="confirm_group_cancel" icon="lodge-confirm" text="Confirm group cancellation" />
+        <Button command="reservation.group_statement" icon="lodge-statement" tooltip="Every reservation of the selected group, with balances" />
+        <Button command="reservation.preview_group_settlement" icon="lodge-group-settle" />
+        <Button command="reservation.confirm_group_settlement" icon="lodge-confirm" />
+        <Button command="reservation.preview_group_cancel" icon="lodge-group-cancel" />
+        <Button command="reservation.confirm_group_cancel" icon="lodge-confirm" />
       </Group>
     </Tab>
     <Tab label="Housekeeping" context="rooms">
       <Group label="Cleaning status">
-        <Button action="mark_clean" icon="lodge-clean" text="Mark clean" size="large" tooltip="The selected room is clean and ready" />
-        <Button action="mark_dirty" icon="lodge-dirty" text="Mark dirty" size="large" />
-        <Button action="mark_inspection" icon="lodge-inspect" text="Needs inspection" size="large" />
+        <Button command="rooms.clean" icon="lodge-clean" size="large" tooltip="The selected room is clean and ready" />
+        <Button command="rooms.dirty" icon="lodge-dirty" size="large" />
+        <Button command="rooms.inspection" icon="lodge-inspect" size="large" />
       </Group>
       <Group label="Print">
-        <Button action="cleaning_list" icon="lodge-cleaning-list" text="Cleaning list" size="large" tooltip="Today's housekeeping list with what to do in each room" />
+        <Button command="rooms.cleaning_list" icon="lodge-cleaning-list" size="large" tooltip="Today's housekeeping list with what to do in each room" />
       </Group>
       <Group label="View">
-        <Button action="refresh" icon="lodge-refresh" text="Refresh rooms" size="large" />
+        <Button command="desk.refresh" icon="lodge-refresh" text="Refresh rooms" size="large" />
       </Group>
     </Tab>
     <Tab label="Reports" context="reports">
       <Group label="Period">
-        <Button action="this_month" icon="lodge-this-month" text="This month" size="large" />
-        <Button action="last_month" icon="lodge-last-month" text="Last month" size="large" />
+        <Button command="reports.this_month" icon="lodge-this-month" size="large" />
+        <Button command="reports.last_month" icon="lodge-last-month" size="large" />
       </Group>
       <Group label="Export">
-        <Button action="export" icon="lodge-export" text="Export report" size="large" tooltip="The figures as a page to print or file" />
-        <Button action="export_csv" icon="lodge-csv" text="Export data as CSV" size="large" tooltip="Reservations, guests and payments for spreadsheets and accounting" />
+        <Button command="reports.export" icon="lodge-export" size="large" tooltip="The figures as a page to print or file" />
+        <Button command="reports.export_csv" icon="lodge-csv" size="large" tooltip="Reservations, guests and payments for spreadsheets and accounting" />
       </Group>
     </Tab>
     <Tab label="Night audit" context="day_close">
       <Group label="Close">
-        <Button action="close_day" icon="lodge-close-day" text="Close today" size="large" tooltip="Locks today's reservations and payments once every red item is resolved" />
-        <Button action="export_overdue" icon="lodge-overdue" text="Overdue stays" size="large" tooltip="Print the stays that block closing" />
+        <Button command="audit.close_day" icon="lodge-close-day" size="large" tooltip="Locks today's reservations and payments once every red item is resolved" />
+        <Button command="audit.overdue" icon="lodge-overdue" size="large" tooltip="Print the stays that block closing" />
       </Group>
     </Tab>
     <Tab label="Setup" context="hotel_setup">
       <Group label="Hotel">
-        <Button action="save_profile" icon="lodge-save" text="Save hotel details" size="large" />
-        <Button action="sample" icon="lodge-sample" text="Add sample hotel" size="large" tooltip="Nine rooms and a few guests around today, to try Lodge" />
+        <Button command="setup.save_profile" icon="lodge-save" size="large" />
+        <Button command="file.sample" icon="lodge-sample" size="large" tooltip="Nine rooms and a few guests around today, to try Lodge" />
       </Group>
       <Group label="Data">
-        <Button action="export_data" icon="lodge-data" text="Export all data" size="large" tooltip="Reservations, guests and payments as CSV files" />
+        <Button command="file.export" icon="lodge-data" size="large" tooltip="Reservations, guests and payments as CSV files" />
       </Group>
     </Tab>
   </ribbon>
