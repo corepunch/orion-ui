@@ -32,7 +32,7 @@ orionc: warning: command 'edit.lost' is not reachable from the ribbon
 
 A gem is hosted by a shell that owns the menu row, so it keeps contributing
 its menus (and its `<toolbar>`) there; the ribbon is for the standalone
-application.
+application. Ledger, Git Client and Pencil Test use one.
 
 ## Markup
 
@@ -51,6 +51,15 @@ Windows Ribbon framework's:
 | `DropDownButton` | `<DropDown menu="view" text icon>` | Opens a declared menu |
 | `SizeDefinition`, `ScalingPolicy` | automatic | See [Layout](#layout) |
 | | `<Separator />` | Ends a column of small buttons with a rule |
+| `Spinner`, `ComboBox` and the like | `<Slider name text value width flags>` | Hosts a `Slider`: see [Hosted controls](#hosted-controls) |
+| | `<Control name class width size>` | Hosts a control of any window class |
+| | `<Label name text value>` | A readout the application writes, with no control |
+
+`if="..."` on a `<Button>`, `<DropDown>` or hosted item keeps it out of the
+builds where the condition is false, as on a menu item. `if=` on `<ribbon>`
+itself compiles the whole ribbon for one build of several (Pencil Test, of the
+three Image Editor builds); `orionc` then cannot know which commands that build
+has, and does not list unreachable ones.
 
 ```xml
 <ribbon>
@@ -113,6 +122,9 @@ button, as Office does on a Mac. The ribbon window is also what
 | `rbGetMinimized`, `rbSetMinimized` | Only the tab row shows |
 | `rbGetContexts`, `rbSetContexts` | The contexts whose tabs show |
 | `rbGetItemRect`, `rbGetTabRect` | Geometry, for tests and remote control |
+| `rbGetControl` | The window a hosted item created, by ident |
+| `rbSetValue` | The readout after a hosted control, by ident (the text is copied) |
+| `rbUpdateLayout` | A hosted control now measures differently: lay the tab out again |
 
 ## Layout
 
@@ -140,6 +152,57 @@ first small buttons drop their captions, then large buttons become small.
 Only a bare icon has a tooltip: the item's `tooltip`, or its text, with the
 command's shortcut appended from the accelerator table. A button that shows
 its caption has none.
+
+## Hosted controls
+
+A group can hold an ordinary control between its buttons: a slider, a palette,
+anything with a window class. The ribbon creates it as its own child, with the
+item's ident as its id, places it in the item's cell, and hides it with its tab
+and when the ribbon folds. Its notifications arrive at the ribbon's procedure
+like any child's:
+
+```xml
+<Group label="Brush">
+  <Slider name="size" text="Size" value="00px" width="56" flags="SLIDER_TROUGH" />
+  <Slider name="opacity" text="Opacity" value="100%" width="56" flags="SLIDER_TROUGH" />
+</Group>
+<Group label="Colors">
+  <Control name="colors" class="SwatchGrid" size="large" />
+</Group>
+<Group label="Frame">
+  <Label name="frame" text="Frame" value="000/000" />
+</Group>
+```
+
+```c
+// in the ribbon's procedure
+if (msg == evCommand && HIWORD(wparam) == sliderValueChanged && LOWORD(wparam) == ID_RIBBON_SIZE) { ... }
+// when the value changes
+send_message(ribbon, rbSetValue, ID_RIBBON_SIZE, "5px");
+window_t *grid = (window_t *)send_message(ribbon, rbGetControl, ID_RIBBON_COLORS, NULL);
+```
+
+![Pencil Test's Draw tab](validation/penciltest/ribbon-three-rows.png)
+
+- The item's ID is `ID_RIBBON_<NAME>`, from `name=`.
+- A cell reads caption, control, readout. `text` is the caption. `value` is the
+  widest readout the item will show; it reserves that room, so the control
+  does not move when the number changes. `rbSetValue` replaces the text.
+- Controls stacked in a column share the widest caption, so their left and
+  right edges line up.
+- `width` is the control's width. Without it the control is asked what it needs
+  for the cell's height (`evMeasure`): a `SwatchGrid` takes more columns in one
+  row than in three. Send `rbUpdateLayout` when that answer changes.
+- `size="large"` spans the group's rows and drops caption and readout; the
+  group's caption names it.
+- A control in a row is `--control-height` tall in both layouts.
+- `rbSetState` with `TBSTATE_DISABLED` disables the hosted window and greys its
+  caption and readout.
+
+When the window is too narrow, a group that shrinks a step drops its controls'
+readouts (a `<Label>` drops its caption instead). After the buttons have shrunk
+too, the controls that measure themselves are asked to make do with less: a
+palette narrows and pages its colours. A control of declared width keeps it.
 
 ## Contextual tabs
 
@@ -237,7 +300,7 @@ opens. As a gem the shell owns the menu row, so the ribbon is not created.
 | `Ribbon::tabs` | The tab row: `height`, `padding`, `gap` after the File button. It wears the accent colour, as Office's does |
 | `Ribbon::tab`, `Ribbon::tab.contextual`, `Ribbon::tab.menu` | A tab (`:hover`, `:checked`: the open tab takes the panel's background), a contextual one, and the File button |
 | `MenuBar.ribbon`, `Toolbar.ribbon::grip` | The Quick Access Toolbar in the tab row: its background, icon `color` and grip. The chrome gives that toolbar the class `ribbon` |
-| `Ribbon::button` | A command (`:hover`, `:active`, `:checked`, `:disabled`): `height` of a row, `--single-height` of the single row, `min-width` of a large button, `--icon-size`, `--large-icon-size`, and a large button's `padding-top` and `--caption-gap` between icon and caption |
+| `Ribbon::button` | A command (`:hover`, `:active`, `:checked`, `:disabled`): `height` of a row, `--single-height` of the single row, `min-width` of a large button, `--icon-size`, `--large-icon-size`, a large button's `padding-top` and `--caption-gap` between icon and caption, and `--control-height` of a hosted control in a row |
 | `Ribbon::group` | The caption's `color` and font; `padding-left` inside the group |
 | `Ribbon::separator`, `Ribbon::arrow`, `Ribbon::toggle` | The rule between groups, a drop-down's arrow, the layout switch |
 

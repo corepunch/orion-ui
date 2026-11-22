@@ -66,11 +66,17 @@ Ribbon              { padding: 4px; gap: 2px; }
 Ribbon::tabs        { height: var(--menubar-height); padding: 2px; gap: 4px; }
 Ribbon::tab         { padding-left: 12px; }
 Ribbon::button      { height: calc(var(--font-size) + 11px); --single-height: var(--toolbar-height); min-width: 44px;
-                      padding-left: 5px; padding-top: 2px; gap: 4px; --caption-gap: 2px; --icon-size: 16px; --large-icon-size: 32px; }
+                      padding-left: 5px; padding-top: 2px; gap: 4px; --caption-gap: 2px; --icon-size: 16px; --large-icon-size: 32px;
+                      --control-height: 18px; }
+Slider.ribbon::trough { --inset: 2px; }
+Slider.ribbon::knob   { --inset: 2px; --length: 10px; }
 Ribbon::group       { padding-left: 6px; padding-top: 2px; }
 Ribbon::separator   { width: 1px; }
 Ribbon::arrow       { width: 9px; }
 Ribbon::toggle      { width: 16px; }
+SwatchGrid          { gap: 2px; --max-columns: 16; }
+SwatchGrid::swatch  { width: 12px; height: 12px; border-radius: 2px; --checked-inset: 3px; }
+SwatchGrid::pager   { width: 12px; }
 TableView::header   { min-height: 0; }
 TableView::row      { min-height: 0; }
 TableView::divider  { width: 1px; }
@@ -211,6 +217,21 @@ Ribbon::arrow:disabled { fill: var(--text-disabled); }
 Ribbon::toggle    { content: scroll-up; fill: var(--text-secondary); border-radius: var(--toolbar-radius); }
 Ribbon::toggle:checked { content: scroll-down; }
 Ribbon::toggle:hover { background: var(--button-hover); }
+/* A slider hosted in the panel: its well has to show against the panel's own colour. */
+Slider.ribbon::trough { background: color-mix(in srgb, var(--text-normal) 16%, transparent); border-radius: 7px; }
+Slider.ribbon::trough:disabled { background: color-mix(in srgb, var(--text-normal) 8%, transparent); }
+Slider.ribbon::knob { border-radius: 5px; }
+
+/* ── Swatch grid ─────────────────────────────────────────────────────────── */
+
+/* The frame sits over the swatch's colour; the chosen one wears the accent as a ring. */
+SwatchGrid::swatch { border: 1px solid color-mix(in srgb, var(--text-normal) 35%, transparent); }
+SwatchGrid::swatch:hover { border-color: var(--text-normal); }
+SwatchGrid::swatch:checked { border: 2px solid var(--accent); }
+SwatchGrid::swatch:disabled { border-color: color-mix(in srgb, var(--text-normal) 15%, transparent); }
+SwatchGrid::pager { color: var(--text-secondary); border-radius: var(--toolbar-radius); }
+SwatchGrid::pager:hover { background: var(--button-hover); color: var(--text-normal); }
+SwatchGrid::pager:disabled { color: var(--text-disabled); }
 
 /* ── Lists and tables ────────────────────────────────────────────────────── */
 

@@ -18,6 +18,7 @@ extern result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *
 extern result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_gradient(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_swatchgrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_splitter(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_splitview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -78,6 +79,9 @@ static const fe_component_desc_t k_commctl_classes[] = {
   CLASS_DESC("Gradient", "IDC_GRD", "Gradient",
              121, 8, 0, 8, 0,
              FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR, win_gradient),
+  CLASS_DESC("SwatchGrid", "IDC_SWG", NULL,
+             121, 30, 0, 14, WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOTABSTOP,
+             FE_COMPONENT_PLACEABLE, win_swatchgrid),
   CLASS_DESC("Column", "IDC_COL", "Column",
              120, 80, 0, 0, WINDOW_LAYOUT_CONTAINER,
              FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR, win_column),

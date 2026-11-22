@@ -694,6 +694,31 @@ taking keyboard focus from the content (see
 
 In a toolbar use `TOOLBAR_ITEM_SEGMENTED` (see [toolbars.md](toolbars.md)).
 
+## SwatchGrid
+
+A palette as a grid of colour swatches, one of them selected. It fills its
+height with rows and takes the columns its colours need, up to `--max-columns`;
+the rest are on further pages, reached from the pager at its trailing edge or
+with the wheel. It answers `evMeasure` for a given height, and for a given
+width narrows and pages.
+
+```c
+window_t *grid = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL, &frame, parent, "SwatchGrid", hinstance, NULL);
+send_message(grid, swSetColors, count, colors);          // uint32_t colours, copied
+send_message(grid, swSetSel, index, NULL);               // -1 for none; shows the page that holds it
+// the parent, on a click:
+case evCommand: if (HIWORD(wparam) == swnSelChange) index = (int)send_message(lparam, swGetSel, 0, NULL);
+```
+
+| Selector | |
+|---|---|
+| `SwatchGrid` | `gap` between swatches, `--max-columns` |
+| `SwatchGrid::swatch` | `width`, `height`, `border-radius`; the frame over the colour (`:hover`, `:checked`, `:disabled`); `--checked-inset` between the chosen swatch's colour and its ring |
+| `SwatchGrid::pager` | `width`; the two page buttons (`:hover`, `:disabled`) |
+
+A swatch's tooltip is its colour as `#RRGGBB`. A disabled grid fades its
+colours and selects nothing. Pencil Test hosts one in its ribbon.
+
 ## Console
 
 ```c

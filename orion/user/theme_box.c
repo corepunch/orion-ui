@@ -154,6 +154,8 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_RIBBON_ARROW]           = {"Ribbon", "arrow"},
   [THEME_PART_RIBBON_TOGGLE]          = {"Ribbon", "toggle"},
   [THEME_PART_TUTORIAL_SPOT]          = {"Tutorial", "spot"},
+  [THEME_PART_SWATCH]                 = {"SwatchGrid", "swatch"},
+  [THEME_PART_SWATCH_PAGER]           = {"SwatchGrid", "pager"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────
