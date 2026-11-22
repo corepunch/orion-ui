@@ -185,8 +185,9 @@ palette (a `SwatchGrid`) and the frame counter; **Animation** the frame,
 playback, timing, onion-skin and export commands; **Picture** clipboard,
 selection, image and background commands; **View** zoom and grid. The Quick
 Access Toolbar repeats Save, Undo, Redo and the transport, so stepping and
-playing work from any tab and with the ribbon folded. The four layers are
-commands (`layer.fx`, `layer.color`, `layer.pencil`, `layer.back`).
+playing work from any tab and with the ribbon folded. The four layers are one
+radio group, a `SegmentedControl` hosted in the Layers group: icons in the single
+row, each icon over its name in three rows.
 `pencil_ribbon_sync()` brings checks, disabled states, sliders, swatches and
 readouts up to date; the existing sync points call it. What a layer cannot use
 is disabled, not removed: paint tools, Gaps and the palette on Pencil; the

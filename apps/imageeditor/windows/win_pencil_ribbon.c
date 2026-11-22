@@ -13,8 +13,12 @@ typedef struct {
 } pencil_ribbon_state_t;
 static pencil_ribbon_state_t s_ribbon;
 
-static const struct { int ident, layer; } kLayerCommands[] = {
-  {ID_LAYER_FX, IE_LAYER_FX}, {ID_LAYER_COLOR, IE_LAYER_COLOR}, {ID_LAYER_PENCIL, IE_LAYER_PENCIL}, {ID_LAYER_BACK, IE_LAYER_BG},
+// The Layers radio group's segments, front of the stack first, as its title in the .orion lists them.
+static const struct { int layer; segment_glyph_t glyph; } kLayerSegments[] = {
+  {IE_LAYER_FX,     {"phosphor-sparkle",       "phosphor-sparkle-fill"}},
+  {IE_LAYER_COLOR,  {"phosphor-palette",       "phosphor-palette-fill"}},
+  {IE_LAYER_PENCIL, {"phosphor-pencil-simple", "phosphor-pencil-simple-fill"}},
+  {IE_LAYER_BG,     {"phosphor-image-square",  "phosphor-image-square-fill"}},
 };
 
 static void ribbon_state(window_t *rb, int ident, bool checked, bool disabled) {
@@ -73,8 +77,10 @@ void pencil_ribbon_sync(void) {
   if (tool != g_app->current_tool) handle_menu_command((uint16_t)tool);
   tool = imageeditor_tool_group(g_app->current_tool);
 
-  for (int i = 0; i < ARRAY_LEN(kLayerCommands); i++)
-    ribbon_state(rb, kLayerCommands[i].ident, layered && kLayerCommands[i].layer == layer, !layered);
+  window_t *layers = (window_t *)send_message(rb, rbGetControl, ID_RIBBON_LAYER, NULL);
+  for (int i = 0; layers && i < ARRAY_LEN(kLayerSegments); i++)
+    if (kLayerSegments[i].layer == layer) send_message(layers, sgSetSelection, (uint32_t)i, NULL);
+  ribbon_state(rb, ID_RIBBON_LAYER, false, !layered);
 
   // The pencil layer takes graphite only; the colour layers take paint.
   static const struct { int ident; bool paint, graphite; } kTools[] = {
@@ -152,6 +158,13 @@ result_t pencil_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *
       pencil_ribbon_sync();
       return true;
     }
+    if (code == sgnSelChange && id == ID_RIBBON_LAYER && lparam) {
+      int chosen = (int)send_message(lparam, sgGetSelection, 0, NULL);
+      if (!s_ribbon.busy && chosen >= 0 && chosen < ARRAY_LEN(kLayerSegments))
+        cmd_pencil_layer(g_app->active_doc, kLayerSegments[chosen].layer);
+      pencil_ribbon_sync();   // a refused change (a selection being moved) returns the group to the working layer
+      return true;
+    }
     if (code == swnSelChange && lparam) {
       int chosen = (int)send_message(lparam, swGetSel, 0, NULL);
       if (!s_ribbon.busy && chosen >= 0 && chosen < s_ribbon.count) cmd_pencil_color(g_app->active_doc, s_ribbon.indices[chosen]);
@@ -172,6 +185,12 @@ window_t *create_pencil_ribbon(hinstance_t hinstance) {
                                            main_toolbar_proc, hinstance);
   g_app->ribbon_win = g_app->menubar_win = app_chrome_ribbon(g_app->chrome_win);
   g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
+  // In a row the layers are their icons, named by tooltips; given the group's height, each icon stands over its name.
+  window_t *layers = (window_t *)send_message(g_app->ribbon_win, rbGetControl, ID_RIBBON_LAYER, NULL);
+  if (layers) send_message(layers, sgSetStyle, SEGMENTED_STYLE_ICONS_ONLY, NULL);
+  for (int i = 0; layers && i < ARRAY_LEN(kLayerSegments); i++)
+    send_message(layers, sgSetSegmentGlyph, (uint32_t)i, (void *)&kLayerSegments[i].glyph);
+  send_message(g_app->ribbon_win, rbUpdateLayout, 0, NULL);
   imageeditor_sync_main_toolbar();   // publishes the menus and brings the ribbon up to date
   return g_app->ribbon_win;
 }

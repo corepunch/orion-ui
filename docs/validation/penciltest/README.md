@@ -100,9 +100,12 @@ Drawing area in the same 1080×810 window:
 | Layout | Chrome | Drawing area |
 |---|---|---|
 | Tool strip (before) | 24 px row, one-column strip at the left | 786 high, less the strip's width |
-| Ribbon, one row | 70 px | 1080×740 |
+| Ribbon, one row | 59 px | 1080×751 |
 | Ribbon, three rows | 120 px | 1080×690 |
 | Ribbon, folded | 24 px | 1080×786 |
+
+The four layers are one radio group: a segmented control with the layer icons,
+which stands each icon over its name when the ribbon has three rows.
 
 At 1080 px the one-row Draw tab shows every control; the sliders give up their
 readouts ("5px", "50%", "Small") to fit, and three rows show them.
@@ -114,4 +117,5 @@ the tab set at startup (`rbSetLayout`, `rbSetMinimized`, `rbSetActiveTab`); that
 was a temporary hook in `create_pencil_ribbon`, not part of the tree.
 
 Checks: `test_ribbon_test` 8/8 (hosted controls), `test_swatchgrid_test` 2/2,
-`test_orionc_contract_test` 21/21, `test_penciltest_ribbon_test` 4/4.
+`test_segmented_test` 7/7 (named icons, tall form), `test_orionc_contract_test` 21/21,
+`test_penciltest_ribbon_test` 4/4.

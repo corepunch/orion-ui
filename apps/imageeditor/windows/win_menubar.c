@@ -492,14 +492,6 @@ void handle_menu_command(uint16_t id) {
   // If no document has focus, fall back to the first available document
   if (!doc) doc = g_app->docs;
 
-#if IMAGEEDITOR_BW
-  switch (id) {   // the four layers as commands: the ribbon's Layers group
-    case ID_LAYER_FX:     id = IE_PENCIL_LAYER_BASE + IE_LAYER_FX;     break;
-    case ID_LAYER_COLOR:  id = IE_PENCIL_LAYER_BASE + IE_LAYER_COLOR;  break;
-    case ID_LAYER_PENCIL: id = IE_PENCIL_LAYER_BASE + IE_LAYER_PENCIL; break;
-    case ID_LAYER_BACK:   id = IE_PENCIL_LAYER_BASE + IE_LAYER_BG;     break;
-  }
-#endif
   if (IMAGEEDITOR_BW && id >= IE_PENCIL_LAYER_BASE && id < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
     cmd_pencil_layer(doc, id - IE_PENCIL_LAYER_BASE);
     return;
