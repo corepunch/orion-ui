@@ -52,7 +52,7 @@ Windows Ribbon framework's:
 | `SizeDefinition`, `ScalingPolicy` | automatic | See [Layout](#layout) |
 | | `<Separator />` | Ends a column of small buttons with a rule |
 | `Spinner`, `ComboBox` and the like | `<Slider name text value width flags>` | Hosts a `Slider`: see [Hosted controls](#hosted-controls) |
-| | `<Control name class width size>` | Hosts a control of any window class |
+| | `<Control name class width size title flags>` | Hosts a control of any window class; `title` is its window title (a `SegmentedControl`'s segments) |
 | | `<Label name text value>` | A readout the application writes, with no control |
 
 `if="..."` on a `<Button>`, `<DropDown>` or hosted item keeps it out of the
@@ -139,7 +139,9 @@ group's caption sits under them.
 
 **One row** (`RIBBON_LAYOUT_SIMPLIFIED`), as Office shows on a tablet: large
 buttons keep their caption beside the icon, small ones show their icon and
-name themselves in the tooltip; rules separate the groups.
+name themselves in the tooltip; rules separate the groups. The row is a little
+taller than one of the three rows (`--single-height`), not a toolbar band: the
+single row is the layout for giving the content its room.
 
 The switch at the panel's trailing end changes between them. A double click on
 a tab folds the ribbon to its tab row; choosing a tab unfolds it. The
@@ -193,9 +195,19 @@ window_t *grid = (window_t *)send_message(ribbon, rbGetControl, ID_RIBBON_COLORS
 - `width` is the control's width. Without it the control is asked what it needs
   for the cell's height (`evMeasure`): a `SwatchGrid` takes more columns in one
   row than in three. Send `rbUpdateLayout` when that answer changes.
-- `size="large"` spans the group's rows and drops caption and readout; the
-  group's caption names it.
-- A control in a row is `--control-height` tall in both layouts.
+- `size="large"` offers the control the group's rows and drops caption and
+  readout; the group's caption names it.
+- A control of declared width in a row is `--control-height` tall in both
+  layouts. One that measures itself is as tall as it says, up to what it was
+  offered, in the middle of its cell.
+- A choice of one among a few is a hosted `SegmentedControl`, not a row of
+  toggle buttons: it is one control with radio behaviour. Offered three rows,
+  one with named icons stands each icon over its label; in the single row it
+  is a row of icons.
+
+```xml
+<Control name="layer" class="SegmentedControl" size="large" title="FX|Color|Pencil|Background" flags="WINDOW_NOFOCUS | CONTROL_SIZE_LARGE" />
+```
 - `rbSetState` with `TBSTATE_DISABLED` disables the hosted window and greys its
   caption and readout.
 

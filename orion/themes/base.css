@@ -65,7 +65,8 @@ TabView::bar        { padding-left: 0; padding-top: 1px; }
 Ribbon              { padding: 4px; gap: 2px; }
 Ribbon::tabs        { height: var(--menubar-height); padding: 2px; gap: 4px; }
 Ribbon::tab         { padding-left: 12px; }
-Ribbon::button      { height: calc(var(--font-size) + 11px); --single-height: var(--toolbar-height); min-width: 44px;
+/* The single row is a little taller than one of the three rows: an icon with room to press, not a toolbar band. */
+Ribbon::button      { height: calc(var(--font-size) + 11px); --single-height: calc(var(--font-size) + 15px); min-width: 44px;
                       padding-left: 5px; padding-top: 2px; gap: 4px; --caption-gap: 2px; --icon-size: 16px; --large-icon-size: 32px;
                       --control-height: 18px; }
 Slider.ribbon::trough { --inset: 2px; }
@@ -74,6 +75,7 @@ Ribbon::group       { padding-left: 6px; padding-top: 2px; }
 Ribbon::separator   { width: 1px; }
 Ribbon::arrow       { width: 9px; }
 Ribbon::toggle      { width: 16px; }
+SegmentedControl::segment { --icon-size: 16px; --large-icon-size: 32px; --caption-gap: 2px; }
 SwatchGrid          { gap: 2px; --max-columns: 16; }
 SwatchGrid::swatch  { width: 12px; height: 12px; border-radius: 2px; --checked-inset: 3px; }
 SwatchGrid::pager   { width: 12px; }
