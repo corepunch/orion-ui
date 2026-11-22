@@ -620,6 +620,13 @@ enum {
   sgSetSegmentColor,            // wparam = index; lparam = (void*)(uintptr_t)color dot drawn before the label; 0 clears
   sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
 };
+// SwatchGrid: a palette of colour swatches, one selected.
+enum {
+  swSetColors = evUser + 580,   // wparam = count; lparam = const uint32_t* colours (copied)
+  swSetSel,                     // wparam = index, -1 for none; shows the page that holds it
+  swGetSel,                     // returns the selected index, or -1
+  swnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
+};
 // Ribbon messages (≈ the Windows Ribbon framework's IUIFramework). Commands are addressed by
 // their ident, wherever they sit; a command placed twice keeps one state.
 enum {
@@ -638,6 +645,9 @@ enum {
   rbSetContexts,                // wparam = mask of ribbon_tab_t.context bits; lparam nonzero opens the first tab this reveals
   rbGetBadge,                   // wparam = command ident; returns the count, or -1 when absent
   rbSetBadge,                   // wparam = command ident; lparam = (void *)(intptr_t) count; 0 hides the badge
+  rbGetControl,                 // wparam = ident of a RIBBON_ITEM_CONTROL; returns its hosted window_t*, or 0
+  rbSetValue,                   // wparam = ident of a RIBBON_ITEM_CONTROL; lparam = const char* readout (copied); NULL restores the declared one
+  rbUpdateLayout,               // a hosted control now measures differently: lay the tab out again
 };
 // Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.
 // SpriteSlider also answers slSetRange / slSetPos / slGetPos and notifies with sliderValueChanged,

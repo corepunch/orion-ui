@@ -211,6 +211,8 @@ typedef enum {
   THEME_PART_RIBBON_ARROW,     // a drop-down's arrow
   THEME_PART_RIBBON_TOGGLE,    // switches the three-row and single-row layouts; CTRL_SELECTED in the single row
   THEME_PART_TUTORIAL_SPOT,    // the ring a tutorial step draws around what it points at
+  THEME_PART_SWATCH,           // a SwatchGrid swatch's frame, over its colour; CTRL_SELECTED is the chosen one
+  THEME_PART_SWATCH_PAGER,     // half of a SwatchGrid's pager: the previous or the next page of colours
   THEME_PART_COUNT,
 } theme_part_t;
 

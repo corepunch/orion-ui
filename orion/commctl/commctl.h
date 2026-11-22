@@ -222,7 +222,9 @@ window_t *app_chrome_add_toolbar(window_t *chrome, toolbar_dock_t dock, winproc_
 // toolbar band, after the Windows Ribbon framework: an application-menu button
 // and tabs in the menu row, and under them the active tab's commands in groups.
 // See docs/ribbon.md.
-typedef enum { RIBBON_ITEM_BUTTON, RIBBON_ITEM_DROPDOWN, RIBBON_ITEM_SEPARATOR } ribbon_item_type_t;
+// RIBBON_ITEM_CONTROL hosts an ordinary control (a Slider, a SwatchGrid) in the group: its caption,
+// the control, then a readout of what it holds. Without a class it is the readout alone.
+typedef enum { RIBBON_ITEM_BUTTON, RIBBON_ITEM_DROPDOWN, RIBBON_ITEM_SEPARATOR, RIBBON_ITEM_CONTROL } ribbon_item_type_t;
 typedef enum { RIBBON_LAYOUT_CLASSIC, RIBBON_LAYOUT_SIMPLIFIED } ribbon_layout_t; // three rows with captions; one row
 #define RIBBON_ITEM_LARGE (1u << 0) // icon over caption, as tall as the group (≈ a SizeDefinition's large button)
 #define RIBBON_ITEM_CHECK (1u << 1) // toggles TBSTATE_CHECKED on each click (≈ ToggleButton)
@@ -238,6 +240,10 @@ typedef struct {
   const menu_item_t *menu;         // RIBBON_ITEM_DROPDOWN: the menu it opens
   int                menu_count;
   const char        *checked_icon; // shown while TBSTATE_CHECKED
+  const char        *control;      // RIBBON_ITEM_CONTROL: window class of the hosted control; its id is ident
+  int                w;            // the hosted control's width; 0 = what it measures for the cell's height
+  const char        *value;        // the widest readout, which reserves its room; rbSetValue replaces the text
+  uint32_t           control_flags; // window flags for the hosted control (SLIDER_TROUGH, ...)
 } ribbon_item_t;
 
 typedef struct { const char *label; const ribbon_item_t *items; int count; } ribbon_group_t;
@@ -484,6 +490,8 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_gradient(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+// A palette as a grid of colour swatches; see swSetColors.
+result_t win_swatchgrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 typedef struct { uint32_t style; } tabview_params_t;
 result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 

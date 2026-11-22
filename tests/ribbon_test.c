@@ -233,6 +233,96 @@ static result_t quick_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
   return false;
 }
 
+// A group hosts ordinary controls: a slider with caption and readout, a readout alone, a palette.
+enum { ID_SIZE = 201, ID_FRAME, ID_COLORS, ID_GHOST };
+static const ribbon_item_t kHosted[] = {
+  { RIBBON_ITEM_CONTROL, ID_SIZE,  NULL, "Size",  NULL, 0, NULL, 0, NULL, "Slider", 60, "00px", SLIDER_TROUGH },
+  { RIBBON_ITEM_CONTROL, ID_FRAME, NULL, "Frame", NULL, 0, NULL, 0, NULL, NULL, 0, "000/000" },
+};
+static const ribbon_item_t kPalette[] = { { RIBBON_ITEM_CONTROL, ID_COLORS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, "SwatchGrid" } };
+static const ribbon_group_t kHostGroups[] = { { "Brush", kHosted, ARRAY_LEN(kHosted) }, { "Colors", kPalette, ARRAY_LEN(kPalette) } };
+static const ribbon_tab_t kHostTabs[] = { { "Draw", kHostGroups, ARRAY_LEN(kHostGroups) }, { "View", kViewGroups, ARRAY_LEN(kViewGroups) } };
+static const ribbon_def_t kHostRibbon = { .tabs = kHostTabs, .tab_count = ARRAY_LEN(kHostTabs) };
+static int g_slides, g_picks;
+
+static result_t host_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCommand && HIWORD(wparam) == sliderValueChanged && LOWORD(wparam) == ID_SIZE) { g_slides++; return true; }
+  if (msg == evCommand && HIWORD(wparam) == swnSelChange && LOWORD(wparam) == ID_COLORS) { g_picks++; return true; }
+  return win_ribbon(win, msg, wparam, lparam);
+}
+
+static void test_hosted_controls(void) {
+  TEST("a group hosts controls: they follow their cells, the open tab and the fold, and notify the ribbon's procedure");
+  test_env_init();
+  register_commctl_classes();
+  window_t *ribbon = create_window("ribbon", WINDOW_NOTITLE | WINDOW_NORESIZE, MAKERECT(0, 0, 900, 200), NULL, host_proc, 0, (void *)&kHostRibbon);
+  ASSERT_NOT_NULL(ribbon);
+  show_window(ribbon, true);
+  window_t *slider = (window_t *)send_message(ribbon, rbGetControl, ID_SIZE, NULL);
+  window_t *grid = (window_t *)send_message(ribbon, rbGetControl, ID_COLORS, NULL);
+  ASSERT_NOT_NULL(slider);
+  ASSERT_NOT_NULL(grid);
+  ASSERT(slider->parent == ribbon && slider->id == ID_SIZE, "the control is the ribbon's child and carries the item's ident");
+  ASSERT(!send_message(ribbon, rbGetControl, ID_FRAME, NULL), "a readout hosts nothing");
+  ASSERT(!send_message(ribbon, rbGetControl, ID_GHOST, NULL), "nor does an unknown ident");
+
+  irect16_t cell = item_rect(ribbon, ID_SIZE);
+  ASSERT_TRUE(window_has_state(slider, WINDOW_STATE_VISIBLE));
+  ASSERT(slider->frame.w == 60 && slider->frame.x > cell.x && slider->frame.x + slider->frame.w < cell.x + cell.w,
+         "the slider keeps its declared width between its caption and its readout");
+  ASSERT(slider->frame.h == ui_px("Ribbon::button", "--control-height") &&
+         abs(2 * slider->frame.y + slider->frame.h - 2 * cell.y - cell.h) <= 1, "and sits in the middle of its row at the sheet's height");
+  ASSERT_TRUE(send_message(ribbon, rbSetValue, ID_SIZE, "5px"));
+  ASSERT_TRUE(send_message(ribbon, rbSetValue, ID_FRAME, "3/12"));
+  ASSERT(!send_message(ribbon, rbSetValue, ID_GHOST, "x") && !send_message(ribbon, rbSetValue, ID_NEW, "x"), "a readout goes to a hosted item only");
+  ASSERT_EQUAL(item_rect(ribbon, ID_SIZE).w, cell.w);   // the declared sample reserved the room
+
+  // The palette measures itself for the group's height, and again when it changes.
+  uint32_t colors[40];
+  for (int i = 0; i < 40; i++) colors[i] = 0xFF000000u | (uint32_t)(i * 6);
+  int empty = grid->frame.w;
+  send_message(grid, swSetColors, 40, colors);
+  send_message(ribbon, rbUpdateLayout, 0, NULL);
+  irect16_t palette = item_rect(ribbon, ID_COLORS);
+  ASSERT(grid->frame.w > empty && grid->frame.h == palette.h, "a large control spans the rows and is as wide as it measures");
+
+  g_slides = g_picks = 0;
+  ui_event_t drag = {.message = kEventLeftButtonDown, .x = (slider->frame.x + 4) * UI_WINDOW_SCALE,
+                     .y = (slider->frame.y + slider->frame.h / 2) * UI_WINDOW_SCALE};
+  dispatch_message(&drag);
+  drag.message = kEventMouseMoved; drag.x = (slider->frame.x + slider->frame.w - 4) * UI_WINDOW_SCALE;
+  dispatch_message(&drag);
+  drag.message = kEventLeftButtonUp;
+  dispatch_message(&drag);
+  ASSERT(g_slides > 0 && send_message(slider, slGetPos, 0, NULL) > 0, "a drag on the slider reaches the ribbon's procedure");
+  ASSERT_NULL(g_ui_runtime.captured);
+  click_at(grid->frame.x + 3, grid->frame.y + grid->frame.h / 2);
+  ASSERT(g_picks == 1 && send_message(grid, swGetSel, 0, NULL) >= 0, "and so does the palette's");
+
+  send_message(ribbon, rbSetState, ID_SIZE, (void *)(uintptr_t)TBSTATE_DISABLED);
+  ASSERT_TRUE(window_has_state(slider, WINDOW_STATE_DISABLED));
+  send_message(ribbon, rbSetState, ID_SIZE, NULL);
+  ASSERT_FALSE(window_has_state(slider, WINDOW_STATE_DISABLED));
+
+  send_message(ribbon, rbSetActiveTab, 1, NULL);
+  ASSERT(!window_has_state(slider, WINDOW_STATE_VISIBLE) && !window_has_state(grid, WINDOW_STATE_VISIBLE), "another tab's controls hide");
+  send_message(ribbon, rbSetActiveTab, 0, NULL);
+  ASSERT_TRUE(window_has_state(slider, WINDOW_STATE_VISIBLE));
+  send_message(ribbon, rbSetMinimized, 1, NULL);
+  ASSERT_FALSE(window_has_state(slider, WINDOW_STATE_VISIBLE));
+  send_message(ribbon, rbSetMinimized, 0, NULL);
+  ASSERT_TRUE(window_has_state(slider, WINDOW_STATE_VISIBLE));
+
+  // Too narrow: a control of declared width keeps it; the palette, which measures itself, narrows and pages.
+  int wide = grid->frame.w;
+  resize_window(ribbon, palette.x + wide, 200);
+  ASSERT(slider->frame.w == 60 && window_has_state(slider, WINDOW_STATE_VISIBLE), "the slider keeps its width");
+  ASSERT(window_has_state(grid, WINDOW_STATE_VISIBLE) && grid->frame.w < wide, "the palette narrows instead of leaving");
+  destroy_window(ribbon);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_chrome(void) {
   TEST("ribbon chrome docks the ribbon in the menu row and keeps the workspace under it");
   test_env_init();
@@ -271,6 +361,7 @@ int main(void) {
   test_layouts();
   test_scaling();
   test_contextual_tabs();
+  test_hosted_controls();
   test_chrome();
   TEST_END();
 }

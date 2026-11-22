@@ -25,8 +25,9 @@
 typedef enum { RB_NONE, RB_MENU, RB_TAB, RB_ITEM, RB_TOGGLE, RB_RESTORE } rb_target_t;
 typedef struct { rb_target_t kind; int index; } rb_hit_t;                 // index: tab, or item within the active tab
 typedef enum { RB_FORM_LARGE, RB_FORM_SMALL, RB_FORM_ICON, RB_FORM_SEPARATOR } rb_form_t;
-typedef struct { irect16_t rect; rb_form_t form; int group; } rb_cell_t;
-typedef struct { int flags, badge; } rb_command_state_t;
+// lead, control_w, value_w: a hosted control's caption, its own width and its readout's room.
+typedef struct { irect16_t rect; rb_form_t form; int group, lead, control_w, value_w; } rb_cell_t;
+typedef struct { int flags, badge; char value[32]; window_t *host; } rb_command_state_t;
 typedef enum { RB_COMMAND_FLAGS, RB_COMMAND_BADGE } rb_command_field_t;
 
 typedef struct {
@@ -39,6 +40,7 @@ typedef struct {
   rb_command_state_t  *states;      // per item, tab after tab
   rb_cell_t           *cells;       // the active tab's items, laid out for laid_w
   int                  cell_count, laid_w;
+  int                  squeeze;     // width the tab's self-measured controls give up so the groups fit
   irect16_t            groups[RIBBON_MAX_GROUPS];
   rb_hit_t             hot, pressed;
   window_t            *popup;       // the open application menu or drop-down
@@ -185,6 +187,43 @@ static int rb_badge_width(int count, char *text, size_t cap) {
   return measure_status_badge(ui_format_number(count, 0, text, cap), NULL);
 }
 
+// A control in a row is as tall as the sheet says, whichever layout the row belongs to; a large one spans its cell.
+static int rb_control_height(const window_t *win, const ribbon_item_t *it, int cell_h) {
+  return it->style & RIBBON_ITEM_LARGE ? cell_h : MIN(cell_h, ui_px(rb_sel(win, "Ribbon::button"), "--control-height"));
+}
+
+// A hosted control is as wide as declared, or as wide as it measures itself for the cell's height.
+// A control that measures itself is then asked to make do with `squeeze` less.
+static int rb_control_width(const ribbon_item_t *it, window_t *host, int height, int squeeze) {
+  layout_measure_t m = {.avail_h = height};
+  if (it->w > 0 || !host) return it->w;
+  send_message(host, evMeasure, 0, &m);
+  if (squeeze <= 0 || m.desired_w <= 1) return MAX(0, m.desired_w);
+  m = (layout_measure_t){.avail_w = MAX(1, m.desired_w - squeeze), .avail_h = height};
+  send_message(host, evMeasure, 0, &m);
+  return MAX(0, m.desired_w);
+}
+
+// A control's cell: caption (or icon), the control, the readout. Parts that are absent take no gap.
+// In a group shrunk a step (`lean`), a control gives up its readout, and a readout its caption.
+static int rb_control_cell(const window_t *win, const ribbon_item_t *it, rb_cell_t *cell, window_t *host, int height, bool lean, int squeeze) {
+  const char *btn = rb_sel(win, "Ribbon::button");
+  int pad = ui_px(btn, "padding-left"), gap = ui_px(btn, "gap");
+  bool bare = cell->form == RB_FORM_LARGE;   // the group's caption names it
+  cell->lead = bare || (lean && !it->control) ? 0 : cell->form == RB_FORM_ICON ? ui_px(btn, "--icon-size") : it->text ? text_strwidth(btn, ui_tr(it->text)) : 0;
+  cell->control_w = rb_control_width(it, host, rb_control_height(win, it, height), squeeze);
+  cell->value_w = !bare && it->value && !(lean && it->control) ? text_strwidth(btn, it->value) : 0;   // a sample of the widest readout, not text to translate
+  int parts = (cell->lead > 0) + (cell->control_w > 0) + (cell->value_w > 0);
+  return 2 * pad + cell->lead + cell->control_w + cell->value_w + MAX(0, parts - 1) * gap;
+}
+
+static irect16_t rb_control_rect(const window_t *win, const ribbon_item_t *it, const rb_cell_t *cell) {
+  const char *btn = rb_sel(win, "Ribbon::button");
+  int lead = cell->lead ? cell->lead + ui_px(btn, "gap") : 0;
+  irect16_t r = rect_split_left(rect_trim_left(rect_inset_xy(cell->rect, ui_px(btn, "padding-left"), 0), lead), cell->control_w);
+  return rect_center(r, r.w, rb_control_height(win, it, r.h));
+}
+
 static int rb_item_width(const window_t *win, const ribbon_item_t *it, rb_form_t form, int count) {
   const char *btn = rb_sel(win, "Ribbon::button");
   const char *text = it->text ? ui_tr(it->text) : "";
@@ -211,7 +250,7 @@ static rb_form_t rb_item_form(const ribbon_state_t *st, const ribbon_item_t *it,
   if (it->type == RIBBON_ITEM_SEPARATOR) return RB_FORM_SEPARATOR;
   bool large = (it->style & RIBBON_ITEM_LARGE) != 0;
   if (rb_classic(st)) {
-    if (large && scale < 2) return RB_FORM_LARGE;
+    if (large && (scale < 2 || it->type == RIBBON_ITEM_CONTROL)) return RB_FORM_LARGE;   // a control that spans the group keeps to it
     return scale >= 1 && it->icon ? RB_FORM_ICON : RB_FORM_SMALL;
   }
   if (large && scale < 1) return RB_FORM_SMALL;   // one row: a large button keeps its caption beside the icon
@@ -233,16 +272,27 @@ static int rb_layout_pass(window_t *win, ribbon_state_t *st, const int *scale) {
       rb_form_t form = it ? rb_item_form(st, it, scale[g]) : RB_FORM_SEPARATOR;
       bool stacks = it && (form == RB_FORM_ICON || form == RB_FORM_SMALL) && rows > 1;
       // A full column, a column-high item or the group's end closes the column of small buttons.
-      if (row && (!stacks || row == rows)) { cx += column_w + gap; row = 0; column_w = 0; }
-      if (!it) break;
-      int w = rb_item_width(win, it, form, st->states[first_item + cell].badge);
-      if (stacks) {
-        st->cells[cell++] = (rb_cell_t){R(cx, panel.y + row * row_h, w, row_h), form, g};
-        column_w = MAX(column_w, w); row++;
-      } else {
-        st->cells[cell++] = (rb_cell_t){R(cx, panel.y, w, rows * row_h), form, g};
-        cx += w + gap;
+      if (row && (!stacks || row == rows)) {
+        // Controls stacked in a column share its caption width, so their left and right edges line up.
+        int lead = 0;
+        for (int c = cell - row; c < cell; c++) lead = MAX(lead, st->cells[c].lead);
+        for (int c = cell - row; c < cell; c++) {
+          if (!st->cells[c].control_w) continue;
+          st->cells[c].rect.w += lead - st->cells[c].lead;
+          st->cells[c].lead = lead;
+          column_w = MAX(column_w, st->cells[c].rect.w);
+        }
+        cx += column_w + gap; row = 0; column_w = 0;
       }
+      if (!it) break;
+      rb_cell_t laid = {.form = form, .group = g};
+      int h = stacks ? row_h : rows * row_h;
+      int w = it->type == RIBBON_ITEM_CONTROL ? rb_control_cell(win, it, &laid, st->states[first_item + cell].host, h, scale[g] >= 1, st->squeeze)
+                                              : rb_item_width(win, it, form, st->states[first_item + cell].badge);
+      laid.rect = R(cx, panel.y + (stacks ? row * row_h : 0), w, h);
+      st->cells[cell++] = laid;
+      if (stacks) { column_w = MAX(column_w, w); row++; }
+      else cx += w + gap;
     }
     int content = MAX(0, cx - gap - (x + side));
     int caption = rb_classic(st) && group->label ? text_strwidth(rb_sel(win, "Ribbon::group"), ui_tr(group->label)) : 0;
@@ -260,18 +310,40 @@ static void rb_layout(window_t *win, ribbon_state_t *st) {
   const ribbon_tab_t *tab = rb_tab(st);
   int scale[RIBBON_MAX_GROUPS] = {0};
   int limit = rb_toggle_rect(win, st).x - ui_px(rb_sel(win, "Ribbon"), "gap");
+  st->squeeze = 0;
   int end = rb_layout_pass(win, st, scale);
   for (int step = 1; step <= 2 && end > limit; step++)
     for (int g = tab ? tab->count - 1 : -1; g >= 0 && end > limit; g--) {
       scale[g] = step;
       end = rb_layout_pass(win, st, scale);
     }
+  // Last, the controls that measure themselves narrow: a palette pages what no longer fits.
+  if (end > limit) { st->squeeze = end - limit; rb_layout_pass(win, st, scale); }
   st->laid_w = win->frame.w;
+}
+
+// Hosted controls follow their cells: those of the open tab that fit show, the rest hide.
+static void rb_place_hosts(window_t *win, ribbon_state_t *st) {
+  int first = rb_tab_first(st, st->active), limit = rb_toggle_rect(win, st).x, flat = 0;
+  for (int t = 0; t < st->def->tab_count; t++)
+    for (int i = 0, n = rb_tab_items(&st->def->tabs[t]); i < n; i++, flat++) {
+      window_t *host = st->states[flat].host;
+      const rb_cell_t *cell = t == st->active && flat - first < st->cell_count ? &st->cells[flat - first] : NULL;
+      if (!host) continue;
+      bool shown = cell && !st->minimized && cell->control_w > 0 && cell->rect.x + cell->rect.w <= limit;
+      if (shown) {
+        irect16_t r = rb_control_rect(win, rb_item(st, flat - first), cell);
+        if (host->frame.x != r.x || host->frame.y != r.y) move_window(host, r.x, r.y);
+        if (host->frame.w != r.w || host->frame.h != r.h) resize_window(host, r.w, r.h);
+      }
+      if (shown != window_has_state(host, WINDOW_STATE_VISIBLE)) show_window(host, shown);
+    }
 }
 
 static void rb_relayout(window_t *win, ribbon_state_t *st) {
   st->laid_w = -1;
   st->hot = st->pressed = (rb_hit_t){RB_NONE, 0};
+  if (st->def) { rb_layout(win, st); rb_place_hosts(win, st); }
   invalidate_window(win);
 }
 
@@ -299,7 +371,8 @@ static rb_hit_t rb_hit(window_t *win, ribbon_state_t *st, ipoint16_t p) {
   int limit = rb_toggle_rect(win, st).x;
   for (int i = 0; i < st->cell_count; i++)
     if (st->cells[i].form != RB_FORM_SEPARATOR && st->cells[i].rect.x + st->cells[i].rect.w <= limit &&
-        rect_contains_point(st->cells[i].rect, p)) return (rb_hit_t){RB_ITEM, i};
+        rect_contains_point(st->cells[i].rect, p))
+      return rb_item(st, i)->type == RIBBON_ITEM_CONTROL ? (rb_hit_t){RB_NONE, 0} : (rb_hit_t){RB_ITEM, i};
   return (rb_hit_t){RB_NONE, 0};
 }
 
@@ -365,6 +438,25 @@ static void rb_set_contexts(window_t *win, ribbon_state_t *st, uint32_t mask, bo
   rb_relayout(win, st);
 }
 
+static void rb_destroy_hosts(ribbon_state_t *st) {
+  int total = 0;
+  for (int t = 0; st->def && t < st->def->tab_count; t++) total += rb_tab_items(&st->def->tabs[t]);
+  for (int i = 0; i < total; i++)
+    if (st->states[i].host && is_window(st->states[i].host)) destroy_window(st->states[i].host);
+}
+
+// The flat index of the hosted-control item `ident`, or -1.
+static int rb_control_index(const ribbon_state_t *st, uint32_t ident) {
+  int flat = 0;
+  for (int t = 0; st->def && t < st->def->tab_count; t++)
+    for (int g = 0; g < st->def->tabs[t].count; g++)
+      for (int i = 0; i < st->def->tabs[t].groups[g].count; i++, flat++) {
+        const ribbon_item_t *it = &st->def->tabs[t].groups[g].items[i];
+        if (it->type == RIBBON_ITEM_CONTROL && it->ident == ident) return flat;
+      }
+  return -1;
+}
+
 static bool rb_set_ribbon(window_t *win, ribbon_state_t *st, const ribbon_def_t *def) {
   int total = 0, widest = 0;
   for (int t = 0; def && t < def->tab_count; t++) {
@@ -384,9 +476,27 @@ static bool rb_set_ribbon(window_t *win, ribbon_state_t *st, const ribbon_def_t 
     free(states); free(cells);
     return false;
   }
+  rb_destroy_hosts(st);
   free(st->states); free(st->cells);
   st->def = def; st->states = states; st->cells = cells;
   st->active = st->home = 0; st->layout = def->layout; st->cell_count = 0;
+  for (int t = 0, flat = 0; t < def->tab_count; t++)
+    for (int g = 0; g < def->tabs[t].count; g++)
+      for (int i = 0; i < def->tabs[t].groups[g].count; i++, flat++) {
+        const ribbon_item_t *it = &def->tabs[t].groups[g].items[i];
+        if (it->type != RIBBON_ITEM_CONTROL || !it->control) continue;
+        window_t *host = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL | it->control_flags, MAKERECT(0, 0, 1, 1), win,
+                                       it->control, win->hinstance, NULL);
+        if (!host) {
+          fprintf(stderr, "[ribbon] hosted control rejected win=%u ident=%u class=%s\n", win->id, it->ident, it->control);
+          fflush(stderr);
+          continue;
+        }
+        host->id = it->ident;
+        window_set_style(host, NULL, "ribbon");   // the sheet dresses a control for the ribbon's panel
+        show_window(host, false);
+        states[flat].host = host;
+      }
   for (int t = 0; t < def->tab_count; t++)
     if (!def->tabs[t].context) { st->active = st->home = t; break; }
   rb_resized(win, st);
@@ -413,6 +523,19 @@ static void rb_draw_item(window_t *win, ribbon_state_t *st, int index) {
   }
   const rb_command_state_t *command = rb_item_state(st, index);
   int bits = command->flags;
+  if (it->type == RIBBON_ITEM_CONTROL) {
+    // The control paints itself; the ribbon names it before and reads it out after.
+    uint32_t ink = theme_foreground_in(win, THEME_PART_RIBBON_BUTTON, bits & TBSTATE_DISABLED ? CTRL_DISABLED : CTRL_NORMAL);
+    irect16_t body = rect_inset_xy(r, ui_px(btn, "padding-left"), 0);
+    irect16_t lead = rect_center(rect_split_left(body, cell->lead), cell->lead, text_char_height(btn));
+    if (cell->form == RB_FORM_ICON && it->icon) rb_draw_icon(win, it->icon, rect_split_left(body, cell->lead), cell->lead, ink);
+    else if (cell->lead) draw_text_ellipsized(btn, ui_tr(it->text), lead.x, lead.y, lead.w, ink);
+    if (cell->value_w) {
+      irect16_t value = rect_center(rect_split_right(body, cell->value_w), cell->value_w, text_char_height(btn));
+      draw_text_ellipsized(btn, command->value[0] ? command->value : it->value, value.x, value.y, value.w, ink);
+    }
+    return;
+  }
   bool checked = (bits & TBSTATE_CHECKED) != 0;
   ctrl_state_t state = rb_state(st, (rb_hit_t){RB_ITEM, index}, (bits & TBSTATE_DISABLED) != 0, checked);
   uint32_t ink = theme_foreground_in(win, THEME_PART_RIBBON_BUTTON, state);
@@ -561,12 +684,13 @@ result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       return !lparam || rb_set_ribbon(win, st, lparam);
     case evDestroy:
       if (g_ui_runtime.captured == win) set_capture(NULL);
+      rb_destroy_hosts(st);
       free(st->states); free(st->cells); free(st);
       win->userdata = NULL;
       return true;
     case evPaint:
       rb_paint(win, st);
-      return true;
+      return false;   // the hosted controls paint after
     case evResize:
     case evThemeChanged:
       rb_relayout(win, st);
@@ -672,9 +796,29 @@ result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         fflush(stderr);
         return false;
       }
+      int host = rb_control_index(st, wparam);
+      if (host >= 0 && st->states[host].host) enable_window(st->states[host].host, !(bits & TBSTATE_DISABLED));
       invalidate_window(win);
       return true;
     }
+    case rbGetControl: {
+      int host = rb_control_index(st, wparam);
+      return host < 0 ? 0 : (result_t)st->states[host].host;
+    }
+    case rbSetValue: {
+      int at = rb_control_index(st, wparam);
+      if (at < 0) {
+        fprintf(stderr, "[ribbon] value rejected win=%u ident=%u: no such control\n", win->id, (unsigned)wparam);
+        fflush(stderr);
+        return false;
+      }
+      snprintf(st->states[at].value, sizeof(st->states[at].value), "%s", lparam ? (const char *)lparam : "");
+      invalidate_window(win);
+      return true;
+    }
+    case rbUpdateLayout:
+      rb_relayout(win, st);
+      return true;
     case rbGetBadge:     return rb_command_value(st, wparam, RB_COMMAND_BADGE, -1);
     case rbSetBadge: {
       intptr_t count = (intptr_t)lparam;

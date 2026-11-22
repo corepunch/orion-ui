@@ -615,6 +615,8 @@ static void emit_activitybars(FILE *f, xmlNodePtr parent, const char *form) {
 // <ribbon> follows the Windows Ribbon framework's markup: an <ApplicationMenu>, a
 // <QuickAccessToolbar>, and <Tab>s of <Group>s holding <Button>, <DropDown> and
 // <Separator>. Commands are the menu-declared ones; the ribbon only places them.
+// <Slider>, <Control class> and <Label> host a control or a readout in a group;
+// each takes its ID from name=, as ID_RIBBON_<NAME>.
 
 static xmlNodePtr find_menu(xmlNodePtr menus, const char *name) {
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *n = attr(m, "name"); bool hit = eq(n, name); free(n); if (hit) return m; }
@@ -626,9 +628,17 @@ static const action_meta_t *find_action(const action_meta_list_t *meta, const ch
   return NULL;
 }
 
-static void collect_ribbon_refs(cmd_refs_t *refs, xmlNodePtr ribbon) {
+static bool ribbon_control(xmlNodePtr it) { return elem(it, "slider") || elem(it, "control") || elem(it, "label"); }
+
+static void collect_ribbon_refs(ids_t *ids, cmd_refs_t *refs, xmlNodePtr ribbon) {
   EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) EACH_ELEMENT(group, tab) if (elem(group, "group")) EACH_ELEMENT(it, group) {
     char *command = attr(it, "command"), id[256];
+    if (ribbon_control(it)) {
+      char *name = attr(it, "name");
+      if (name && *name) { scoped(id, sizeof(id), "ribbon", name, NULL); add_id(ids, id); }
+      free(name); free(command);
+      continue;
+    }
     if (command && *command && resolve_action(id, sizeof(id), command, NULL, NULL, NULL, NULL) && refs->n < ORIONC_MAX_IDS) {
       snprintf(refs->v[refs->n].name, ORIONC_MAX_IDENT, "%s", command);
       snprintf(refs->v[refs->n].id, ORIONC_MAX_IDENT, "%s", id);
@@ -676,7 +686,12 @@ static int validate_ribbon(xmlNodePtr ribbon, xmlNodePtr menus, const action_met
           } else if (elem(it, "dropdown")) {
             if (!find_menu(menus, menu) || !text || !*text) errors += ribbon_error("a <DropDown> needs text and menu=\"...\" naming a declared menu; got", nz(menu, "none"));
             for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].category, menu)) reached[i] = true;
-          } else if (!elem(it, "separator")) errors += ribbon_error("a <Group> holds <Button>, <DropDown> and <Separator>, not", (const char *)it->name);
+          } else if (ribbon_control(it)) {
+            char *name = attr(it, "name"), *cls = attr(it, "class");
+            if (!name || !*name) errors += ribbon_error("a hosted control needs a name; missing on", (const char *)it->name);
+            if (elem(it, "control") && (!cls || !*cls)) errors += ribbon_error("a <Control> needs class=\"...\" naming a window class:", nz(name, "unnamed"));
+            free(name); free(cls);
+          } else if (!elem(it, "separator")) errors += ribbon_error("a <Group> holds <Button>, <DropDown>, <Slider>, <Control>, <Label> and <Separator>, not", (const char *)it->name);
           for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].name, command)) reached[i] = true;
           free(command); free(menu); free(text); free(size);
         }
@@ -685,16 +700,20 @@ static int validate_ribbon(xmlNodePtr ribbon, xmlNodePtr menus, const action_met
       free(label);
     } else errors += ribbon_error("holds <ApplicationMenu>, <QuickAccessToolbar> and <Tab>, not", (const char *)n->name);
   }
-  for (int i = 0; i < meta->n; i++)
+  // A ribbon under if= serves one build of several; which commands that build has is not known here.
+  char *condition = attr(ribbon, "if");
+  for (int i = 0; i < meta->n && !(condition && *condition); i++)
     if (!reached[i]) fprintf(stderr, "orionc: warning: command '%s' is not reachable from the ribbon\n", meta->v[i].name);
-  free(reached);
+  free(reached); free(condition);
   return errors;
 }
 
 static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char *pre, const action_meta_list_t *meta) {
   int tab_index = 0, contexts = 0;
   char upper[128]; ident(upper, sizeof(upper), pre, true);
+  char *condition = attr(ribbon, "if");
   LINE("#include <orion/user/toolbar.h>\n");
+  if (condition && *condition) OUT("#if %s\n", condition);
   // Each contextual tab's context is a bit the application passes to rbSetContexts.
   EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) {
     char *context = attr(tab, "context"), name[128];
@@ -725,9 +744,23 @@ static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char
         if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
         if (checked && *checked) snprintf(checkedq, sizeof(checkedq), "\"%s\"", checked); else snprintf(checkedq, sizeof(checkedq), "NULL");
         if (elem(it, "dropdown")) { char scope[128]; ident(scope, sizeof(scope), menu, true); snprintf(menuq, sizeof(menuq), "MENU_%s_ITEMS, ARRAY_LEN(MENU_%s_ITEMS)", scope, scope); }
-        if (elem(it, "separator")) LINE("  { RIBBON_ITEM_SEPARATOR },\n");
+        char *item_if = attr(it, "if");
+        if (item_if && *item_if) OUT("#if %s\n", item_if);
+        if (ribbon_control(it)) {
+          // Caption, hosted control and readout; a <Label> is the readout alone.
+          char *name = attr(it, "name"), *cls = attr(it, "class"), *width = attr(it, "width"), *value = attr(it, "value"), *flags = attr(it, "flags");
+          char clsq[256] = "NULL", valueq[ORIONC_STRING_SIZE] = "NULL";
+          scoped(id, sizeof(id), "ribbon", name, NULL);
+          if (elem(it, "slider")) snprintf(clsq, sizeof(clsq), "\"Slider\""); else if (cls && *cls) snprintf(clsq, sizeof(clsq), "\"%s\"", cls);
+          if (value && *value) cstr(valueq, sizeof(valueq), value);
+          OUT("  { RIBBON_ITEM_CONTROL, %s, %s, %s, %s, %s, NULL, 0, NULL, %s, %s, %s, %s },\n", id, iconq, text && *text ? textq : "NULL", tipq,
+              eq(size, "large") ? "RIBBON_ITEM_LARGE" : "0", clsq, width && *width ? width : "0", valueq, flags && *flags ? flags : "0");
+          free(name); free(cls); free(width); free(value); free(flags);
+        } else if (elem(it, "separator")) LINE("  { RIBBON_ITEM_SEPARATOR },\n");
         else OUT("  { %s, %s, %s, %s, %s, %s%s, %s, %s },\n", elem(it, "dropdown") ? "RIBBON_ITEM_DROPDOWN" : "RIBBON_ITEM_BUTTON", id, iconq, textq, tipq,
                  eq(size, "large") ? "RIBBON_ITEM_LARGE" : "0", eq(toggle, "true") || eq(toggle, "1") ? " | RIBBON_ITEM_CHECK" : "", menuq, checkedq);
+        if (item_if && *item_if) LINE("#endif\n");
+        free(item_if);
         free(command); free(menu); free(icon); free(text); free(tooltip); free(size); free(toggle); free(checked);
       }
       LINE("};\n");
@@ -762,8 +795,10 @@ static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char
   }
   if (quick) OUT(", .quick_access = &%s_ribbon_quick_access", pre);
   char *layout = attr(ribbon, "layout");
-  OUT(", .layout = %s };\n\n", eq(layout, "simplified") ? "RIBBON_LAYOUT_SIMPLIFIED" : "RIBBON_LAYOUT_CLASSIC");
-  free(layout);
+  OUT(", .layout = %s };\n", eq(layout, "simplified") ? "RIBBON_LAYOUT_SIMPLIFIED" : "RIBBON_LAYOUT_CLASSIC");
+  if (condition && *condition) LINE("#endif\n");
+  LINE("\n");
+  free(layout); free(condition);
 }
 
 // Validate the action manifest: reject unknown references, duplicate hotkeys,
@@ -1863,7 +1898,7 @@ int main(int argc, char **argv) {
   collect_toolbar_ids(&commands, &refs, app_toolbar, "application");
   xmlNodePtr ribbon = child(root, "ribbon");
   collect_toolbar_ids(&commands, &refs, child(ribbon, "quickaccesstoolbar"), "application");
-  collect_ribbon_refs(&refs, ribbon);
+  collect_ribbon_refs(&commands, &refs, ribbon);
   collect_context_ids(&commands, &refs, contexts);
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (activity_form_needed(form, forms, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }
   if (commands.failed || controls.failed) {

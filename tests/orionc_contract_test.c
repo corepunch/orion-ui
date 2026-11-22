@@ -308,6 +308,41 @@ static void test_ribbon_declaration(void) {
   }
   PASS();
 }
+static void test_ribbon_hosted_controls(void) {
+  TEST("orionc: a ribbon group hosts sliders, controls and readouts, and a conditional ribbon serves one build");
+  char out[20000] = {0};
+  const char *fixture = "<orion><menus><menu name=\"file\" label=\"File\"><item name=\"new\" label=\"New\"/>"
+    "<item name=\"lost\" label=\"Lost\"/></menu></menus>"
+    "<ribbon if=\"APP_PENCIL\"><Tab label=\"Draw\"><Group label=\"Brush\">"
+    "<Slider name=\"size\" text=\"Size\" value=\"00px\" width=\"56\" flags=\"SLIDER_TROUGH\"/>"
+    "<Label name=\"frame\" text=\"Frame\" value=\"000/000\"/>"
+    "<Control name=\"colors\" class=\"SwatchGrid\" size=\"large\"/>"
+    "<Button command=\"file.new\" icon=\"plus\" if=\"!defined(APP_TOUCH)\"/>"
+    "</Group></Tab></ribbon></orion>";
+  ASSERT_EQUAL(run_orionc(fixture, "ribbon_hosted", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "#define ID_RIBBON_SIZE"));
+  ASSERT_TRUE(contains(out, "#define ID_RIBBON_COLORS"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_SIZE, NULL, \"Size\", NULL, 0, NULL, 0, NULL, \"Slider\", 56, \"00px\", SLIDER_TROUGH }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_FRAME, NULL, \"Frame\", NULL, 0, NULL, 0, NULL, NULL, 0, \"000/000\", 0 }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_CONTROL, ID_RIBBON_COLORS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, \"SwatchGrid\", 0, NULL, 0 }"));
+  ASSERT_TRUE(contains(out, "#if !defined(APP_TOUCH)\n  { RIBBON_ITEM_BUTTON, ID_FILE_NEW, \"plus\", \"New\", NULL, 0, NULL, 0, NULL },\n#endif"));
+  ASSERT_TRUE(contains(out, "#if APP_PENCIL\n"));
+  ASSERT_TRUE(contains(out, ".layout = RIBBON_LAYOUT_CLASSIC };\n#endif"));
+  // Which commands the one build has is not known to orionc, so it names none as lost.
+  ASSERT_FALSE(contains(out, "is not reachable from the ribbon"));
+  const char *bad[][2] = {
+    { "<ribbon><Tab label=\"T\"><Group><Slider text=\"Size\"/></Group></Tab></ribbon>", "needs a name" },
+    { "<ribbon><Tab label=\"T\"><Group><Control name=\"c\"/></Group></Tab></ribbon>", "naming a window class" },
+  };
+  for (int i = 0; i < 2; i++) {
+    char doc[2000];
+    snprintf(doc, sizeof(doc), "<orion><menus><menu name=\"file\" label=\"File\"><item name=\"new\" label=\"New\"/></menu></menus>%s</orion>", bad[i][0]);
+    ASSERT_NOT_EQUAL(run_orionc(doc, "ribbon_hosted_bad", out, sizeof(out)), 0);
+    ASSERT_TRUE(contains(out, bad[i][1]));
+  }
+  PASS();
+}
+
 static void test_content_column_width(void) {
   TEST("orionc: auto column width preserves intrinsic sizing");
   char out[12000] = {0};
@@ -479,6 +514,7 @@ int main(void) {
     test_accounting_presentation_declaration();
     test_application_toolbar_declaration();
     test_ribbon_declaration();
+    test_ribbon_hosted_controls();
     test_top_level_toolbars_rejected();
     test_toolbar_reference_rejected();
     test_unknown_form_role_rejected();
