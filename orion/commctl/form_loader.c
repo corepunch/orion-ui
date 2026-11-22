@@ -1020,13 +1020,20 @@ static void fl_pages(form_library_t *lib, xmlNodePtr node, fl_form_t *host) {
   host->rejected = true;
 }
 
-// ── Ribbon ──────────────────────────────────────────────────────────────────
-// <ribbon> with script commands; see form_library_ribbon() in the header.
+// ── Commands and ribbon ─────────────────────────────────────────────────────
+// As in a compiled application and the Windows Ribbon framework: <menus> is
+// the command registry (Application.Commands), each <item> a command with its
+// label and shortcut, here bound to a script action; the <ribbon> only places
+// commands (command="menu.item"). See form_library_ribbon() in the header.
 
 #define FL_MAX_COMMANDS 512
 typedef struct {
   form_library_t *lib;
+  form_ribbon_t *ribbon;
+  const char *names[FL_MAX_COMMANDS];   // "menu.item", parallel to ribbon commands
   form_command_t commands[FL_MAX_COMMANDS];
+  const char *labels[FL_MAX_COMMANDS];  // the item's label, without the shortcut
+  bool reached[FL_MAX_COMMANDS];
   accel_t accels[FL_MAX_COMMANDS];
   const char *contexts[32];
   int command_count, accel_count, context_count;
@@ -1040,71 +1047,155 @@ static void fl_ribbon_error(fl_ribbon_build_t *rb, xmlNodePtr n, const char *wha
   rb->ok = false;
 }
 
-static bool fl_same(const char *a, const char *b) { return (!a && !b) || (a && b && !strcmp(a, b)); }
+// The command "menu.item" names, or -1.
+static int fl_command_index(fl_ribbon_build_t *rb, const char *name) {
+  for (int i = 0; name && i < rb->command_count; i++) if (!strcmp(rb->names[i], name)) return i;
+  return -1;
+}
 
-// The ident of the command an item runs; equal commands share one.
-static uint16_t fl_ribbon_command(fl_ribbon_build_t *rb, xmlNodePtr it) {
+static const menu_def_t *fl_menu_named(fl_ribbon_build_t *rb, const char *name) {
+  form_ribbon_t *r = rb->ribbon;
+  for (int i = 0; name && i < r->menu_count; i++) if (r->menu_names[i] && !strcmp(r->menu_names[i], name)) return &r->menus[i];
+  return NULL;
+}
+
+// <menus><menu name label><item name label shortcut action [page] [target argument]/>
+static void fl_menus(fl_ribbon_build_t *rb, xmlNodePtr node) {
   form_library_t *lib = rb->lib;
-  form_command_t c = { fl_attr(lib, it, "action"), fl_attr(lib, it, "page"), fl_attr(lib, it, "target"), fl_attr(lib, it, "argument") };
-  if (!c.action || !*c.action) { fl_ribbon_error(rb, it, "a <Button> needs action=", NULL); return 0; }
-  if (c.page && fl_find(lib, c.page) == NULL) { fl_ribbon_error(rb, it, "page= names no form:", c.page); return 0; }
-  int i = 0;
-  while (i < rb->command_count && !(fl_same(rb->commands[i].action, c.action) && fl_same(rb->commands[i].page, c.page) &&
-                                    fl_same(rb->commands[i].target, c.target) && fl_same(rb->commands[i].argument, c.argument))) i++;
-  if (i == rb->command_count) {
-    if (i >= FL_MAX_COMMANDS) { fl_ribbon_error(rb, it, "too many commands", NULL); return 0; }
-    rb->commands[rb->command_count++] = c;
+  form_ribbon_t *r = rb->ribbon;
+  int menus = 0;
+  FL_EACH_ELEMENT(m, node) if (fl_elem(m, "menu")) menus++;
+  menu_def_t *defs = menus ? fl_alloc(lib, (size_t)menus * sizeof(*defs)) : NULL;
+  const char **names = menus ? fl_alloc(lib, (size_t)menus * sizeof(*names)) : NULL;
+  int mi = 0;
+  FL_EACH_ELEMENT(m, node) if (rb->ok && fl_elem(m, "menu")) {
+    const char *menu = fl_attr(lib, m, "name"), *label = fl_attr(lib, m, "label");
+    if (!menu || !*menu || !label || !*label) { fl_ribbon_error(rb, m, "a <menu> needs name= and label=", NULL); break; }
+    int count = 0;
+    FL_EACH_ELEMENT(it, m) count++;
+    menu_item_t *items = count ? fl_alloc(lib, (size_t)count * sizeof(*items)) : NULL;
+    int ii = 0;
+    FL_EACH_ELEMENT(it, m) if (rb->ok) {
+      menu_item_t *item = &items[ii++];
+      memset(item, 0, sizeof(*item));
+      if (fl_elem(it, "separator")) continue;
+      if (!fl_elem(it, "item")) { fl_ribbon_error(rb, it, "a <menu> holds <item> and <Separator>, not", (const char *)it->name); break; }
+      const char *name = fl_attr(lib, it, "name"), *text = fl_attr(lib, it, "label"), *shortcut = fl_attr(lib, it, "shortcut");
+      form_command_t c = { fl_attr(lib, it, "action"), fl_attr(lib, it, "page"), fl_attr(lib, it, "target"), fl_attr(lib, it, "argument") };
+      if (!name || !*name || !text || !*text) { fl_ribbon_error(rb, it, "an <item> needs name= and label=", NULL); break; }
+      if (!c.action || !*c.action) { fl_ribbon_error(rb, it, "an <item> needs the script action= it runs:", name); break; }
+      if (c.page && !fl_find(lib, c.page)) { fl_ribbon_error(rb, it, "page= names no form:", c.page); break; }
+      if (rb->command_count >= FL_MAX_COMMANDS) { fl_ribbon_error(rb, it, "too many commands", NULL); break; }
+      char full[256];
+      snprintf(full, sizeof(full), "%s.%s", menu, name);
+      if (fl_command_index(rb, full) >= 0) { fl_ribbon_error(rb, it, "command declared twice:", full); break; }
+      int index = rb->command_count++;
+      uint16_t ident = (uint16_t)(r->first_ident + index);
+      rb->names[index] = fl_strdup(lib, full);
+      rb->commands[index] = c;
+      rb->labels[index] = text;
+      // A menu label carries its shortcut after a tab, as orionc writes it ("Save\tCtrl+S").
+      char display[256];
+      snprintf(display, sizeof(display), "%s%s%s", text, shortcut && *shortcut ? "\t" : "", shortcut && *shortcut ? shortcut : "");
+      *item = (menu_item_t){ fl_strdup(lib, display), ident, NULL, 0, false };
+      if (shortcut && *shortcut) {
+        accel_t a = { .cmd = ident };
+        if (!accel_parse(shortcut, &a)) { fl_ribbon_error(rb, it, "unknown shortcut", shortcut); break; }
+        for (int k = 0; k < rb->accel_count; k++)
+          if (rb->accels[k].key == a.key && rb->accels[k].fVirt == a.fVirt) fl_ribbon_error(rb, it, "shortcut used twice:", shortcut);
+        if (rb->ok) rb->accels[rb->accel_count++] = a;
+      }
+    }
+    names[mi] = menu;
+    defs[mi++] = (menu_def_t){ label, items, ii };
   }
-  uint16_t ident = (uint16_t)(lib->ribbon->first_ident + i);
-  const char *shortcut = fl_attr(lib, it, "shortcut");
-  if (shortcut && *shortcut) {
-    accel_t a = { .cmd = ident };
-    if (!accel_parse(shortcut, &a)) fl_ribbon_error(rb, it, "unknown shortcut", shortcut);
-    for (int k = 0; rb->ok && k < rb->accel_count; k++)
-      if (rb->accels[k].key == a.key && rb->accels[k].fVirt == a.fVirt && rb->accels[k].cmd != ident) fl_ribbon_error(rb, it, "shortcut used twice:", shortcut);
-    bool known = false;
-    for (int k = 0; k < rb->accel_count; k++) known |= rb->accels[k].cmd == ident && rb->accels[k].key == a.key && rb->accels[k].fVirt == a.fVirt;
-    if (rb->ok && !known) rb->accels[rb->accel_count++] = a;
+  r->menus = defs; r->menu_names = names; r->menu_count = mi;
+}
+
+static uint16_t fl_ribbon_command(fl_ribbon_build_t *rb, xmlNodePtr it) {
+  const char *command = fl_attr(rb->lib, it, "command");
+  int index = fl_command_index(rb, command);
+  if (index < 0) {
+    if (fl_attr(rb->lib, it, "action")) fl_ribbon_error(rb, it, "a ribbon <Button> places a declared command (command=\"menu.item\"); declare action= on the menu <item>:", fl_attr(rb->lib, it, "action"));
+    else fl_ribbon_error(rb, it, "a <Button> needs command=\"menu.item\" naming a declared command; got", command ? command : "none");
+    return 0;
   }
-  return ident;
+  rb->reached[index] = true;
+  return (uint16_t)(rb->ribbon->first_ident + index);
 }
 
 static bool fl_true(const char *v) { return v && (!strcmp(v, "true") || !strcmp(v, "1")); }
+
+// A button without text takes its command's menu label, less the ellipsis a menu item carries.
+static const char *fl_button_text(fl_ribbon_build_t *rb, xmlNodePtr it, uint16_t ident) {
+  const char *text = fl_attr(rb->lib, it, "text");
+  if (text && *text) return text;
+  const char *label = ident ? rb->labels[ident - rb->ribbon->first_ident] : NULL;
+  if (!label) return NULL;
+  size_t n = strlen(label);
+  if (n > 3 && !strcmp(label + n - 3, "...")) {
+    char *copy = fl_alloc(rb->lib, n - 2);
+    if (copy) { memcpy(copy, label, n - 3); copy[n - 3] = 0; }
+    return copy;
+  }
+  return label;
+}
 
 static ribbon_item_t fl_ribbon_item(fl_ribbon_build_t *rb, xmlNodePtr it) {
   form_library_t *lib = rb->lib;
   ribbon_item_t item = { RIBBON_ITEM_BUTTON };
   if (fl_elem(it, "separator")) { item.type = RIBBON_ITEM_SEPARATOR; return item; }
-  if (!fl_elem(it, "button")) { fl_ribbon_error(rb, it, "a <Group> holds <Button> and <Separator>, not", (const char *)it->name); return item; }
   const char *size = fl_attr(lib, it, "size");
   if (size && strcmp(size, "large") && strcmp(size, "small")) fl_ribbon_error(rb, it, "size must be large or small, not", size);
-  item.ident = fl_ribbon_command(rb, it);
+  item.style = size && !strcmp(size, "large") ? RIBBON_ITEM_LARGE : 0;
   item.icon = fl_attr(lib, it, "icon");
-  item.text = fl_attr(lib, it, "text");
   item.tooltip = fl_attr(lib, it, "tooltip");
+  if (fl_elem(it, "dropdown")) {
+    const menu_def_t *menu = fl_menu_named(rb, fl_attr(lib, it, "menu"));
+    item.type = RIBBON_ITEM_DROPDOWN;
+    item.text = fl_attr(lib, it, "text");
+    if (!menu || !item.text || !*item.text) { fl_ribbon_error(rb, it, "a <DropDown> needs text and menu=\"...\" naming a declared menu", NULL); return item; }
+    item.menu = menu->items; item.menu_count = menu->item_count;
+    for (int k = 0; k < menu->item_count; k++)
+      if (menu->items[k].id) rb->reached[menu->items[k].id - rb->ribbon->first_ident] = true;
+    return item;
+  }
+  if (!fl_elem(it, "button")) { fl_ribbon_error(rb, it, "a <Group> holds <Button>, <DropDown> and <Separator>, not", (const char *)it->name); return item; }
+  item.ident = fl_ribbon_command(rb, it);
+  item.text = fl_button_text(rb, it, item.ident);
   item.checked_icon = fl_attr(lib, it, "checked-icon");
-  item.style = (size && !strcmp(size, "large") ? RIBBON_ITEM_LARGE : 0) | (fl_true(fl_attr(lib, it, "toggle")) ? RIBBON_ITEM_CHECK : 0);
-  if (!item.text || !*item.text) fl_ribbon_error(rb, it, "a <Button> needs text=", NULL);
+  item.style |= fl_true(fl_attr(lib, it, "toggle")) ? RIBBON_ITEM_CHECK : 0;
   return item;
 }
 
 static void fl_ribbon(form_library_t *lib, xmlNodePtr root) {
-  xmlNodePtr node = fl_child(root, "ribbon");
+  xmlNodePtr node = fl_child(root, "ribbon"), menus = fl_child(root, "menus");
   if (!node) return;
   fl_ribbon_build_t *rb = calloc(1, sizeof(*rb));
   form_ribbon_t *ribbon = fl_alloc(lib, sizeof(*ribbon));
   if (!rb || !ribbon) { free(rb); return; }
-  *rb = (fl_ribbon_build_t){ .lib = lib, .ok = true };
   memset(ribbon, 0, sizeof(*ribbon));
+  *rb = (fl_ribbon_build_t){ .lib = lib, .ribbon = ribbon, .ok = true };
   lib->ribbon = ribbon;
   ribbon->first_ident = (uint16_t)lib->next_id;
+  if (!menus) fl_ribbon_error(rb, node, "a <ribbon> places the commands its <menus> declare; the document has none", NULL);
+  else fl_menus(rb, menus);
   const char *layout = fl_attr(lib, node, "layout");
   if (layout && strcmp(layout, "classic") && strcmp(layout, "simplified")) fl_ribbon_error(rb, node, "layout must be classic or simplified, not", layout);
   ribbon->def.layout = layout && !strcmp(layout, "simplified") ? RIBBON_LAYOUT_SIMPLIFIED : RIBBON_LAYOUT_CLASSIC;
-  int tabs = 0;
+  int tabs = 0, app_menus = 0, quick_count = 0;
   FL_EACH_ELEMENT(n, node) {
     if (fl_elem(n, "tab")) tabs++;
-    else if (!fl_elem(n, "quickaccesstoolbar")) fl_ribbon_error(rb, n, "holds <QuickAccessToolbar> and <Tab>, not", (const char *)n->name);
+    else if (fl_elem(n, "applicationmenu")) {
+      const menu_def_t *menu = rb->ok ? fl_menu_named(rb, fl_attr(lib, n, "menu")) : NULL;
+      if (++app_menus > 1 || !menu) { fl_ribbon_error(rb, n, "one <ApplicationMenu menu=\"...\"> naming a declared menu is allowed", NULL); continue; }
+      const char *label = fl_attr(lib, n, "label");
+      ribbon->def.menu_label = label && *label ? label : menu->label;
+      ribbon->def.menu_items = menu->items; ribbon->def.menu_count = menu->item_count;
+      for (int k = 0; k < menu->item_count; k++)
+        if (menu->items[k].id) rb->reached[menu->items[k].id - ribbon->first_ident] = true;
+    } else if (fl_elem(n, "quickaccesstoolbar")) { if (++quick_count > 1) fl_ribbon_error(rb, n, "declares more than one <QuickAccessToolbar>", NULL); }
+    else fl_ribbon_error(rb, n, "holds <ApplicationMenu>, <QuickAccessToolbar> and <Tab>, not", (const char *)n->name);
   }
   ribbon_tab_t *tab_defs = tabs ? fl_alloc(lib, (size_t)tabs * sizeof(*tab_defs)) : NULL;
   int t = 0;
@@ -1113,6 +1204,7 @@ static void fl_ribbon(form_library_t *lib, xmlNodePtr root) {
     memset(def, 0, sizeof(*def));
     def->label = fl_attr(lib, tab, "label");
     if (!def->label || !*def->label) fl_ribbon_error(rb, tab, "a <Tab> needs a label", NULL);
+    // A contextual tab (Ribbon.ContextualTabs) shows while the page it names is selected.
     const char *context = fl_attr(lib, tab, "context");
     if (context && *context) {
       const fl_form_t *page = fl_find(lib, context);
@@ -1130,7 +1222,7 @@ static void fl_ribbon(form_library_t *lib, xmlNodePtr root) {
       if (fl_elem(g, "group")) groups++;
       else fl_ribbon_error(rb, g, "a <Tab> holds <Group> elements, not", (const char *)g->name);
     }
-    if (groups > RIBBON_MAX_GROUPS) fl_ribbon_error(rb, tab, "a <Tab> holds at most 16 groups:", def->label);
+    if (groups > RIBBON_MAX_GROUPS) fl_ribbon_error(rb, tab, "a <Tab> holds at most 16 groups (RIBBON_MAX_GROUPS):", def->label);
     ribbon_group_t *group_defs = groups ? fl_alloc(lib, (size_t)groups * sizeof(*group_defs)) : NULL;
     int gi = 0;
     FL_EACH_ELEMENT(g, tab) if (rb->ok && fl_elem(g, "group")) {
@@ -1161,18 +1253,27 @@ static void fl_ribbon(form_library_t *lib, xmlNodePtr root) {
       item->ident = fl_ribbon_command(rb, it);
       item->icon = fl_attr(lib, it, "icon");
       item->tooltip = fl_attrs_first(lib, it, "tooltip", "text");
+      if (!item->tooltip && item->ident) item->tooltip = fl_button_text(rb, it, (uint16_t)item->ident);
       if (!item->icon) fl_ribbon_error(rb, it, "a Quick Access <Button> needs icon=", NULL);
     }
     if (bar && k) { *bar = (application_toolbar_t){ items, k, TOOLBAR_PRESENTATION_COMPACT }; ribbon->def.quick_access = bar; }
   }
   if (rb->ok && !t) fl_ribbon_error(rb, node, "declares no <Tab>", NULL);
+  // Without a menu bar, a command on no tab and in no menu the ribbon opens is lost (orionc warns the same).
+  for (int i = 0; rb->ok && i < rb->command_count; i++)
+    if (!rb->reached[i]) {
+      fprintf(stderr, "[form_loader] %s: warning: command '%s' is not reachable from the ribbon\n", lib->origin, rb->names[i]);
+      fflush(stderr);
+    }
   form_command_t *commands = rb->command_count ? fl_alloc(lib, (size_t)rb->command_count * sizeof(*commands)) : NULL;
+  const char **names = rb->command_count ? fl_alloc(lib, (size_t)rb->command_count * sizeof(*names)) : NULL;
   accel_t *accels = rb->accel_count ? fl_alloc(lib, (size_t)rb->accel_count * sizeof(*accels)) : NULL;
   const char **contexts = rb->context_count ? fl_alloc(lib, (size_t)rb->context_count * sizeof(*contexts)) : NULL;
   if (commands) memcpy(commands, rb->commands, (size_t)rb->command_count * sizeof(*commands));
+  if (names) memcpy(names, rb->names, (size_t)rb->command_count * sizeof(*names));
   if (accels) memcpy(accels, rb->accels, (size_t)rb->accel_count * sizeof(*accels));
   if (contexts) memcpy(contexts, rb->contexts, (size_t)rb->context_count * sizeof(*contexts));
-  ribbon->commands = commands; ribbon->command_count = rb->command_count;
+  ribbon->commands = commands; ribbon->command_names = names; ribbon->command_count = rb->command_count;
   ribbon->accelerators = accels; ribbon->accelerator_count = rb->accel_count;
   ribbon->contexts = contexts; ribbon->context_count = rb->context_count;
   lib->next_id += (uint32_t)rb->command_count;
@@ -1185,6 +1286,12 @@ static void fl_ribbon(form_library_t *lib, xmlNodePtr root) {
 }
 
 const form_ribbon_t *form_library_ribbon(const form_library_t *lib) { return lib ? lib->ribbon : NULL; }
+
+uint32_t form_ribbon_command_id(const form_ribbon_t *ribbon, const char *name) {
+  for (int i = 0; ribbon && name && i < ribbon->command_count; i++)
+    if (!strcmp(ribbon->command_names[i], name)) return ribbon->first_ident + (uint32_t)i;
+  return 0;
+}
 
 const form_command_t *form_ribbon_command(const form_ribbon_t *ribbon, uint32_t ident) {
   if (!ribbon || ident < ribbon->first_ident || ident >= (uint32_t)ribbon->first_ident + (uint32_t)ribbon->command_count) return NULL;

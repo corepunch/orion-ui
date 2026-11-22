@@ -846,6 +846,15 @@ static void test_ribbon(void) {
   const form_ribbon_t *ribbon = form_library_ribbon(library); ASSERT_NOT_NULL(ribbon);
   ASSERT_TRUE(ribbon->def.tab_count >= 8);
   ASSERT_STR_EQUAL(ribbon->def.tabs[0].label, "Home");
+  // As in a compiled application: File is the application menu, <menus> the command registry.
+  ASSERT_STR_EQUAL(ribbon->def.menu_label, "File");
+  ASSERT_TRUE(ribbon->menu_count >= 8);
+  uint32_t check_in_id = form_ribbon_command_id(ribbon, "desk.check_in"); ASSERT_TRUE(check_in_id != 0);
+  ASSERT_STR_EQUAL(form_ribbon_command(ribbon, check_in_id)->action, "check_in");
+  ASSERT_STR_EQUAL(ribbon->menus[1].items[0].label, "Check in\tCtrl+I");
+  ASSERT_EQUAL(ribbon->def.tabs[0].groups[1].items[0].ident, check_in_id);
+  ASSERT_STR_EQUAL(ribbon->def.tabs[0].groups[1].items[0].text, "Check in");
+  ASSERT_STR_EQUAL(ribbon->def.tabs[0].groups[0].items[1].text, "Walk-in guest");   // the menu label less its ellipsis
   ASSERT_EQUAL(ribbon->def.tabs[0].context, 0);
   ASSERT_NOT_NULL(ribbon->def.quick_access);
   ASSERT_TRUE(form_ribbon_context(ribbon, "reception") != 0);
@@ -860,11 +869,20 @@ static void test_ribbon(void) {
   // The Quick Access Toolbar's New reservation is the Home tab's: one command, one state.
   ASSERT_EQUAL(ribbon->def.quick_access->items[0].ident, ribbon->def.tabs[0].groups[0].items[0].ident);
   form_library_free(library);
-  const char *bad = "<orion><forms><form name=\"p\" role=\"page\" /></forms><ribbon><Tab label=\"Home\"><Group label=\"G\">"
-                    "<Button action=\"a\" text=\"A\" shortcut=\"Ctrl+Nope\" /></Group></Tab></ribbon></orion>";
-  library = form_library_parse(bad, strlen(bad), "bad-ribbon"); ASSERT_NOT_NULL(library);
-  ASSERT_NULL(form_library_ribbon(library));
-  form_library_free(library);
+  // Malformed ribbons are left out: an unknown shortcut, a button with an inline action, an undeclared command.
+  const char *bad[] = {
+    "<orion><menus><menu name=\"m\" label=\"M\"><item name=\"a\" label=\"A\" action=\"a\" shortcut=\"Ctrl+Nope\" /></menu></menus>"
+    "<ribbon><Tab label=\"Home\"><Group label=\"G\"><Button command=\"m.a\" /></Group></Tab></ribbon></orion>",
+    "<orion><menus><menu name=\"m\" label=\"M\"><item name=\"a\" label=\"A\" action=\"a\" /></menu></menus>"
+    "<ribbon><Tab label=\"Home\"><Group label=\"G\"><Button action=\"a\" text=\"A\" /></Group></Tab></ribbon></orion>",
+    "<orion><menus><menu name=\"m\" label=\"M\"><item name=\"a\" label=\"A\" action=\"a\" /></menu></menus>"
+    "<ribbon><Tab label=\"Home\"><Group label=\"G\"><Button command=\"m.b\" /></Group></Tab></ribbon></orion>",
+  };
+  for (int i = 0; i < 3; i++) {
+    library = form_library_parse(bad[i], strlen(bad[i]), "bad-ribbon"); ASSERT_NOT_NULL(library);
+    ASSERT_NULL(form_library_ribbon(library));
+    form_library_free(library);
+  }
   accel_t a = {0};
   ASSERT_TRUE(accel_parse("Ctrl+Shift+K", &a)); ASSERT_EQUAL(a.key, AX_KEY_K); ASSERT_EQUAL(a.fVirt, FVIRTKEY | FCONTROL | FSHIFT);
   ASSERT_TRUE(accel_parse("F5", &a)); ASSERT_EQUAL(a.key, AX_KEY_F5);

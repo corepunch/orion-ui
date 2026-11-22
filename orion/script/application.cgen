@@ -3,6 +3,7 @@
   <functions>
     <function name="save" lua="true"><summary>Save an owned datasource, refusing on failure.</summary><arg name="database" type="string"/><returns type="bool"/></function>
     <function name="write" lua="true"><summary>Atomically write a named document inside the application's data directory.</summary><arg name="filename" type="string"/><arg name="text" type="string"/><returns type="string"/></function>
+    <function name="quit" lua="true"><summary>Close the application's main window as its close box does, saving its data first.</summary><returns type="bool"/></function>
     <function name="open" lua="true"><summary>Open a form from the application's declarative object graph.</summary><arg name="form" type="string"/><returns type="int">window handle</returns></function>
   </functions>
 </module>

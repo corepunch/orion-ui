@@ -169,44 +169,65 @@ As a gem there is no ribbon, and the pages' `<Toolbar>`s show as before.
 
 ## Declarative applications
 
-An application run by the Lua host (`application.orion`, no C) declares the
-same `<ribbon>`, but its buttons name script actions instead of menu
-commands; `form_library_ribbon()` builds the `ribbon_def_t` at run time and the
-host creates the chrome, the Quick Access Toolbar and the shortcuts:
+An application run by the Lua host (`application.orion`, no C) writes the same
+`<menus>` and `<ribbon>` markup, read the same way: `form_library_ribbon()`
+builds the `ribbon_def_t` at run time and the host creates the chrome, the File
+button, the Quick Access Toolbar and the shortcuts, as `create_ribbon_chrome()`
+does for a compiled application. The one difference is where a command is
+handled. A compiled application switches on the command id in C; a declarative
+one names the script action on the menu `<item>` that declares the command:
 
 ```xml
+<menus>
+  <menu name="file" label="File">
+    <item name="new" label="New reservation" shortcut="Ctrl+N" action="new_booking" page="reception" />
+    <item name="exit" label="Exit" target="orion.application" action="quit" />
+  </menu>
+  <menu name="desk" label="Front desk">
+    <item name="check_in" label="Check in" shortcut="Ctrl+I" action="check_in" />
+  </menu>
+  <menu name="reservation" label="Reservation">
+    <item name="save" label="Save reservation" shortcut="Ctrl+S" action="reserve" />
+  </menu>
+</menus>
 <ribbon>
+  <ApplicationMenu menu="file" />
   <QuickAccessToolbar>
-    <Button action="new_booking" page="reception" icon="lodge-new-reservation" text="New reservation" />
+    <Button command="file.new" icon="lodge-new-reservation" />
   </QuickAccessToolbar>
   <Tab label="Home">
     <Group label="Arrive and leave">
-      <Button action="check_in" icon="lodge-check-in" text="Check in" size="large" shortcut="Ctrl+I" />
+      <Button command="desk.check_in" icon="lodge-check-in" size="large" />
     </Group>
   </Tab>
   <Tab label="Reservation" context="reception">
     <Group label="Editor">
-      <Button action="reserve" icon="lodge-save" text="Save reservation" size="large" shortcut="Ctrl+S" />
+      <Button command="reservation.save" icon="lodge-save" size="large" />
     </Group>
   </Tab>
 </ribbon>
 ```
 
-| Attribute | |
-|---|---|
-| `action=` | The page method to run, with the page's input values, as its own button would |
-| `page=` | The page to run it on, selected first; without it, the page that shows |
-| `target="orion.application" action="open" argument="form"` | An application action instead, such as opening a window |
-| `shortcut=` | `Ctrl+N`, `Ctrl+Shift+K`, `F5`, `Alt+Left`: parsed by `accel_parse()`; a shortcut used twice is an error |
-| `context=` on `<Tab>` | The name of a `role="page"` form: the tab shows while that page is selected, and opens when it is chosen |
+| Windows Ribbon | Compiled (`orionc`) | Declarative (Lua host) |
+|---|---|---|
+| `Application.Commands`, a command's `LabelTitle` and key | `<menus>`: `<item name label shortcut>` | The same, plus the script binding below |
+| `IUICommandHandler::Execute` | The application's ribbon procedure, by command id | `action=` on the `<item>`: run on the selected page with its input values, as its own button would; `page=` selects that page first; `target="orion.application" action= argument=` runs an application action (`open`, `quit`) |
+| `Ribbon.ApplicationMenu` | `<ApplicationMenu menu="file" />` | The same |
+| `Ribbon.QuickAccessToolbar` | `<QuickAccessToolbar><Button command icon>` | The same |
+| `Tab`, `Group`, `Button`, `DropDownButton` | `<Tab>`, `<Group>`, `<Button command size icon>`, `<DropDown menu>` | The same; a button without `text` takes its command's label, less a menu ellipsis |
+| `Ribbon.ContextualTabs` | `<Tab context="name">`, set with `rbSetContexts` | `<Tab context="form">`: the host sets it while that `role="page"` form is selected |
+| `IUIFramework::InvalidateUICommand` (enabled state) | `rbSetState` from the application | The host greys out a command whose page has no such action, or whose last `data()` turned it off: `disabled = {control = true}` for a control that runs the action, `commands = {action = false}` for one only the ribbon offers |
 
-Buttons with the same action, page, target and argument are one command with
-one state, wherever they appear. The host disables a command whose page has no
-such method, or whose last `data()` turned it off: `disabled = {control = true}`
-for a control that runs the action, `commands = {action = false}` for one only
-the ribbon offers. A malformed ribbon is reported on stderr and left out; the
-application then runs without one. As a gem the shell owns the menu row, so the
-ribbon is not created. [Lodge](../apps/lodge/README.md) is the example.
+The menus also go to the operating system's menu bar where it has one
+(`kMenuBarMessageSetMenus`), the shortcuts to the accelerator table
+(`accel_parse()` reads `Ctrl+N`, `Ctrl+Shift+K`, `F5`, `Alt+Left`), and the
+main window is maximized into the workspace under the ribbon. The loader
+refuses what `orionc` refuses — a button without a declared `command=`, an
+action written on a ribbon button, an unknown or repeated shortcut, a command
+declared twice — reports it on stderr and leaves the ribbon out; it warns, as
+`orionc` does, about a command that is on no tab and in no menu the ribbon
+opens. As a gem the shell owns the menu row, so the ribbon is not created.
+[Lodge](../apps/lodge/README.md) is the example.
 
 ## Styling
 

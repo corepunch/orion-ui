@@ -50,7 +50,6 @@ from the start page.
 
 ## Known issues
 
-- The main window keeps its own caption row under the ribbon, as Ledger's does.
 - Calendar cells are text marks (•, ›, ×); a stay cannot be dragged yet.
 - The shared-company view (`lodge --remote`) keeps its previous layout and has no ribbon.
 - Seasonal rate plans, CSV import, dated backups and a cash-drawer count are listed under [Next](user-stories.md#next).

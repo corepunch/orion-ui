@@ -43,7 +43,7 @@ The sidebar switches pages; the ribbon holds the commands.
 
 ## Ribbon, shortcuts and the assistant
 
-**Home** holds the desk's everyday commands — New reservation (Ctrl+N),
+**File** holds New reservation, Walk-in guest, data export and Exit, as in Git Client and Ledger; **Home** holds the desk's everyday commands — New reservation (Ctrl+N),
 Walk-in guest (Ctrl+Shift+N), Check in (Ctrl+I), Check out (Ctrl+O), Extend
 stay (Ctrl+E), No-show, Payment (Ctrl+M), Guest bill (Ctrl+B), documents and
 the Assistant (Ctrl+K) — and acts on the page that shows; each page's own
