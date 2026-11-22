@@ -40,7 +40,7 @@ static int color_button_count(void) {
 }
 
 static void test_layer_sidebar(void) {
-  TEST("layer ladder reads front to back, switches the target and shows colors only on painting layers");
+  TEST("layer icons read front to back, switch the target and show colors only on painting layers");
   canvas_doc_t *doc = layers_setup();
   ASSERT_NOT_NULL(doc);
   ASSERT_EQUAL(doc->layer.count, 4);
@@ -49,16 +49,26 @@ static void test_layer_sidebar(void) {
   ASSERT_FALSE(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE));
   const int order[] = {IE_LAYER_FX, IE_LAYER_COLOR, IE_LAYER_PENCIL, IE_LAYER_BG};
   const char *const names[] = {"FX", "Color", "Pencil", "Back"};
+  const char *const icons[] = {"phosphor-sparkle", "phosphor-palette", "phosphor-pencil-simple", "phosphor-image-square"};
   for (int i = 0; i < 4; i++) {
     toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
     ASSERT_EQUAL(tb->items[i].ident, IE_PENCIL_LAYER_BASE + order[i]);
     ASSERT_STR_EQUAL(tb->items[i].text, names[i]);
+    ASSERT_STR_EQUAL(tb->items[i].icon, icons[i]);
+    char checked[40];
+    snprintf(checked, sizeof(checked), "%s-fill", icons[i]);
+    ASSERT_STR_EQUAL(tb->items[i].checked_icon, checked);
     ASSERT_TRUE(tb->items[i].tooltip && tb->items[i].tooltip[0]);
     irect16_t r = tb->item_rects[i];
     uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
     send_message(g_app->tool_win->toolbar, evLeftButtonDown, point, NULL);
     send_message(g_app->tool_win->toolbar, evLeftButtonUp, point, NULL);
     ASSERT_EQUAL(doc->layer.active, order[i]);
+    tb = window_toolbar_state(g_app->tool_win);
+    for (int j = 0; j < IE_LAYER_COUNT; j++) {
+      ASSERT_EQUAL(tb->items[j].state & TBSTATE_CHECKED, j == i ? TBSTATE_CHECKED : 0);
+      ASSERT_EQUAL(tb->items[j].color, j < i ? get_sys_color(brTextDisabled) : 0);
+    }
     ASSERT_TRUE(doc->pixels == doc->layer.stack[order[i]]->pixels);
     ASSERT_EQUAL(color_button_count(), order[i] == IE_LAYER_PENCIL ? 0 : IE_PENCIL_COLORS);
     ASSERT_EQUAL(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE), order[i] != IE_LAYER_PENCIL);

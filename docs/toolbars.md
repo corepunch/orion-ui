@@ -503,8 +503,8 @@ A custom item in a single-column vertical toolbar can be smaller than a button
 without making the bar wider. `TOOLBAR_ITEM_FLAG_SMALL` is a half-size square;
 consecutive ones pack two per row (color swatches). `TOOLBAR_ITEM_FLAG_SLIM` is
 a row a whole cell wide and half a cell tall, for a one-word choice or a readout
-such as "3/12"; two slim rows take the height of one button. Pencil Test's layer
-ladder is four slim rows.
+such as "3/12"; two slim rows take the height of one button. Pencil Test uses
+slim rows for brush size, opacity, frame number and playback speed.
 
 The former toolbox control and `bx*` messages have been removed. Component
 registration uses `toolbar_icon` and `FE_COMPONENT_SHOW_TOOLBAR`.

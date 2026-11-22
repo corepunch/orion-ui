@@ -330,10 +330,9 @@ static void test_no_fg_bg_swatch(void) {
     for (int i = 0; i < tb->item_count; i++) {
       if (tb->items[i].type != TOOLBAR_ITEM_CUSTOM) continue;
       uint32_t ident = tb->items[i].ident;
-      bool layer_btn = ident >= IE_PENCIL_LAYER_BASE && ident < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT;
       bool readout = ident == ID_PENCIL_TOOLS_SIZE_VALUE || ident == ID_PENCIL_TOOLS_OPACITY_VALUE ||
                      ident == ID_PENCIL_TOOLS_FRAME || ident == ID_PENCIL_TOOLS_SPEED;
-      ASSERT_TRUE(layer_btn || readout);
+      ASSERT_TRUE(readout);
       ASSERT_EQUAL(ident == ID_PENCIL_TOOLS_OPACITY_VALUE && layers[layer] != IE_LAYER_PENCIL, false);
     }
   }
@@ -352,17 +351,14 @@ static void test_coloring_palette(void) {
   ASSERT_EQUAL(tb->columns, 1);
   ASSERT_EQUAL(g_app->tool_win->frame.w, PALETTE_WIN_W);
   int mini = (TOOL_PALETTE_BTN_SIZE - ui_px("Toolbar", "gap")) / 2;
-  // The layer ladder: four slim rungs, a cell wide and half a cell tall, no wider than the rail was.
+  // The layer buttons use the same square cells as the tool buttons.
   for (int i = 0; i < 4; i++) {
-    ASSERT_TRUE(tb->items[i].style & TOOLBAR_ITEM_FLAG_SLIM);
+    ASSERT_EQUAL(tb->items[i].type, TOOLBAR_ITEM_BUTTON);
     ASSERT_EQUAL(tb->item_rects[i].w, TOOL_PALETTE_BTN_SIZE);
-    ASSERT_EQUAL(tb->item_rects[i].h, mini);
+    ASSERT_EQUAL(tb->item_rects[i].h, TOOL_PALETTE_BTN_SIZE);
     ASSERT_EQUAL(tb->item_rects[i].x, tb->item_rects[0].x);
-    if (i) ASSERT_EQUAL(tb->item_rects[i].y, tb->item_rects[i - 1].y + mini + ui_px("Toolbar", "gap"));
+    if (i) ASSERT_EQUAL(tb->item_rects[i].y, tb->item_rects[i - 1].y + TOOL_PALETTE_BTN_SIZE + ui_px("Toolbar", "gap"));
   }
-  ASSERT_EQUAL(tb->item_rects[3].y + tb->item_rects[3].h - tb->item_rects[0].y,
-               4 * mini + 3 * ui_px("Toolbar", "gap"));
-  ASSERT_TRUE(4 * mini + 3 * ui_px("Toolbar", "gap") <= 2 * TOOL_PALETTE_BTN_SIZE + ui_px("Toolbar", "gap"));
   tb = window_toolbar_state(g_app->color_win);
   ASSERT_TRUE(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE));
   ASSERT_EQUAL(tb->columns, 1);
@@ -450,7 +446,7 @@ static const toolbar_item_t *rail_item(int ident) {
 }
 
 static void test_compact_rail(void) {
-  TEST("readouts and the ladder fit the rail's width; dead menus leave the header");
+  TEST("the rail has equal side padding and the workspace starts at its edge");
   penciltest_setup();
   int rail = g_app->tool_win->frame.w;
   ASSERT_EQUAL(rail, PALETTE_WIN_W);
@@ -470,7 +466,7 @@ static void test_compact_rail(void) {
     ASSERT_TRUE(item->style & TOOLBAR_ITEM_FLAG_SLIM);
     irect16_t r = tb->item_rects[item - tb->items];
     ASSERT_EQUAL(r.w, TOOL_PALETTE_BTN_SIZE); ASSERT_EQUAL(r.h, mini);
-    ASSERT_TRUE(r.x + r.w <= rail);
+    ASSERT_EQUAL(r.x, rail - (r.x + r.w));
   }
   // Each readout sits directly over what it reports.
   ASSERT_EQUAL(rail_item(ID_PENCIL_TOOLS_SIZE_VALUE) + 1, rail_item(IE_OPT_SIZE));
@@ -481,7 +477,16 @@ static void test_compact_rail(void) {
   ASSERT_NULL(rail_item(IE_OPT_OPACITY));
   ASSERT_NULL(rail_item(ID_PENCIL_TOOLS_OPACITY_VALUE));
   ASSERT_NOT_NULL(rail_item(ID_PENCIL_TOOLS_SIZE_VALUE));
-  ASSERT_EQUAL(g_app->tool_win->frame.w, rail);
+  for (int layer = 0; layer < IE_LAYER_COUNT; layer++) {
+    ASSERT_TRUE(cmd_pencil_layer(doc, layer));
+    ASSERT_EQUAL(g_app->tool_win->frame.w, rail);
+    ASSERT_EQUAL(imageeditor_document_workspace_rect().x, rail);
+    tb = window_toolbar_state(g_app->tool_win);
+    for (int i = 0; i < tb->item_count; i++) {
+      irect16_t r = tb->item_rects[i];
+      ASSERT_EQUAL(r.x, rail - (r.x + r.w));
+    }
+  }
   // The header loses the menus that did nothing here.
   for (int i = 0; i < kNumMenus; i++) {
     ASSERT_TRUE(strcmp(kMenus[i].label, "Filter") != 0);

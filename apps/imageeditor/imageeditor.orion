@@ -316,11 +316,11 @@
 
       <form name="pencil_tools" title="Tools" width="40" flags="WINDOW_NOTITLE | WINDOW_NORESIZE" spacing="0" padding="0">
         <Toolbar>
-          <!-- The four layers, front to back. The window draws them and the readouts as slim rows. -->
-          <Label name="layer_fx" text="FX" tooltip="FX: in front of everything" />
-          <Label name="layer_color" text="Color" tooltip="Color: ink and paint, over the pencil" />
-          <Label name="layer_pencil" text="Pencil" tooltip="Pencil: the rough sketch" />
-          <Label name="layer_bg" text="Back" tooltip="Background: the same on every frame" />
+          <!-- The four layers, front to back. -->
+          <Button name="layer_fx" text="FX" icon="phosphor-sparkle" checked-icon="phosphor-sparkle-fill" tooltip="FX: in front of everything" />
+          <Button name="layer_color" text="Color" icon="phosphor-palette" checked-icon="phosphor-palette-fill" tooltip="Color: ink and paint, over the pencil" />
+          <Button name="layer_pencil" text="Pencil" icon="phosphor-pencil-simple" checked-icon="phosphor-pencil-simple-fill" tooltip="Pencil: the rough sketch" />
+          <Button name="layer_bg" text="Back" icon="phosphor-image-square" checked-icon="phosphor-image-square-fill" tooltip="Background: the same on every frame" />
           <Separator />
           <Button name="pencil" command="tool.pencil" icon="ie-pencil" tooltip="Pencil" flags="TBSTYLE_CHECKGROUP" />
           <Button name="brush" command="tool.brush" icon="phosphor-circle-fill" tooltip="Brush" flags="TBSTYLE_CHECKGROUP" />

@@ -59,24 +59,24 @@ Opening a document now fits again after scrollbars disappear, using the final vi
 
 Validation: 151/151 checks passed (theme 8, toolbar 38, iPad layout 10, rendering 4, image-editor integration 91). The large-image opening check also asserts that the fitted image reaches at least one viewport dimension, preventing a gutter on both axes after scrollbar removal. All four canvas viewport corners in the captured bouncing-ball project are white paper pixels. Physical iPad input remains unverified.
 
-## Layer ladder and readouts
+## Layer icons and readouts
 
-The rail keeps its width and the header its height; the canvas still reaches every workspace edge. Inside that footprint the rail now says what it holds.
+The rail is one column wide with 28 px buttons and 3 px of padding on each side in these captures. The 24 px header and rail meet the canvas viewport at its edges.
 
-![The rail before, and after on Pencil, Color and Background](ladder-rail.png)
+![The original text-only ladder, followed by FX, Color, Pencil and Background selected](ladder-rail.png)
 
-- **Layers** were four two-letter codes in a 2×2 block that did not match the stack. They are now a ladder of four slim rungs, a cell wide and half a cell tall, that spell the layers out front to back: FX, Color, Pencil, Back. The ladder is two buttons tall and no wider than a button.
-- **The editing cutoff is visible.** The canvas shows the stack up to the working layer. The rungs above it are now grey, so a layer that is not being drawn is not a mystery.
+- **Layers** use Phosphor sparkle, palette, pencil and image icons, front to back. Hover shows each layer's name and purpose.
+- **The editing cutoff is visible.** The selected layer has a filled icon. Icons above it are muted and can still be clicked.
 - **Sliders have readouts**: "5px" over size and "50%" over opacity.
 - **The frame counter reads "3/12"** instead of "3", with the speed ("12fps") under it. A click on either opens its dialog: the exposure sheet, Animation Speed.
 - **The header loses two menus**, Filter and Color, and Image loses Levels. None of them did anything in Pencil Test. This leaves more of the 24 px row for the compact toolbar before it has to wrap into a band of its own.
 
-No previews, panels or strips were added. The floating color toolbar, the tools and the frame buttons are unchanged.
+The floating color palette, drawing tools and frame controls remain available in the same places.
 
 ![Light](ladder-light.png)
 
 ![Dark](ladder-dark.png)
 
-`ladder-light.png` and `ladder-dark.png` are `bouncing-ball.ptf` opened with `--screenshot` (and `--appearance dark`). The close-up is the same capture at three times its size, beside the previous rail and two projects saved on other layers.
+`ladder-light.png` and `ladder-dark.png` show `bouncing-ball.ptf` at 1070 × 810. The viewport matches the drawing's aspect ratio. The comparison crops each rail at its actual edge before scaling it up, excluding any fitted canvas margin.
 
-Validation: Pencil Test layout 11/11, layers 6/6, rendering 4/4, toolbar 42/42, generator contract 20/20. Physical iPad input remains unverified; a slim rung is 32×15 logical pixels in these captures, wider than the 15×15 cells it replaces.
+Validation: Pencil Test layout 11/11, layers 6/6, rendering 4/4, toolbar 42/42, generator contract 20/20. The iPad layout test checks equal left and right padding on every layer. Physical iPad input remains unverified.
