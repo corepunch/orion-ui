@@ -619,6 +619,7 @@ enum {
   sgSetStyle,                   // wparam = SEGMENTED_STYLE_* flags
   sgSetSegmentColor,            // wparam = index; lparam = (void*)(uintptr_t)color dot drawn before the label; 0 clears
   sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
+  sgSetSegmentGlyph,            // wparam = index; lparam = const segment_glyph_t* named icons (copied); NULL clears
 };
 // SwatchGrid: a palette of colour swatches, one selected.
 enum {
@@ -660,6 +661,8 @@ enum {
   spsIsDragging,                  // returns nonzero while the thumb is held
   spsnReleased,                   // slider -> parent (evCommand): LOWORD = control id, lparam = slider; the thumb was let go
 };
+// A segment's named icon, drawn in the segment's own colour; checked_icon (or NULL) shows while it is selected.
+typedef struct { const char *icon, *checked_icon; } segment_glyph_t;
 #define SEGMENTED_MAX_SEGMENTS 24
 #define SEGMENTED_STYLE_ICONS_ONLY (1u << 0) // a segment with an icon shows it alone; its label becomes the tooltip
 #define SEGMENTED_LABEL_MAX    128

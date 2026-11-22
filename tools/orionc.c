@@ -616,7 +616,8 @@ static void emit_activitybars(FILE *f, xmlNodePtr parent, const char *form) {
 // <QuickAccessToolbar>, and <Tab>s of <Group>s holding <Button>, <DropDown> and
 // <Separator>. Commands are the menu-declared ones; the ribbon only places them.
 // <Slider>, <Control class> and <Label> host a control or a readout in a group;
-// each takes its ID from name=, as ID_RIBBON_<NAME>.
+// each takes its ID from name=, as ID_RIBBON_<NAME>. title= is the hosted
+// window's title (a SegmentedControl's "One|Two|Three").
 
 static xmlNodePtr find_menu(xmlNodePtr menus, const char *name) {
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *n = attr(m, "name"); bool hit = eq(n, name); free(n); if (hit) return m; }
@@ -749,13 +750,15 @@ static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char
         if (ribbon_control(it)) {
           // Caption, hosted control and readout; a <Label> is the readout alone.
           char *name = attr(it, "name"), *cls = attr(it, "class"), *width = attr(it, "width"), *value = attr(it, "value"), *flags = attr(it, "flags");
-          char clsq[256] = "NULL", valueq[ORIONC_STRING_SIZE] = "NULL";
+          char *title = attr(it, "title");
+          char clsq[256] = "NULL", valueq[ORIONC_STRING_SIZE] = "NULL", titleq[ORIONC_STRING_SIZE] = "NULL";
+          if (title && *title) cstr(titleq, sizeof(titleq), title);
           scoped(id, sizeof(id), "ribbon", name, NULL);
           if (elem(it, "slider")) snprintf(clsq, sizeof(clsq), "\"Slider\""); else if (cls && *cls) snprintf(clsq, sizeof(clsq), "\"%s\"", cls);
           if (value && *value) cstr(valueq, sizeof(valueq), value);
-          OUT("  { RIBBON_ITEM_CONTROL, %s, %s, %s, %s, %s, NULL, 0, NULL, %s, %s, %s, %s },\n", id, iconq, text && *text ? textq : "NULL", tipq,
-              eq(size, "large") ? "RIBBON_ITEM_LARGE" : "0", clsq, width && *width ? width : "0", valueq, flags && *flags ? flags : "0");
-          free(name); free(cls); free(width); free(value); free(flags);
+          OUT("  { RIBBON_ITEM_CONTROL, %s, %s, %s, %s, %s, NULL, 0, NULL, %s, %s, %s, %s, %s },\n", id, iconq, text && *text ? textq : "NULL", tipq,
+              eq(size, "large") ? "RIBBON_ITEM_LARGE" : "0", clsq, width && *width ? width : "0", valueq, flags && *flags ? flags : "0", titleq);
+          free(name); free(cls); free(width); free(value); free(flags); free(title);
         } else if (elem(it, "separator")) LINE("  { RIBBON_ITEM_SEPARATOR },\n");
         else OUT("  { %s, %s, %s, %s, %s, %s%s, %s, %s },\n", elem(it, "dropdown") ? "RIBBON_ITEM_DROPDOWN" : "RIBBON_ITEM_BUTTON", id, iconq, textq, tipq,
                  eq(size, "large") ? "RIBBON_ITEM_LARGE" : "0", eq(toggle, "true") || eq(toggle, "1") ? " | RIBBON_ITEM_CHECK" : "", menuq, checkedq);

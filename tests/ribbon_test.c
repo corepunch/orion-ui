@@ -234,12 +234,15 @@ static result_t quick_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
 }
 
 // A group hosts ordinary controls: a slider with caption and readout, a readout alone, a palette.
-enum { ID_SIZE = 201, ID_FRAME, ID_COLORS, ID_GHOST };
+enum { ID_SIZE = 201, ID_FRAME, ID_COLORS, ID_GHOST, ID_LAYERS };
 static const ribbon_item_t kHosted[] = {
   { RIBBON_ITEM_CONTROL, ID_SIZE,  NULL, "Size",  NULL, 0, NULL, 0, NULL, "Slider", 60, "00px", SLIDER_TROUGH },
   { RIBBON_ITEM_CONTROL, ID_FRAME, NULL, "Frame", NULL, 0, NULL, 0, NULL, NULL, 0, "000/000" },
 };
-static const ribbon_item_t kPalette[] = { { RIBBON_ITEM_CONTROL, ID_COLORS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, "SwatchGrid" } };
+static const ribbon_item_t kPalette[] = {
+  { RIBBON_ITEM_CONTROL, ID_COLORS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, "SwatchGrid" },
+  { RIBBON_ITEM_CONTROL, ID_LAYERS, NULL, NULL, NULL, RIBBON_ITEM_LARGE, NULL, 0, NULL, "SegmentedControl", 0, NULL, WINDOW_NOFOCUS, "Back|Front" },
+};
 static const ribbon_group_t kHostGroups[] = { { "Brush", kHosted, ARRAY_LEN(kHosted) }, { "Colors", kPalette, ARRAY_LEN(kPalette) } };
 static const ribbon_tab_t kHostTabs[] = { { "Draw", kHostGroups, ARRAY_LEN(kHostGroups) }, { "View", kViewGroups, ARRAY_LEN(kViewGroups) } };
 static const ribbon_def_t kHostRibbon = { .tabs = kHostTabs, .tab_count = ARRAY_LEN(kHostTabs) };
@@ -284,7 +287,21 @@ static void test_hosted_controls(void) {
   send_message(grid, swSetColors, 40, colors);
   send_message(ribbon, rbUpdateLayout, 0, NULL);
   irect16_t palette = item_rect(ribbon, ID_COLORS);
-  ASSERT(grid->frame.w > empty && grid->frame.h == palette.h, "a large control spans the rows and is as wide as it measures");
+  layout_measure_t rows = {.avail_h = palette.h};
+  send_message(grid, evMeasure, 0, &rows);
+  ASSERT(grid->frame.w > empty && grid->frame.w == rows.desired_w && grid->frame.h == rows.desired_h && grid->frame.h > palette.h / 2,
+         "a large control is offered the group's rows and is as wide and tall as it measures for them");
+
+  // A radio group: the title is its segments, and it is as tall as it measures, in the middle of its cell.
+  window_t *layers = (window_t *)send_message(ribbon, rbGetControl, ID_LAYERS, NULL);
+  ASSERT_NOT_NULL(layers);
+  ASSERT_EQUAL(send_message(layers, sgGetCount, 0, NULL), 2);
+  ASSERT_TRUE(layers->flags & WINDOW_NOFOCUS);
+  irect16_t group = item_rect(ribbon, ID_LAYERS);
+  layout_measure_t asked = {.avail_h = group.h};
+  send_message(layers, evMeasure, 0, &asked);
+  ASSERT(layers->frame.h == asked.desired_h && layers->frame.h < group.h && abs(2 * layers->frame.y + layers->frame.h - 2 * group.y - group.h) <= 1,
+         "a control that measures its height gets it");
 
   g_slides = g_picks = 0;
   ui_event_t drag = {.message = kEventLeftButtonDown, .x = (slider->frame.x + 4) * UI_WINDOW_SCALE,

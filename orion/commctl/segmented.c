@@ -2,7 +2,9 @@
 // NSSegmentedControl / a WinAPI auto-radio group. One segment is selected at
 // a time; a click or Left/Right selects another and notifies the parent.
 // Segments can carry icons from a shared strip (sgSetImageStrip +
-// sgSetSegmentIcon, as tcSetImageStrip / tcSetTabIcon on a TabView).
+// sgSetSegmentIcon, as tcSetImageStrip / tcSetTabIcon on a TabView), or named
+// icons that follow the segment's colour (sgSetSegmentGlyph). A control tall
+// enough for a large named icon over its label draws its segments that way.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,12 +15,16 @@
 #include <orion/user/draw.h>
 #include <orion/user/rect.h>
 #include <orion/user/theme.h>
+#include <orion/user/svg_icon_loader.h>
 #include "commctl.h"
+
+#define SEGMENTED_GLYPH_MAX 48
 
 typedef struct {
   char label[SEGMENTED_MAX_SEGMENTS][SEGMENTED_LABEL_MAX];
   int  icon[SEGMENTED_MAX_SEGMENTS]; // index in strip, -1 = none
   uint32_t dot[SEGMENTED_MAX_SEGMENTS]; // colour dot before the label, 0 = none
+  char glyph[SEGMENTED_MAX_SEGMENTS][2][SEGMENTED_GLYPH_MAX]; // named icon, and the one shown while selected
   int  count, selected, pressed, hot;
   uint32_t style;
   bitmap_strip_t strip;
@@ -26,7 +32,23 @@ typedef struct {
 
 #define SG_ICON_GAP 4
 
-static bool sg_has_icon(const segmented_state_t *s, int i) { return s->strip.cols > 0 && s->icon[i] >= 0; }
+static const char *sg_sel(const window_t *win) { return ui_selector(win, "SegmentedControl::segment"); }
+static bool sg_has_glyph(const segmented_state_t *s, int i) { return s->glyph[i][0][0] != 0; }
+static bool sg_has_strip_icon(const segmented_state_t *s, int i) { return s->strip.cols > 0 && s->icon[i] >= 0; }
+static bool sg_has_icon(const segmented_state_t *s, int i) { return sg_has_glyph(s, i) || sg_has_strip_icon(s, i); }
+static int sg_icon_width(const window_t *win, const segmented_state_t *s, int i) {
+  return sg_has_glyph(s, i) ? ui_px(sg_sel(win), "--icon-size") : s->strip.icon_w;
+}
+// The height the control is laid out for: `h` when a parent is asking, otherwise its own.
+static int sg_height(const window_t *win, int h) {
+  return h > 0 ? h : win->frame.h > 1 ? win->frame.h : control_predefined_height(win->flags);
+}
+// Tall: every segment has a named icon, and there is room for the large one over its label.
+static bool sg_tall(const window_t *win, const segmented_state_t *s, int h) {
+  const char *sel = sg_sel(win);
+  for (int i = 0; i < s->count; i++) if (!sg_has_glyph(s, i)) return false;
+  return s->count > 0 && sg_height(win, h) >= ui_px(sel, "--large-icon-size") + ui_px(sel, "--caption-gap") + text_char_height(sel) + 4 * SEGMENTED_INSET;
+}
 static bool sg_shows_label(const segmented_state_t *s, int i) { return !sg_has_icon(s, i) || !(s->style & SEGMENTED_STYLE_ICONS_ONLY); }
 // The dot is a small disc on the text's x-height, like a status bullet.
 static int sg_dot_size(const window_t *win) { return MAX(4, text_char_height("SegmentedControl::segment") * 3 / 5); }
@@ -34,32 +56,41 @@ static int sg_dot_size(const window_t *win) { return MAX(4, text_char_height("Se
 // Width of the dot, icon and label drawn centred in a segment.
 static int sg_content_width(const window_t *win, const segmented_state_t *s, int i) {
   int w = s->dot[i] ? sg_dot_size(win) : 0;
-  if (sg_has_icon(s, i)) w += (w ? SG_ICON_GAP : 0) + s->strip.icon_w;
+  if (sg_has_icon(s, i)) w += (w ? SG_ICON_GAP : 0) + sg_icon_width(win, s, i);
   if (sg_shows_label(s, i)) w += (w ? SG_ICON_GAP : 0) + text_strwidth(ui_selector(win, "SegmentedControl::segment"), s->label[i]);
   return w;
 }
 
 // A segment is never narrower than it is tall, so a short label still forms a
 // capsule whose ends are concentric with the track's (taller controls on touch).
-static int sg_natural_width(const window_t *win, const segmented_state_t *s, int i) {
-  int h = win->frame.h > 1 ? win->frame.h : control_predefined_height(win->flags);
+static int sg_natural_width(const window_t *win, const segmented_state_t *s, int i, int height) {
+  int h = sg_height(win, height);
+  if (sg_tall(win, s, height))   // the large icon over the label, as wide as the wider of the two
+    return MAX(ui_px(sg_sel(win), "--large-icon-size"), text_strwidth(sg_sel(win), s->label[i])) + 2 * SEGMENTED_PADDING;
   int pad = sg_shows_label(s, i) ? SEGMENTED_PADDING : SEGMENTED_INSET;
   return MAX(sg_content_width(win, s, i) + 2 * pad, h - 2 * SEGMENTED_INSET);
 }
 
-static int sg_desired_width(const window_t *win, const segmented_state_t *s) {
+static int sg_desired_width(const window_t *win, const segmented_state_t *s, int height) {
   int w = 2 * SEGMENTED_INSET;
-  for (int i = 0; i < s->count; i++) w += sg_natural_width(win, s, i);
+  for (int i = 0; i < s->count; i++) w += sg_natural_width(win, s, i, height);
   return w;
+}
+
+static void sg_draw_glyph(const segmented_state_t *s, int i, bool selected, irect16_t r, int size, uint32_t ink) {
+  sysicon_resolved_t icon;
+  const char *name = selected && s->glyph[i][1][0] ? s->glyph[i][1] : s->glyph[i][0];
+  if (!sysicon_resolve_size(name, size, &icon)) return;
+  draw_sprite_region((int)icon.tex, rect_center(r, size, size), UV_RECT(icon.u0, icon.v0, icon.u1, icon.v1), ink, 0);
 }
 
 // Segments keep their natural proportions; spare or missing width is shared.
 static irect16_t sg_segment_rect(const window_t *win, const segmented_state_t *s, int index) {
   irect16_t track = rect_inset(R(0, 0, win->frame.w, win->frame.h), SEGMENTED_INSET);
-  int natural = MAX(1, sg_desired_width(win, s) - 2 * SEGMENTED_INSET), acc = 0, x0 = 0, x1 = 0;
+  int natural = MAX(1, sg_desired_width(win, s, 0) - 2 * SEGMENTED_INSET), acc = 0, x0 = 0, x1 = 0;
   for (int i = 0; i <= index; i++) {
     x0 = x1;
-    acc += sg_natural_width(win, s, i);
+    acc += sg_natural_width(win, s, i, 0);
     x1 = (int)((int64_t)acc * track.w / natural);
   }
   return R(track.x + x0, track.y, x1 - x0, track.h);
@@ -97,6 +128,7 @@ static int sg_add(window_t *win, segmented_state_t *s, const char *label, size_t
   s->label[s->count][n] = '\0';
   s->icon[s->count] = -1;
   s->dot[s->count] = 0;
+  s->glyph[s->count][0][0] = s->glyph[s->count][1][0] = '\0';
   return s->count++;
 }
 
@@ -125,12 +157,16 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         return false;
       }
       sg_set_segments(win, s, win->title);
-      if (win->frame.w <= 1) win->frame.w = sg_desired_width(win, s);
+      if (win->frame.w <= 1) win->frame.w = sg_desired_width(win, s, 0);
       if (win->frame.h <= 1) control_apply_predefined_height(win, "segmented");
       return true;
     case evMeasure: {
       layout_measure_t *m = lparam;
-      if (m) { m->desired_w = sg_desired_width(win, s); m->desired_h = control_predefined_height(win->flags); }
+      if (!m) return true;
+      // Offered a height that fits the tall form, the control takes it; otherwise it is one row.
+      bool tall = m->avail_h > 0 && sg_tall(win, s, m->avail_h);
+      m->desired_h = tall ? m->avail_h : control_predefined_height(win->flags);
+      m->desired_w = sg_desired_width(win, s, tall ? m->avail_h : m->avail_h > 0 ? m->desired_h : 0);
       return true;
     }
     case evArrange:
@@ -146,6 +182,16 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         if (!disabled && i == s->pressed) state |= CTRL_PRESSED;
         if (!disabled && i == s->hot)     state |= CTRL_HOVER;
         theme_draw_in(win, THEME_PART_SEGMENT, r, state);
+        uint32_t ink = theme_foreground_in(win, THEME_PART_SEGMENT, state);
+        if (sg_tall(win, s, 0)) {
+          const char *sel = sg_sel(win);
+          int size = ui_px(sel, "--large-icon-size"), line = text_char_height(sel);
+          irect16_t body = rect_center(r, r.w - 4, size + ui_px(sel, "--caption-gap") + line);
+          irect16_t caption = rect_split_bottom(body, line);
+          sg_draw_glyph(s, i, i == s->selected, rect_split_top(body, size), size, ink);
+          draw_text_clipped(sel, s->label[i], &caption, ink, TEXT_ALIGN_CENTER);
+          continue;
+        }
         irect16_t content = rect_center(r, MIN(sg_content_width(win, s, i), MAX(0, r.w - 4)), r.h);
         if (s->dot[i]) {
           // The chosen segment already shows its colour in the content it filters; its dot takes the label colour.
@@ -155,7 +201,11 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           fill_rounded_rect(color, rect_center(rect_split_left(content, d), d, d), d / 2);
           content = rect_trim_left(content, d + SG_ICON_GAP);
         }
-        if (sg_has_icon(s, i)) {
+        if (sg_has_glyph(s, i)) {
+          int size = sg_icon_width(win, s, i);
+          sg_draw_glyph(s, i, i == s->selected, rect_split_left(content, size), size, ink);
+          content = rect_trim_left(content, size + SG_ICON_GAP);
+        } else if (sg_has_strip_icon(s, i)) {
           const bitmap_strip_t *st = &s->strip;
           int col = s->icon[i] % st->cols, row = s->icon[i] / st->cols;
           float u0 = (float)(col * st->icon_w) / st->sheet_w, v0 = (float)(row * st->icon_h) / st->sheet_h;
@@ -167,7 +217,7 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         }
         if (sg_shows_label(s, i) && content.w > 0) {
           irect16_t label = rect_center(content, content.w, text_char_height(ui_selector(win, "SegmentedControl::segment")));
-          draw_text_ellipsized(ui_selector(win, "SegmentedControl::segment"), s->label[i], label.x, label.y, label.w, theme_foreground_in(win, THEME_PART_SEGMENT, state));
+          draw_text_ellipsized(ui_selector(win, "SegmentedControl::segment"), s->label[i], label.x, label.y, label.w, ink);
         }
       }
       return true;
@@ -180,7 +230,7 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     }
     case evGetTooltipText: {
       int hit = sg_hit(win, s, (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam));
-      if (hit < 0 || sg_shows_label(s, hit) || !lparam) return false;
+      if (hit < 0 || sg_shows_label(s, hit) || sg_tall(win, s, 0) || !lparam) return false;
       snprintf(lparam, 256, "%s", s->label[hit]);
       return true;
     }
@@ -266,6 +316,20 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         return false;
       }
       s->icon[index] = icon;
+      invalidate_window(win);
+      return true;
+    }
+    case sgSetSegmentGlyph: {
+      int index = (int)wparam;
+      const segment_glyph_t *glyph = lparam;
+      if (index < 0 || index >= s->count || (glyph && !glyph->icon)) {
+        fprintf(stderr, "[sg] segment glyph rejected win=%u index=%d count=%d icon=%p\n", win->id, index, s->count,
+                glyph ? (void *)glyph->icon : NULL);
+        fflush(stderr);
+        return false;
+      }
+      snprintf(s->glyph[index][0], SEGMENTED_GLYPH_MAX, "%s", glyph ? glyph->icon : "");
+      snprintf(s->glyph[index][1], SEGMENTED_GLYPH_MAX, "%s", glyph && glyph->checked_icon ? glyph->checked_icon : "");
       invalidate_window(win);
       return true;
     }
