@@ -26,14 +26,14 @@
         <Button name="choose" text="Select Recipe" action="choose" />
         <Button name="item_labels" text="Open Item Labels" action="item_labels" />
       </StackView>
-      <MultiEdit name="details" height="56" flags="readonly,vscroll" />
+      <MultiEdit name="details" height="56" flags="WINDOW_READONLY,vscroll" />
       <StackView name="input" orientation="horizontal" spacing="6">
         <Button name="load_data" text="Load Data File..." action="load_data" />
         <TextBox name="key" placeholder="SKU or bank account, when needed" flags="flexspace" />
       </StackView>
       <Label name="parameters_label" text="Parameters (JSON)" />
       <MultiEdit name="params" height="94" flags="vscroll" />
-      <MultiEdit name="output" flags="readonly,vscroll,flexspace" />
+      <MultiEdit name="output" flags="WINDOW_READONLY,vscroll,flexspace" />
       <Label name="error" />
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Button name="preview" text="Preview" action="preview" />
