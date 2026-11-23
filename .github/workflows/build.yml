@@ -64,6 +64,9 @@ jobs:
     - name: Check Lua sources
       run: make lua-check
 
+    - name: Exercise offline marketplace CLI transport
+      run: lua5.4 apps/ledger/tests/marketplace_transport_test.lua
+
     - name: Check developer SDK
       run: python3 -m unittest discover -s tools/sdk -p 'test_*.py' -v
 
