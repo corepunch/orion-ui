@@ -700,4 +700,5 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Use the .html extension for printable labels.">Verwenden Sie die Dateiendung .html.</string>
   <string source="The printable file could not be created.">Die Druckdatei konnte nicht erstellt werden.</string>
   <string source="The printable file could not be saved.">Die Druckdatei konnte nicht gespeichert werden.</string>
+  <string source="Automation Recipes..." where="menu">Automationsrezepte...</string>
 </strings>

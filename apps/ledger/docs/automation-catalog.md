@@ -352,6 +352,75 @@ Tags: закрытие, документы, проверка
 | `date_from` | `string` | no | Inclusive ISO start date (not used for stock). |
 | `date_to` | `string` | no | Inclusive ISO cutoff date. |
 
+## Recipe `print.item_labels` — Print item labels
+
+Render internal Code 128 labels for a catalog item or explicit label lines. Returns printable HTML; does not write a file.
+
+Tags: склад, печать, этикетки, товары, barcode, labels
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `item_id` | `integer` | no | Item ID; use this or rows. |
+| `copies` | `integer` | no | Copies of a selected item; defaults to one. |
+| `rows` | `table` | no | Explicit label lines with name, sku, copies and optional barcode. |
+| `options` | `table` | no | A4, Letter or roll layout options. |
+
+## Recipe `print.product_card` — Print product card
+
+Prepare a printable product card from a catalog item and explicit details. For a local photo use the product-card tool.
+
+Tags: товары, печать, карточка, catalog
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `item_id` | `integer` | yes | Existing Ledger item ID. |
+| `details` | `table` | no | Optional size, variant, language and dated quantity data. |
+
+## Recipe `report.pick_orders` — Group order picking
+
+Group supplied local order rows by exact SKU, variant and barcode. Preserve order quantities and render a pick list.
+
+Tags: склад, сборка, заказы, варианты, fulfillment
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `orders` | `table` | yes | Local object with an orders array; see the fulfillment sample. |
+
+## Recipe `print.order_labels` — Print internal packing labels
+
+Render one internal packing label per supplied order. Not carrier or order QR labels.
+
+Tags: склад, сборка, заказы, этикетки, печать, fulfillment
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `orders` | `table` | yes | Local object with an orders array; see the fulfillment sample. |
+
+## Recipe `preview.bank_statement` — Preview bank statement
+
+Read a local 1C ClientBank statement and show movements, reconciliation warnings and source data. Does not post or connect to a bank.
+
+Tags: проверка, банк, выписка, ClientBank
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `statement` | `string` | yes | Local ClientBank exchange text. Use the CLI for raw legacy encodings. |
+| `account` | `string` | yes | Selected account number copied from the statement. |
+
+## Recipe `report.item_documents` — Find documents containing an item
+
+Select documents by item and show all product lines, not just the matching rows. Drafts are included unless restricted explicitly.
+
+Tags: документы, номенклатура, товары, documents, items, traceability, Belege, Artikel
+
+| Parameter | Type | Required | Meaning |
+|---|---|---|---|
+| `item_id` | `integer` | no | Item ID; provide either this or sku. |
+| `sku` | `string` | no | Exact SKU; ambiguous matches are rejected. |
+| `date_from` | `string` | no | Inclusive start date (YYYY-MM-DD). |
+| `date_to` | `string` | no | Inclusive end date (YYYY-MM-DD). |
+| `posted_only` | `boolean` | no | Restrict to posted documents. |
+
 ## `ledger.automation.search(query?, tags?, kind?)`
 
 Search documented recipe/node titles, aliases and tags. Query terms use AND matching, tags use exact AND matching; kind is recipe or node. Returns catalog metadata.

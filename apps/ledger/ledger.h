@@ -122,6 +122,9 @@ bool ledger_script_in_executor(void);
 bool ledger_execute_document(database_t *ib, database_t *cfg, const char *operation, int document_id);
 // Execute trusted local Lua; the entire run rolls back on error.
 bool ledger_script_run(const char *path, bool writable, char *error, size_t error_sz);
+struct lua_State;
+// Copies the read-only preview and its media flag to the calling Lua VM.
+int ledger_script_recipe_preview(struct lua_State *target, const char *id, const char *payload);
 bool ledger_script_service(const char *path, const char *request, bool writable, char *response, size_t response_sz);
 bool ledger_script_has(const char *function);
 bool ledger_script_post(const ledger_post_t *p, const char *function);

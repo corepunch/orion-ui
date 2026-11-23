@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion>
+  <databases>
+    <database name="ledger_recipes" class="db_schema_xml">
+      <table name="list" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="recipe_id" type="string" length="72" />
+        <field name="title" type="string" length="120" />
+        <field name="tags" type="string" length="180" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="recipes" title="Automation Recipes" width="760" height="665" spacing="6" padding="10">
+      <StackView name="filters" orientation="horizontal" spacing="6">
+        <TextBox name="query" placeholder="Search by task" flags="flexspace" />
+        <TextBox name="tags" placeholder="Tags, comma separated" flags="flexspace" />
+        <Button name="search" text="Search" action="search" flags="BUTTON_DEFAULT" />
+      </StackView>
+      <Label name="count" />
+      <TableView name="recipes" source="ledger_recipes.list" action="choose" flags="vscroll" height="160">
+        <Column field="title" title="Recipe" width="218" />
+        <Column field="tags" title="Tags" width="0" />
+      </TableView>
+      <StackView name="selection" orientation="horizontal" spacing="6">
+        <Button name="choose" text="Select Recipe" action="choose" />
+        <Button name="item_labels" text="Open Item Labels" action="item_labels" />
+      </StackView>
+      <MultiEdit name="details" height="56" flags="readonly,vscroll" />
+      <StackView name="input" orientation="horizontal" spacing="6">
+        <Button name="load_data" text="Load Data File..." action="load_data" />
+        <TextBox name="key" placeholder="SKU or bank account, when needed" flags="flexspace" />
+      </StackView>
+      <Label name="parameters_label" text="Parameters (JSON)" />
+      <MultiEdit name="params" height="94" flags="vscroll" />
+      <MultiEdit name="output" flags="readonly,vscroll,flexspace" />
+      <Label name="error" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Button name="preview" text="Preview" action="preview" />
+        <Button name="print_result" text="Save Print Result" action="print_result" />
+        <Space name="actions_gap" />
+        <Button name="cancel" text="Close" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

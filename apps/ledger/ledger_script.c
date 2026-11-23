@@ -699,6 +699,45 @@ bool ledger_script_run(const char *path, bool writable, char *error, size_t erro
   return ok;
 }
 
+int ledger_script_recipe_preview(lua_State *target, const char *id, const char *payload) {
+  if (!g_lua || g_lua == target || g_script_running || g_script_writable || g_script_transactions ||
+      g_post || !get_database_by_name("ib") || strlen(id) > 120 || strlen(payload) > 1048576) {
+    lua_pushnil(target);
+    lua_pushliteral(target, "The recipe preview is unavailable.");
+    return 2;
+  }
+  const int top = lua_gettop(g_lua);
+  lua_getglobal(g_lua, "ledger");
+  if (lua_istable(g_lua, -1)) lua_getfield(g_lua, -1, "automation");
+  if (lua_istable(g_lua, -1)) lua_getfield(g_lua, -1, "browser_preview");
+  if (lua_isfunction(g_lua, -1)) {
+    lua_pushstring(g_lua, id);
+    lua_pushstring(g_lua, payload);
+    g_script_running = true;
+    int status = lua_pcall(g_lua, 2, 2, 0);
+    g_script_running = false;
+    if (status == LUA_OK && lua_isstring(g_lua, -2) && lua_isboolean(g_lua, -1)) {
+      size_t length;
+      const char *result = lua_tolstring(g_lua, -2, &length);
+      if (length <= 8 * 1024 * 1024) {
+        lua_pushlstring(target, result, length);
+        lua_pushboolean(target, lua_toboolean(g_lua, -1));
+        lua_settop(g_lua, top);
+        return 2;
+      }
+    } else if (status != LUA_OK && lua_isstring(g_lua, -1)) {
+      lua_pushnil(target);
+      lua_pushstring(target, lua_tostring(g_lua, -1));
+      lua_settop(g_lua, top);
+      return 2;
+    }
+  }
+  lua_settop(g_lua, top);
+  lua_pushnil(target);
+  lua_pushliteral(target, "The recipe did not produce a valid preview.");
+  return 2;
+}
+
 bool ledger_script_service(const char *path, const char *request, bool writable, char *response, size_t response_sz) {
   if (!g_lua || g_script_running || g_post || !response || !response_sz) return false;
   database_t *db = get_database_by_name("ib");

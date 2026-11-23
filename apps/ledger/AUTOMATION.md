@@ -1,9 +1,10 @@
 # Local Lua automation
 
-Ledger ships 12 recipes and 16 typed node operations, implemented entirely in
+Ledger ships 18 recipes and 16 typed node operations, implemented entirely in
 Lua. Both use the same public Ledger API; C supplies reflection, validation and
-transactional datasource operations. There is no 1C adapter, online service or
-visual graph editor in this version. The graph is an executable Lua data value
+transactional datasource operations. The recipe browser is local and is not
+a remote-service endpoint or a visual graph editor. The separate
+[1C OData connector](docs/unf-odata.md) remains an explicit CLI action. The graph is an executable Lua data value
 with typed edges, ready for a future editor.
 
 ## Standard and custom plugins
@@ -30,6 +31,34 @@ table; registration mappings and public Lua argument wrappers are generated.
 There is no dependency resolver, plugin manager UI or live unloading yet. The
 [architecture plan](docs/script-first-architecture.md) describes moving the
 remaining built-in accounting and UI to standard plugins.
+
+## Find and run in Ledger
+
+Open **File → Automation Recipes**. Search by task or type a comma-separated
+list of tags; every term and every tag must match. For example:
+
+| Search or tags | Result |
+| --- | --- |
+| `Дубли`, tag `контрагенты` | Find Duplicate Counterparties; preview candidates and review them manually. |
+| `склад, этикетки` as tags | Internal item labels and order packing labels. Item labels also open the dedicated **Items → Labels** dialog. |
+| `склад, сборка` as tags | Group orders by SKU, variant and barcode; print picks and packing labels from local order JSON. |
+| `документы, номенклатура` as tags | [Trace an item across documents](docs/item-document-trace.md) and show all lines of each match. |
+| `банк, выписка` as tags | Review a UTF-8 ClientBank export for the chosen account. No online banking or settlement is performed. |
+
+Select a result to see its input fields and starter parameters. Use **Load Data
+File** for a supported local CSV or JSON export, or a UTF-8 ClientBank text file.
+Use the simple SKU/account field for item tracing and bank review; advanced
+options accept JSON data, never executable Lua. A selected file is read locally,
+up to 1 MiB, and not transmitted. Legacy bank encodings remain available
+through the separate [statement preview tool](docs/bank-statement-preview.md).
+
+**Preview** never applies changes. Duplicate checks and reporting need no write,
+and imports/price changes show plans rather than applying them. Save a printable
+result explicitly to a selected file; open it in a browser to print. Editing
+input invalidates the previous printable result on save. Desktop previews
+truncate large reports; full scripted results remain available via the trusted
+local API described below. The desktop catalog is the shipped library, not a
+third-party code downloader or arbitrary Lua runner.
 
 ## Run
 

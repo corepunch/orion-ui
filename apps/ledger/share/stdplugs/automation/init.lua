@@ -31,26 +31,9 @@ function I.register(descriptor, node_impl, recipe_impl)
   A.plugins[descriptor.id] = descriptor.version
 end
 
+local Search = assert(loadfile(directory .. "search.lua"))()
 function I.search(query, tags, kind)
-  local out, wanted = {}, {}
-  for _, tag in ipairs(tags or {}) do wanted[tag] = true end
-  query = N.normalized(query or "")
-  for _, collection in ipairs({{name = "recipe", rows = A.recipes}, {name = "node", rows = A.nodes}}) do
-    if not kind or kind == collection.name then
-      for _, item in ipairs(collection.rows) do
-        local haystack = N.normalized(item.title .. " " .. item.description .. " " .. table.concat(item.tags, " ") .. " " .. table.concat(item.aliases, " "))
-        local matches = true
-        for word in query:gmatch("%S+") do if not haystack:find(word, 1, true) then matches = false end end
-        for tag in pairs(wanted) do
-          local found = false
-          for _, existing in ipairs(item.tags) do if existing == tag then found = true end end
-          if not found then matches = false end
-        end
-        if matches then out[#out + 1] = item end
-      end
-    end
-  end
-  return out
+  return Search.find(A, query, tags, kind)
 end
 
 local function validate_params(spec, params)
@@ -140,6 +123,14 @@ R.report_stock = function(p) return N.stock(ledger.fetch("ib", "entries"), p) en
 R.report_settlements = function(p) return N.settlements(ledger.fetch("ib", "entries"), p) end
 R.check_month = function(p) return N.month(ledger.fetch("ib", "documents"), p) end
 
+local W = assert(loadfile(directory .. "workflows.lua"))()
+R.print_item_labels = W.print_item_labels
+R.print_product_card = W.print_product_card
+R.report_pick_orders = W.report_pick_orders
+R.print_order_labels = W.print_order_labels
+R.preview_bank_statement = W.preview_bank_statement
+R.report_item_documents = assert(loadfile(directory .. "document_lines.lua"))()
+
 function I.preview(id, params)
   local run = assert(recipe_handlers[id], "unknown recipe: " .. tostring(id))
   params = params or {}
@@ -179,4 +170,54 @@ function I.apply(plan)
 end
 catalog.bind_api(I, A)
 A.register(catalog, N, R)
+
+-- Narrow built-in bridge used only by the desktop recipe browser. The
+-- selected ID must occur in the shipped descriptor; UI input is JSON data,
+-- never an executable chunk, module path, transport or filesystem path.
+local shipped = {}
+for _, item in ipairs(catalog.recipes) do shipped[item.id] = item end
+function A.browser_preview(id, payload)
+  local spec = assert(shipped[id], "unsupported desktop recipe")
+  local json = W.json()
+  local params = json.decode(payload)
+  assert(type(params) == "table" and not getmetatable(params), "recipe parameters must be a JSON object")
+  validate_params(spec, params)
+  local result = R[spec.impl](params)
+  if type(result) == "table" and result.format == "html" then
+    assert(#result.document <= 8 * 1024 * 1024, "printable result too large")
+    return result.document, true
+  end
+  -- Keep the generic text preview small. Counts stay visible; the trusted
+  -- public Lua API can fetch the complete result when explicitly requested.
+  local lines = {}
+  local function push(line)
+    if #lines < 100 then lines[#lines+1] = line end
+  end
+  if type(result) == "table" and #result > 0 then
+    push(tostring(#result) .. " rows")
+    for i = 1, math.min(#result, 90) do push(json.encode(result[i])) end
+    if #result > 90 then push("Preview limited to 90 rows.") end
+  elseif type(result) == "table" then
+    local keys = {}
+    for key in pairs(result) do keys[#keys+1] = key end
+    table.sort(keys)
+    for _, key in ipairs(keys) do
+      local value = result[key]
+      if type(value) == "table" and #value > 0 then
+        push(key .. ": " .. #value)
+        for i = 1, math.min(#value, 20) do push(json.encode(value[i])) end
+      elseif value ~= nil then push(key .. ": " .. json.encode(value)) end
+    end
+    if #lines == 0 then push("No matches.") end
+  else push(json.encode(result)) end
+  local output = table.concat(lines,"\n")
+  if #output > 49152 then
+    local end_at = 49152
+    while output:byte(end_at+1) and output:byte(end_at+1) >= 128 and output:byte(end_at+1) < 192 do
+      end_at = end_at - 1
+    end
+    output = output:sub(1,end_at) .. "\nPreview truncated."
+  end
+  return output, false
+end
 return A

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="de">
+  <string source="Automation Recipes" where="browser">Automationsrezepte</string>
+  <string source="Search by task" where="browser">Nach Aufgabe suchen</string>
+  <string source="Tags, comma separated" where="browser">Tags, durch Kommas getrennt</string>
+  <string source="Search" where="browser">Suchen</string>
+  <string source="Recipe" where="browser">Rezept</string>
+  <string source="Tags" where="browser">Tags</string>
+  <string source="Select Recipe" where="browser">Rezept auswählen</string>
+  <string source="Open Item Labels" where="browser">Artikeletiketten öffnen</string>
+  <string source="Load Data File..." where="browser">Datendatei laden...</string>
+  <string source="SKU or bank account, when needed" where="browser">Artikelnummer oder Bankkonto, falls nötig</string>
+  <string source="Parameters (JSON)" where="browser">Parameter (JSON)</string>
+  <string source="Preview" where="browser">Vorschau</string>
+  <string source="Save Print Result" where="browser">Druckergebnis speichern</string>
+  <string source="Close" where="browser">Schließen</string>
+  <string source="Recipes found: %d" where="browser">Rezepte gefunden: %d</string>
+  <string source="Select a recipe first." where="browser">Wählen Sie zuerst ein Rezept.</string>
+  <string source="Print preview ready. Save the printable result to open or print it." where="browser">Druckvorschau fertig. Speichern Sie das Ergebnis zum Öffnen oder Drucken.</string>
+  <string source="Preview the current parameters before saving." where="browser">Starten Sie vor dem Speichern die Vorschau für die aktuellen Parameter.</string>
+  <string source="Saved. Open the file to view or print the result." where="browser">Gespeichert. Öffnen Sie die Datei zum Anzeigen oder Drucken.</string>
+</strings>

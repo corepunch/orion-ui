@@ -226,6 +226,52 @@
     <param name="date_from" type="string" optional="true">Inclusive ISO start date (not used for stock).</param>
     <param name="date_to" type="string" optional="true">Inclusive ISO cutoff date.</param>
   </recipe>
+  <recipe id="print.item_labels" title="Print item labels" impl="print_item_labels">
+    <description>Render internal Code 128 labels for a catalog item or explicit label lines. Returns printable HTML; does not write a file.</description>
+    <alias>Печать этикеток со штрихкодом из номенклатуры</alias>
+    <alias>Artikeletiketten drucken</alias>
+    <tag>склад</tag><tag>печать</tag><tag>этикетки</tag><tag>товары</tag><tag>barcode</tag><tag>labels</tag>
+    <param name="item_id" type="integer" optional="true">Item ID; use this or rows.</param>
+    <param name="copies" type="integer" optional="true">Copies of a selected item; defaults to one.</param>
+    <param name="rows" type="table" optional="true">Explicit label lines with name, sku, copies and optional barcode.</param>
+    <param name="options" type="table" optional="true">A4, Letter or roll layout options.</param>
+  </recipe>
+  <recipe id="print.product_card" title="Print product card" impl="print_product_card">
+    <description>Prepare a printable product card from a catalog item and explicit details. For a local photo use the product-card tool.</description>
+    <alias>Карточка товара размер вариант остаток</alias><alias>Artikelkarte drucken</alias>
+    <tag>товары</tag><tag>печать</tag><tag>карточка</tag><tag>catalog</tag>
+    <param name="item_id" type="integer" optional="false">Existing Ledger item ID.</param>
+    <param name="details" type="table" optional="true">Optional size, variant, language and dated quantity data.</param>
+  </recipe>
+  <recipe id="report.pick_orders" title="Group order picking" impl="report_pick_orders">
+    <description>Group supplied local order rows by exact SKU, variant and barcode. Preserve order quantities and render a pick list.</description>
+    <alias>Сгруппировать товары по заказам лист сборки</alias><alias>Kommissionierliste nach Artikel und Variante</alias>
+    <tag>склад</tag><tag>сборка</tag><tag>заказы</tag><tag>варианты</tag><tag>fulfillment</tag>
+    <param name="orders" type="table" optional="false">Local object with an orders array; see the fulfillment sample.</param>
+  </recipe>
+  <recipe id="print.order_labels" title="Print internal packing labels" impl="print_order_labels">
+    <description>Render one internal packing label per supplied order. Not carrier or order QR labels.</description>
+    <alias>Этикетки заказов упаковка</alias><alias>Interne Packetiketten</alias>
+    <tag>склад</tag><tag>сборка</tag><tag>заказы</tag><tag>этикетки</tag><tag>печать</tag><tag>fulfillment</tag>
+    <param name="orders" type="table" optional="false">Local object with an orders array; see the fulfillment sample.</param>
+  </recipe>
+  <recipe id="preview.bank_statement" title="Preview bank statement" impl="preview_bank_statement">
+    <description>Read a local 1C ClientBank statement and show movements, reconciliation warnings and source data. Does not post or connect to a bank.</description>
+    <alias>Выписка банка Клиент Банк проверка</alias><alias>Kontoauszug prüfen</alias>
+    <tag>проверка</tag><tag>банк</tag><tag>выписка</tag><tag>ClientBank</tag>
+    <param name="statement" type="string" optional="false">Local ClientBank exchange text. Use the CLI for raw legacy encodings.</param>
+    <param name="account" type="string" optional="false">Selected account number copied from the statement.</param>
+  </recipe>
+  <recipe id="report.item_documents" title="Find documents containing an item" impl="report_item_documents">
+    <description>Select documents by item and show all product lines, not just the matching rows. Drafts are included unless restricted explicitly.</description>
+    <alias>Найти документы с товаром и показать все строки</alias><alias>Belege zu einem Artikel mit allen Zeilen</alias>
+    <tag>документы</tag><tag>номенклатура</tag><tag>товары</tag><tag>documents</tag><tag>items</tag><tag>traceability</tag><tag>Belege</tag><tag>Artikel</tag>
+    <param name="item_id" type="integer" optional="true">Item ID; provide either this or sku.</param>
+    <param name="sku" type="string" optional="true">Exact SKU; ambiguous matches are rejected.</param>
+    <param name="date_from" type="string" optional="true">Inclusive start date (YYYY-MM-DD).</param>
+    <param name="date_to" type="string" optional="true">Inclusive end date (YYYY-MM-DD).</param>
+    <param name="posted_only" type="boolean" optional="true">Restrict to posted documents.</param>
+  </recipe>
   <api module="ledger.automation">
     <function name="search" returns="table">
       <description>Search documented recipe/node titles, aliases and tags. Query terms use AND matching, tags use exact AND matching; kind is recipe or node. Returns catalog metadata.</description>
