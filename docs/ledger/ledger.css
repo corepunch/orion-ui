@@ -234,6 +234,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 .final p { color: var(--navy-muted); max-width: 60ch; }
 .final pre.code { background: rgb(0 0 0 / 0.25); border-color: rgb(255 255 255 / 0.14); color: var(--navy-ink); width: 100%; max-width: 760px; }
 .final .code .c { color: var(--navy-muted); }
+.final .btn { min-height: 44px; padding-block: 9px; line-height: 1.3; }
+.final .btn svg { flex: none; }
+.final-links { display: flex; flex-wrap: wrap; gap: 2px 20px; color: var(--navy-muted); font-size: 0.9rem; }
+.final-links a { padding-block: 5px; }
+.final-links a:hover, .final-links a:focus-visible { color: var(--navy-ink); }
 footer { background: var(--navy); color: var(--navy-muted); border-top: 1px solid rgb(255 255 255 / 0.1); font-size: 0.85rem; }
 footer .wrap { padding-block: 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
