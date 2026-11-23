@@ -490,7 +490,7 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
     // OData catalogs lack Ledger-specific price, VAT, address, etc. Never
     // replace an existing row with the sparse imported record or adopt it.
     if (seen || key) {
-      note(st, "%s: %s (%s)", cat->type, ui_tr("Existing catalog record left unchanged."), guid);
+      note(st, "%s: existing catalog record %s left unchanged", cat->type, guid);
       tally(st, cat->type, 0, 0, 1);
       return;
     }
