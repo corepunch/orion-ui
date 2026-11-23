@@ -71,7 +71,7 @@ assert(not pcall(bank.preview, good:gsub("Сумма=123%.45","Сумма=123.45
 -- account's own booking date rather than the other side or the document date.
 local transfer = doc("04", "03.10.2026", a, b, "50.25", "04.10.2026", "05.10.2026")
 local transfer_header = header:match("^(.-)СекцияРасчСчет")
-local function balance(account, incoming, outgoing, closing)
+local function balance(account, total_in, total_out, closing)
   return ([[СекцияРасчСчет
 РасчСчет=%s
 ДатаНачала=01.10.2026
@@ -80,7 +80,7 @@ local function balance(account, incoming, outgoing, closing)
 ВсегоСписано=%s
 КонечныйОстаток=%s
 КонецРасчСчет
-]]):format(account, incoming, outgoing, closing)
+]]):format(account, total_in, total_out, closing)
 end
 local transfer_file = transfer_header .. balance(a, "0", "50.25", "49.75")
   .. balance(b, "50.25", "0", "150.25") .. transfer .. eof
