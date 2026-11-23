@@ -16,6 +16,12 @@ static window_t *help_test_control(window_t *win, const char *name) {
   return NULL;
 }
 
+static window_t *help_test_viewer(window_t *owner) {
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
+    if (win->owner == owner) return win;
+  return NULL;
+}
+
 static void test_offline_help(void) {
   TEST("help books open illustrated topics, search body text and keep navigation history");
   test_env_init();
@@ -24,9 +30,7 @@ static void test_offline_help(void) {
   window_t *owner = create_window("Owner", 0, MAKERECT(0, 0, 960, 720), NULL, help_test_owner, 0, NULL);
   const char *path = "build/share/gitclient/gitclient.ohlp";
   ASSERT_TRUE(help_open(owner, path, NULL));
-  window_t *viewer = NULL;
-  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
-    if (win->owner == owner) viewer = win;
+  window_t *viewer = help_test_viewer(owner);
   ASSERT_NOT_NULL(viewer);
   window_t *article = help_test_control(viewer, "article");
   window_t *topics = help_test_control(viewer, "topics");
@@ -70,8 +74,43 @@ static void test_offline_help(void) {
   PASS();
 }
 
+static void test_localized_help(void) {
+  TEST("help books open translated articles by stable ID and search accented text");
+  test_env_init();
+  static const struct {
+    const char *language, *book, *topic, *caption, *title, *query;
+  } editions[] = {
+    {"ru",    "build/share/ledger/ledger.ohlp",       "reports",   "Справка Ledger",     "Оборотно-сальдовая ведомость", "ДЕБЕТОВЫЙ"},
+    {"de-CH", "build/share/ledger/ledger.ohlp",       "journal",   "Ledger-Hilfe",      "Das Belegjournal prüfen",      "GELÖSCHTER"},
+    {"ru-RU", "build/share/gitclient/gitclient.ohlp", "conflicts", "Справка Git Client", "Разрешение конфликтов",       "РЕШЁННЫЙ"},
+    {"de",    "build/share/gitclient/gitclient.ohlp", "history",   "Git Client Help",   "Read history and inspect a diff", "SIDE-BY-SIDE"},
+  };
+  window_t *owner = create_window("Owner", 0, MAKERECT(0, 0, 960, 720), NULL, help_test_owner, 0, NULL);
+  for (size_t i = 0; i < ARRAY_LEN(editions); i++) {
+    ASSERT_TRUE(ui_set_language(editions[i].language));
+    ASSERT_TRUE(help_open(owner, editions[i].book, editions[i].topic));
+    window_t *viewer = help_test_viewer(owner);
+    ASSERT_NOT_NULL(viewer);
+    ASSERT_STR_EQUAL(viewer->title, editions[i].caption);
+    window_t *article = help_test_control(viewer, "article");
+    window_t *topics = help_test_control(viewer, "topics");
+    window_t *search = help_test_control(viewer, "search");
+    ASSERT(article && topics && search, "Viewer controls should exist");
+    ASSERT_STR_EQUAL(article->children->title, editions[i].title);
+    send_message(search, evTextInput, 0, (void *)editions[i].query);
+    ASSERT_EQUAL(send_message(topics, RVM_GETITEMCOUNT, 0, NULL), 1);
+    reportview_item_t item;
+    ASSERT_TRUE(send_message(topics, RVM_GETITEMDATA, 0, &item));
+    ASSERT_STR_EQUAL(item.text, editions[i].title);
+    destroy_window(viewer);
+  }
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Orion Help");
   test_offline_help();
+  test_localized_help();
   TEST_END();
 }

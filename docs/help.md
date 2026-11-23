@@ -11,6 +11,9 @@ search topic titles, keywords, article text, and screenshot captions. Use
 **Back** and **Forward** to revisit topics. With the article focused, use
 Page Up, Page Down, Home, and End to scroll it.
 
+Ledger Help is available in English, Russian, and German. Git Client Help is
+available in English and Russian. Help follows the application language.
+
 The **Tutorials** group on each app's Help tab opens guided tours on the live
 screen. The tour highlights the relevant controls and advances with **Next**.
 
@@ -37,6 +40,13 @@ each topic ID stable so an app can link directly to it. IDs and image names
 use lowercase ASCII letters, digits and hyphens. Images are stored beside the
 manifest. Blocks are plain text headings, paragraphs, or captioned screenshots.
 Text uses Orion's string catalogs when translations are available.
+
+To include translations in the book, add a manifest for each language, such as
+`book.ru.xml` or `book.de.xml`, alongside `book.xml`. Keep the topic IDs and
+order from `book.xml`, and translate the book title, topic titles, keywords,
+body text, and captions. A localized manifest can reference its own screenshots
+or share the originals. The viewer tries the exact language tag first, then its
+base language, then `book.xml`.
 
 Books may contain up to 128 topics and 64 blocks per topic. Keep each text
 block under 512 UTF-8 bytes, each screenshot under 4 MiB, and the archive under

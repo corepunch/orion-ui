@@ -1,6 +1,7 @@
 #include "help.h"
 #include "commctl.h"
 #include "form_loader.h"
+#include <orion/user/font_sdf.h>
 #include <orion/user/i18n.h>
 #include <orion/user/zip.h>
 
@@ -79,9 +80,21 @@ static bool help_read_archive(help_book_t *book, const char *path) {
   return book->zip != NULL;
 }
 
+static int help_manifest(const help_book_t *book, const char *language) {
+  char name[64];
+  snprintf(name, sizeof(name), "book.%s.xml", language);
+  int entry = help_entry(book, name);
+  const char *region = strchr(language, '-');
+  if (entry < 0 && region) {
+    snprintf(name, sizeof(name), "book.%.*s.xml", (int)(region - language), language);
+    entry = help_entry(book, name);
+  }
+  return entry >= 0 ? entry : help_entry(book, "book.xml");
+}
+
 static bool help_book_load(help_book_t *book, const char *path) {
   if (!help_read_archive(book, path)) return false;
-  int entry = help_entry(book, "book.xml");
+  int entry = help_manifest(book, ui_get_language());
   if (entry < 0) return false;
   size_t size;
   uint8_t *bytes = zip_extract_limited(book->zip, entry, HELP_XML_LIMIT, &size);
@@ -111,8 +124,27 @@ static bool help_book_load(help_book_t *book, const char *path) {
   return book->count > 0;
 }
 
+// Fold ASCII, Latin-1 and Russian case independently of the process locale.
+static uint32_t help_fold(uint32_t ch) {
+  if ((ch >= 'A' && ch <= 'Z') || (ch >= 0x00c0 && ch <= 0x00de && ch != 0x00d7) ||
+      (ch >= 0x0410 && ch <= 0x042f)) return ch + 0x20;
+  if (ch == 0x0401) return 0x0451;  // Ё
+  if (ch == 0x1e9e) return 0x00df;  // ẞ
+  return ch;
+}
+
 static bool help_contains(const char *text, const char *query) {
-  return xmlStrcasestr(BAD_CAST text, BAD_CAST query) != NULL;
+  while (*text) {
+    const char *value = text, *needle = query;
+    font_sdf_utf8_next(&text);
+    while (*needle && *value) {
+      uint32_t a = help_fold(font_sdf_utf8_next(&value));
+      uint32_t b = help_fold(font_sdf_utf8_next(&needle));
+      if (a != b) break;
+      if (!*needle) return true;
+    }
+  }
+  return !*query;
 }
 
 static bool help_matches(xmlNodePtr topic, const char *query) {

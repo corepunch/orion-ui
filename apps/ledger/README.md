@@ -19,7 +19,8 @@ build/bin/ledger --config de-2026 --lang de --data /tmp/books
 python3 -I apps/ledger/tools/check_configuration.py --all apps/ledger/share/configurations
 ```
 
-**Help → Help Topics** (F1) opens the illustrated Ledger guide. The Help tab
+**Help → Help Topics** (F1) opens the illustrated Ledger guide in English,
+Russian, or German according to the app language. The Help tab
 also offers **Review the Journal** and **Read the Trial Balance** as guided
 tutorials. See [Orion Help](../../docs/help.md) for the book format.
 

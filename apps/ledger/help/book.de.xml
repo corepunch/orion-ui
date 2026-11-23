@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help version="1" title="Ledger-Hilfe">
+  <topic id="start" title="Erste Schritte mit Ledger" keywords="Startseite Navigation Unternehmen Firma Demodaten Datenbestand Konfiguration">
+    <p>Ledger erfasst Geschäftsvorfälle als Belege. Beim Buchen entstehen Soll- und Habenbuchungen. Über die Seitenleiste gelangen Sie zum Journal, zu den Stammdaten, zu den Konten und zu den Auswertungen.</p>
+    <image src="home-de.jpg" caption="Die Startseite mit den deutschen Demodaten. Über „Zu erledigen“ und „Letzte Belege“ öffnen Sie die zugehörigen Einträge." />
+    <heading>Den geöffneten Datenbestand prüfen</heading>
+    <p>Der Firmenname steht unter dem Seitentitel. Unter „Datei“ → „Firmendaten“ bearbeiten Sie die Angaben zur Firma. Über „Konfiguration wählen“ legen Sie Kontenrahmen und Belegarten für den nächsten Start fest. Jede Konfiguration hat einen eigenen Datenbestand.</p>
+    <heading>Ein Lernprogramm ausprobieren</heading>
+    <p>Wählen Sie unter „Hilfe“ das Lernprogramm „Belegjournal prüfen“ oder „Summen- und Saldenliste lesen“. Mit „Weiter“ wechseln Sie zum nächsten Schritt. Ledger hebt den passenden Bereich im Fenster hervor.</p>
+  </topic>
+
+  <topic id="journal" title="Das Belegjournal prüfen" keywords="gebucht Entwurf Datum Buchung Soll Haben Buchungsverlauf">
+    <p>Wählen Sie in der Seitenleiste „Journal“. Jede Zeile steht für einen Beleg. Sie finden ihn anhand von Datum, Art, Nummer und Geschäftspartner. Das Siegel neben dem Datum kennzeichnet einen gebuchten Beleg, das gestrichelte Blatt einen Entwurf.</p>
+    <image src="journal-de.jpg" caption="Wählen Sie einen Beleg in der oberen Tabelle aus. Darunter erscheinen seine Details." />
+    <heading>Die Belegdetails ansehen</heading>
+    <p>Wählen Sie eine Zeile aus. Unter „Positionen“ sehen Sie die Artikel, unter „Buchungen“ die Soll- und Habenbuchungen. „Soll/Haben“ öffnet direkt die Buchungen. Ein Doppelklick auf die Zeile oder „Bearbeiten“ öffnet den Beleg.</p>
+    <p>Unter „Buchungsverlauf“ können Sie einen gespeicherten Stand auswählen und die damaligen Buchungen prüfen. Die Auswertung „Gesamter Buchungsverlauf“ enthält auch die gespeicherten Stände gelöschter Belege.</p>
+  </topic>
+
+  <topic id="post" title="Belege erfassen und buchen" keywords="Verkauf Einkauf Wareneingang Rechnung Quittung Entwurf speichern Artikel">
+    <p>Wählen Sie im Journal „Erstellen“ oder drücken Sie Strg+N. Wählen Sie dann die Belegart. Sie bestimmt die verfügbaren Felder, Buchungsregeln und Druckformulare.</p>
+    <image src="document-de.jpg" caption="Die Befehle stehen über den Belegdaten. Die Positionen befinden sich in der unteren Hälfte des Formulars." />
+    <heading>Belegdaten erfassen und prüfen</heading>
+    <p>Geben Sie das Datum und den Geschäftspartner an. Wählen Sie unter „Positionen“ die Schaltfläche „Hinzufügen“ und geben Sie Artikel, Menge, Preis und gegebenenfalls die Steuer an. Kontrollieren Sie vor dem Buchen die Summen und die Buchungsvorschau.</p>
+    <heading>Den Beleg speichern oder buchen</heading>
+    <p>Mit „Speichern“ legen Sie einen Entwurf ab. „Buchen“ (F9) erstellt die Buchungen und lässt das Formular geöffnet. „Buchen und schließen“ (Strg+Enter) bringt Sie zurück ins Journal. Wenn Ledger eine Buchung ablehnt, beheben Sie den angezeigten Fehler und versuchen Sie es erneut.</p>
+    <p>Wählen Sie den gebuchten Beleg im Journal und prüfen Sie mit „Soll/Haben“ die Buchungen. Unter „Drucken“ finden Sie die verfügbaren Formulare für diese Belegart.</p>
+  </topic>
+
+  <topic id="catalogs" title="Geschäftspartner und Artikel" keywords="Stammdaten Kunde Lieferant Steuernummer Produkt Dienstleistung Währung Lager">
+    <p>Unter „Geschäftspartner“ erfassen Sie Kunden und Lieferanten, die Sie in Belegen auswählen. Wählen Sie „Neuer Geschäftspartner“. Geben Sie den Firmennamen und die für Ihre Konfiguration erforderlichen Kennnummern an und speichern Sie den Eintrag.</p>
+    <p>Unter „Artikel“ erfassen Sie Produkte und Dienstleistungen für Belegpositionen. Wählen Sie „Neuer Artikel“ und hinterlegen Sie Name, Einheit und die verfügbaren Standardwerte. Prüfen Sie beim Buchen die tatsächlichen Werte auf dem Beleg.</p>
+    <p>Mit einem Doppelklick öffnen Sie einen Stammdatensatz zur Bearbeitung. Verträge und Bankkonten finden Sie unter „Geschäftspartner“, Lager unter „Artikel“.</p>
+  </topic>
+
+  <topic id="reports" title="Summen- und Saldenliste lesen" keywords="Auswertungen Kontoblatt Soll Haben Eröffnungsbilanz Anfangssaldo Schlusssaldo Umsatz Summenzeile Zeitraum">
+    <p>Öffnen Sie „Auswertungen“ und wählen Sie „Summen- und Saldenliste“. Legen Sie in den „Einstellungen“ (Strg+R) Anfangs- und Enddatum des gewünschten Zeitraums fest.</p>
+    <image src="reports-de.jpg" caption="Die Summen- und Saldenliste zeigt Anfangsbestände, Bewegungen und Schlusssalden nebeneinander." />
+    <heading>Ein einzelnes Konto prüfen</heading>
+    <p>„EB-Wert Soll“ und „EB-Wert Haben“ zeigen den Anfangsbestand. Die Verkehrszahlen zeigen die Soll- und Habenumsätze im Zeitraum. „Saldo Soll“ und „Saldo Haben“ zeigen den Schlussbestand. Vergleichen Sie die Soll- und Habenumsätze in der Zeile „Summe“.</p>
+    <p>Für eine genauere Prüfung wählen Sie in der Berichtsliste „Kontoblatt“ und legen das Konto in den Einstellungen fest. Prüfen Sie die Buchungen. Über die Belegnummer finden Sie den zugehörigen Beleg.</p>
+  </topic>
+
+  <topic id="corrections" title="Gebuchte Belege korrigieren" keywords="Storno stornieren Gegenbuchung Rückbuchung Korrektur Prüfung gesperrte Periode">
+    <p>Wählen Sie im Journal den gebuchten Beleg aus und prüfen Sie seine Buchungen. „Buchung stornieren“ entfernt die Buchungen und setzt den Beleg auf Entwurf zurück, sofern der Beleg diese Aktion unterstützt. Für geschützte Buchungen verwenden Sie „Stornieren“, sofern die Schaltfläche verfügbar ist.</p>
+    <p>Wählen Sie im Stornodialog ein Datum in einer offenen Periode und geben Sie den Grund an. Ledger erstellt einen verknüpften Vorgang mit Gegenbuchungen. Prüfen Sie im Journal die neue Zeile und ihre Buchungen.</p>
+    <p>Unter „Buchungsverlauf“ sehen Sie frühere gespeicherte Stände. Die ursprüngliche Belegnummer auf dem Storno verweist auf den korrigierten Beleg.</p>
+  </topic>
+
+  <topic id="periods" title="Monats- und Periodenabschluss" keywords="Monatsende Buchungsperiode sperren schützen Abschreibung Neubewertung Historie">
+    <heading>Den Monat vorbereiten</heading>
+    <p>Unter „Startseite“ → „Zu erledigen“ sehen Sie Entwürfe und weitere Prüfergebnisse. Prüfen Sie den Zeitraum in den Auswertungen und klären Sie Buchungen, die berichtigt werden müssen.</p>
+    <heading>Den Monatsabschluss buchen</heading>
+    <p>Öffnen Sie „Monatsabschluss“ (Strg+E). Bestätigen Sie das Monatsenddatum, prüfen Sie die von der aktiven Konfiguration vorgeschlagenen Buchungen und buchen Sie den Abschlussbeleg. Prüfen Sie anschließend die Salden in den Auswertungen.</p>
+    <heading>Eine abgeschlossene Periode schützen</heading>
+    <p>„Buchungsperiode abschließen“ setzt das Datum herauf, bis zu dem Ledger Buchungen vor Änderungen schützt. Prüfen Sie das Datum vor dem Bestätigen. Ledger speichert den Abschluss. Unter „Auswertungen“ → „Periodenabschlüsse“ sehen Sie die bisherigen Abschlüsse.</p>
+  </topic>
+</help>

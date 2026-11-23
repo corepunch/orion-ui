@@ -64,6 +64,11 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_gc->selected_file   = -1;
   gc_recent_load();
 
+#ifndef BUILD_AS_GEM
+  char language[32];
+  if (ui_system_language(language, sizeof(language))) ui_set_language(language);
+#endif
+
   // Register app-specific icons so they are found by sysicon_resolve().
   {
     char icons_path[4096];

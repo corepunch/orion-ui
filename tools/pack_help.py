@@ -15,20 +15,20 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def pack(source, output):
+def load_manifest(source):
     xml = source.read_bytes()
-    require(len(xml) <= 512 * 1024, "book.xml exceeds 512 KiB")
+    require(len(xml) <= 512 * 1024, f"{source.name} exceeds 512 KiB")
     require(b"<!DOCTYPE" not in xml, "DTD declarations are unsupported")
     root = ET.fromstring(xml)
     require(root.tag == "help" and root.get("version") == "1" and root.get("title"),
             'expected a titled <help version="1"> book')
     require(1 <= len(root) <= 128, "a book needs 1 to 128 topics")
-    images, ids = {}, set()
+    images, ids = set(), []
     for topic in root:
         ident = topic.get("id", "")
         require(topic.tag == "topic" and re.fullmatch(r"[a-z0-9][a-z0-9-]*", ident)
                 and ident not in ids and topic.get("title"), f"invalid topic {ident!r}")
-        ids.add(ident)
+        ids.append(ident)
         require(1 <= len(topic) <= 64, f"{ident} needs 1 to 64 content blocks")
         for block in topic:
             require(not len(block), f"{ident}: nested markup is unsupported")
@@ -40,18 +40,34 @@ def pack(source, output):
             require(block.tag == "image" and block.get("caption") and
                     re.fullmatch(r"[a-z0-9][a-z0-9-]*\.(jpg|png)", name),
                     f"{ident}: invalid content block or image name {name!r}")
-            if name not in images:
-                path = source.parent / name
-                require(0 < path.stat().st_size <= 4 * 1024 * 1024, f"{name} exceeds 4 MiB")
-                images[name] = path.read_bytes()
+            images.add(name)
+    return xml, ids, images
+
+
+def pack(source, output):
+    xml, ids, names = load_manifest(source)
+    manifests = {"book.xml": xml}
+    for translation in sorted(source.parent.glob("book.*.xml")):
+        require(re.fullmatch(r"book\.[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*\.xml", translation.name),
+                f"invalid localized manifest name {translation.name!r}")
+        localized, localized_ids, localized_names = load_manifest(translation)
+        require(localized_ids == ids, f"{translation.name}: topic IDs and order must match book.xml")
+        manifests[translation.name] = localized
+        names.update(localized_names)
+    images = {}
+    for name in sorted(names):
+        path = source.parent / name
+        require(0 < path.stat().st_size <= 4 * 1024 * 1024, f"{name}: image size must be between 1 byte and 4 MiB")
+        images[name] = path.read_bytes()
 
     with tempfile.NamedTemporaryFile(dir=output.parent, suffix=".ohlp.tmp", delete=False) as handle:
         tmp = Path(handle.name)
     try:
         with zipfile.ZipFile(tmp, "w", allowZip64=False) as archive:
-            archive.writestr(zipfile.ZipInfo("book.xml"), xml, zipfile.ZIP_DEFLATED)
-            for name in sorted(images):
-                archive.writestr(zipfile.ZipInfo(name), images[name])
+            for name, manifest in manifests.items():
+                archive.writestr(zipfile.ZipInfo(name), manifest, zipfile.ZIP_DEFLATED)
+            for name, image in images.items():
+                archive.writestr(zipfile.ZipInfo(name), image)
         require(tmp.stat().st_size <= 16 * 1024 * 1024, "book exceeds 16 MiB")
         tmp.chmod(0o644)
         tmp.replace(output)
