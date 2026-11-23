@@ -25,13 +25,26 @@ local function required_text(value, max, where)
   return value
 end
 
+local function pick_order(a, b)
+  if a.sku ~= b.sku then return a.sku < b.sku end
+  return (a.variant or "") < (b.variant or "")
+end
+
+-- Empty strings are invalid variants, so "" is an unambiguous key for
+-- legacy lines. Separate tables keep arbitrary SKU/variant strings distinct.
+local function get_pick(index, sku, variant)
+  local variants = index[sku]
+  if not variants then variants = {}; index[sku] = variants end
+  return variants, variant or ""
+end
+
 function M.plan(input, json)
   local array_mt = json and getmetatable(json.array())
   fields(input, {orders=true}, "batch")
   array(input.orders, MAX_ORDERS, array_mt, "orders")
   local orders, picks, seen_orders, by_sku, line_count = {}, {}, {}, {}, 0
   local order_fields = {id=true, recipient=true, status=true, selected=true, lines=true}
-  local line_fields = {sku=true, quantity=true}
+  local line_fields = {sku=true, variant=true, quantity=true}
 
   for _, src in ipairs(input.orders) do
     fields(src, order_fields, "order")
@@ -51,23 +64,30 @@ function M.plan(input, json)
         fields(raw, line_fields, "order line")
         local sku = required_text(raw.sku, 100, "SKU")
         assert(sku == sku:match("^%s*(.-)%s*$"), "SKU has surrounding whitespace")
+        local variant = raw.variant
+        if variant ~= nil then
+          required_text(variant, 512, "variant")
+          assert(variant == variant:match("^%s*(.-)%s*$"), "variant has surrounding whitespace")
+        end
         local qty = raw.quantity
         assert(math.type(qty) == "integer" and qty > 0 and qty <= MAX_QUANTITY, "invalid pick quantity")
-        local line = selected_lines[sku]
+        local variants, key = get_pick(selected_lines, sku, variant)
+        local line = variants[key]
         if not line then
-          line = {sku=sku, quantity=0}
-          selected_lines[sku] = line
+          line = {sku=sku, variant=variant, quantity=0}
+          variants[key] = line
           order.lines[#order.lines + 1] = line
         end
         line.quantity = line.quantity + qty
       end
-      table.sort(order.lines, function(a, b) return a.sku < b.sku end)
+      table.sort(order.lines, pick_order)
       orders[#orders + 1] = order
       for _, line in ipairs(order.lines) do
-        local pick = by_sku[line.sku]
+        local variants, key = get_pick(by_sku, line.sku, line.variant)
+        local pick = variants[key]
         if not pick then
-          pick = {sku=line.sku, quantity=0, orders={}}
-          by_sku[line.sku] = pick
+          pick = {sku=line.sku, variant=line.variant, quantity=0, orders={}}
+          variants[key] = pick
           picks[#picks + 1] = pick
         end
         pick.quantity = pick.quantity + line.quantity
@@ -77,7 +97,7 @@ function M.plan(input, json)
   end
   assert(#orders > 0, "no selected open orders")
   table.sort(orders, function(a, b) return a.id < b.id end)
-  table.sort(picks, function(a, b) return a.sku < b.sku end)
+  table.sort(picks, pick_order)
   for _, pick in ipairs(picks) do table.sort(pick.orders, function(a, b) return a.id < b.id end) end
   return {orders=orders, picks=picks}
 end
@@ -95,6 +115,7 @@ h2 { font-size:1.1rem; margin:0; }
 table { width:100%; border-collapse:collapse; margin:.75rem 0; }
 th, td { border-bottom:1px solid #aaa; padding:.3rem; text-align:left; overflow-wrap:anywhere; }
 thead { display:table-header-group; }
+.variant { white-space:pre-wrap; }
 tr, article { break-inside:avoid; }
 article { border:1px solid #555; margin:.75rem 0; padding:.75rem; overflow-wrap:anywhere; }
 small { color:#333; }
@@ -104,15 +125,15 @@ small { color:#333; }
 end
 
 function M.pick_list(plan)
-  local out = {'<h1>Batch pick list</h1>', '<p>Pick each SKU once, then split quantities into the listed orders.</p>',
-    '<table><thead><tr><th>Picked</th><th>SKU</th><th>Total</th><th>Split by order ID</th></tr></thead><tbody>'}
+  local out = {'<h1>Batch pick list</h1>', '<p>Pick each SKU and variant together, then split quantities into the listed orders.</p>',
+    '<table><thead><tr><th>Picked</th><th>SKU</th><th>Variant</th><th>Total</th><th>Split by order ID</th></tr></thead><tbody>'}
   for _, pick in ipairs(plan.picks) do
     local splits = {}
     for _, part in ipairs(pick.orders) do
       splits[#splits + 1] = ("%s × %d"):format(escape(part.id), part.quantity)
     end
-    out[#out + 1] = ('<tr><td><input type="checkbox" aria-label="Mark picked"></td><th scope="row">%s</th><td>%d</td><td>%s</td></tr>')
-      :format(escape(pick.sku), pick.quantity, table.concat(splits, "<br>"))
+    out[#out + 1] = ('<tr><td><input type="checkbox" aria-label="Mark picked"></td><th scope="row">%s</th><td class="variant">%s</td><td>%d</td><td>%s</td></tr>')
+      :format(escape(pick.sku), escape(pick.variant or "Not specified"), pick.quantity, table.concat(splits, "<br>"))
   end
   out[#out + 1] = "</tbody></table>"
   return document("Batch pick list", out)
@@ -124,9 +145,10 @@ function M.order_labels(plan)
   for _, order in ipairs(plan.orders) do
     out[#out + 1] = ('<article><small>%s</small><h2>Order %s</h2><p>Recipient: %s</p>')
       :format(notice, escape(order.id), escape(order.recipient))
-    out[#out + 1] = '<table><thead><tr><th>SKU</th><th>Quantity</th></tr></thead><tbody>'
+    out[#out + 1] = '<table><thead><tr><th>SKU</th><th>Variant</th><th>Quantity</th></tr></thead><tbody>'
     for _, line in ipairs(order.lines) do
-      out[#out + 1] = ('<tr><th scope="row">%s</th><td>%d</td></tr>'):format(escape(line.sku), line.quantity)
+      out[#out + 1] = ('<tr><th scope="row">%s</th><td class="variant">%s</td><td>%d</td></tr>')
+        :format(escape(line.sku), escape(line.variant or "Not specified"), line.quantity)
     end
     out[#out + 1] = '</tbody></table></article>'
   end

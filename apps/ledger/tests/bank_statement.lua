@@ -67,6 +67,32 @@ assert(not pcall(bank.preview, header .. incoming .. outgoing, a))
 assert(not pcall(bank.preview, good .. outgoing, a))
 assert(not pcall(bank.preview, good:gsub("Сумма=123%.45","Сумма=123.45\nСумма=999"), a))
 
+-- One internal transfer appears once for each selected account, using that
+-- account's own booking date rather than the other side or the document date.
+local transfer = doc("04", "03.10.2026", a, b, "50.25", "04.10.2026", "05.10.2026")
+local transfer_header = header:match("^(.-)СекцияРасчСчет")
+local function balance(account, incoming, outgoing, closing)
+  return ([[СекцияРасчСчет
+РасчСчет=%s
+ДатаНачала=01.10.2026
+НачальныйОстаток=100
+ВсегоПоступило=%s
+ВсегоСписано=%s
+КонечныйОстаток=%s
+КонецРасчСчет
+]]):format(account, incoming, outgoing, closing)
+end
+local transfer_file = transfer_header .. balance(a, "0", "50.25", "49.75")
+  .. balance(b, "50.25", "0", "150.25") .. transfer .. eof
+local source = bank.preview(transfer_file, a)
+local target = bank.preview(transfer_file, b)
+assert(#source.rows == 1 and #source.issues == 0 and source.rows[1].direction == "outgoing")
+assert(source.rows[1].booking_date == "2026-10-04")
+assert(source.outgoing_minor == 5025 and source.incoming_minor == 0)
+assert(#target.rows == 1 and #target.issues == 0 and target.rows[1].direction == "incoming")
+assert(target.rows[1].booking_date == "2026-10-05")
+assert(target.incoming_minor == 5025 and target.outgoing_minor == 0)
+
 -- Verify raw Cyrillic declarations and values in both legacy code pages.
 local function legacy(s, upper_start, lower_start, special)
   local out = {}

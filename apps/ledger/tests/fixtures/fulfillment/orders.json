@@ -5,14 +5,21 @@
       "recipient": "Packing recipient B",
       "status": "open",
       "selected": true,
-      "lines": [{"sku": "0007", "quantity": 2}, {"sku": "A-15", "quantity": 1}, {"sku": "0007", "quantity": 3}]
+      "lines": [{"sku": "0007", "quantity": 2}, {"sku": "A-15", "quantity": 1}, {"sku": "0007", "quantity": 3}, {"sku": "UMBRELLA", "variant": "Navy / 105 cm / straight handle", "quantity": 2}]
     },
     {
       "id": "O-101",
       "recipient": "Packing recipient A",
       "status": "open",
       "selected": true,
-      "lines": [{"sku": "0007", "quantity": 4}]
+      "lines": [{"sku": "0007", "quantity": 4}, {"sku": "UMBRELLA", "variant": "Navy / 105 cm / straight handle", "quantity": 1}]
+    },
+    {
+      "id": "O-105",
+      "recipient": "Packing recipient C",
+      "status": "open",
+      "selected": true,
+      "lines": [{"sku": "UMBRELLA", "variant": "Navy / 90 cm / curved handle", "quantity": 4}]
     },
     {"id": "O-103", "status": "closed", "selected": false},
     {"id": "O-104", "status": "open", "selected": false}

@@ -179,6 +179,35 @@ static int seed_debts(void) {
   return sale;
 }
 
+static void test_item_label_queue(void) {
+  TEST("item labels add-on: the real form queues SKU labels and rejects invalid copies");
+  ASSERT_TRUE(ledger_ui_open(SHARE));
+  db_item_t item = {.sku = "000123", .name = "Fixture label item"};
+  const db_item_t *added = (const db_item_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_ITEMS, &item);
+  ASSERT_NOT_NULL(added);
+  int count = count_rows("ib", TABLE_ITEMS);
+  char error[512] = "";
+  script_page_t *page = script_page_open(SHARE "/addons/labels/labels.orion", error, sizeof(error));
+  ASSERT(page, error);
+  ASSERT_NOT_NULL(script_page_create(page, NULL));
+  window_t *selector = script_page_control(page, "item");
+  ASSERT_NOT_NULL(selector);
+  send_message(selector, cbSetCurrentValue, added->id, NULL);
+  set_text(page, "copies", "2");
+  ASSERT_TRUE(script_page_perform(page, "add"));
+  ASSERT_EQUAL(count_rows("label_print", 0), 1);
+  ASSERT(strstr(script_page_control(page, "summary")->title, "2"), "dialog reports two labels");
+  set_text(page, "copies", "0");
+  ASSERT_FALSE(script_page_perform(page, "add"));
+  ASSERT_EQUAL(count_rows("label_print", 0), 1);
+  ASSERT_TRUE(script_page_perform(page, "clear"));
+  ASSERT_EQUAL(count_rows("label_print", 0), 0);
+  script_page_close(page);
+  ASSERT_EQUAL(count_rows("ib", TABLE_ITEMS), count);
+  ledger_ui_close();
+  PASS();
+}
+
 static void test_penalties(void) {
   TEST("penalties add-on: overdue debts by payment term, posted as one manual operation");
   const db_document_t *sale = test_document_at(seed_debts());
@@ -357,6 +386,7 @@ int main(int argc, char **argv) {
   test_env_init();
   setup();
   test_ledger_module();
+  test_item_label_queue();
   test_penalties();
   test_german_accounts();
   test_reverse_dialog();
