@@ -43,6 +43,7 @@ static const stage_table_t kKindTables[] = {
 typedef struct {
   database_t *ib, *cfg;
   ledger_stage_import_t *out;
+  bool unf_catalogs;                             // insert-only OData catalog handoff
   xmlNodePtr records;                            // <records>: the catalogs
   struct { char ref_type[96]; int kind_id; } kinds[128];  // 1C type an analytics kind holds -> Ledger kind
   int kind_count;
@@ -485,6 +486,15 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
   db_import_source_t *seen = source_find(st, guid);
   const db_table_schema_t *t = db_schema_table(st->ib->schema, cat->table_id);
   int key = seen ? seen->record_id : match_existing(st, cat, buf);
+  if (st->unf_catalogs) {
+    // OData catalogs lack Ledger-specific price, VAT, address, etc. Never
+    // replace an existing row with the sparse imported record or adopt it.
+    if (seen || key) {
+      note(st, "%s: %s (%s)", cat->type, ui_tr("Existing catalog record left unchanged."), guid);
+      tally(st, cat->type, 0, 0, 1);
+      return;
+    }
+  }
   // The national currency is not in the currencies catalog: remembered as id 0.
   if (cat->table_id == TABLE_CURRENCIES && !strcmp(((db_currency_t *)buf)->code, "643")) {
     if (!seen && !source_remember(st, cat->type, guid, cat->table, 0)) goto failed;
@@ -914,6 +924,35 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   if (!st->out->error[0]) { tally(st, type, old ? 0 : 1, old ? 1 : 0, 0); st->out->entries += moves; }
 }
 
+// The OData handoff is intentionally narrower than a full 1CD stage.
+static bool unf_catalog_stage(xmlNodePtr root) {
+  xmlNodePtr records = NULL;
+  for (xmlNodePtr n = root->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE) continue;
+    if (!is_el(n, "records") || records) return false;
+    records = n;
+  }
+  if (!records) return false;
+  for (xmlNodePtr n = records->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE) continue;
+    char type[96], guid[64], name[512];
+    attr(n, "type", type, sizeof(type));
+    attr(n, "id", guid, sizeof(guid));
+    attr(n, "description", name, sizeof(name));
+    bool item = !strcmp(type, "Справочник.Номенклатура");
+    bool counterparty = !strcmp(type, "Справочник.Контрагенты");
+    bool warehouse = !strcmp(type, "Справочник.Склады");
+    if (!is_el(n, "record") || !(item || counterparty || warehouse) || !name[0] || strlen(guid) != 36)
+      return false;
+    for (int i = 0; i < 36; ++i) {
+      char ch = guid[i];
+      if ((i == 8 || i == 13 || i == 18 || i == 23) ? ch != '-'
+          : !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f'))) return false;
+    }
+  }
+  return true;
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledger_stage_import_t *out) {
   memset(out, 0, sizeof(*out));
@@ -926,7 +965,15 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
     if (xml) xmlFreeDoc(xml);
     return false;
   }
-  stage_t st = { .ib = ib, .cfg = cfg, .out = out };
+  char source[32];
+  attr(root, "source", source, sizeof(source));
+  const bool unf_catalogs = !strcmp(source, "unf-odata");
+  if (unf_catalogs && (xml->intSubset || xml->extSubset || !unf_catalog_stage(root))) {
+    snprintf(out->error, sizeof(out->error), "%s", ui_tr("The 1C UNF stage must contain catalogs only."));
+    xmlFreeDoc(xml);
+    return false;
+  }
+  stage_t st = { .ib = ib, .cfg = cfg, .out = out, .unf_catalogs = unf_catalogs };
   if (!send_db_message(ib, dbBeginChanges, 0, NULL)) {
     snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot begin the import transaction."));
     xmlFreeDoc(xml);
@@ -942,7 +989,7 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
     attr(r, "type", type, sizeof(type));
     if (is_el(r, "record") && !strcmp(type, "Справочник.Организации")) import_organization(&st, r);
   }
-  if (!out->error[0] && !ledger_apply_extensions(ib, cfg))  // movements name the new accounts
+  if (!unf_catalogs && !out->error[0] && !ledger_apply_extensions(ib, cfg))  // movements name the new accounts
     snprintf(out->error, sizeof(out->error), "%s", ui_tr("The imported accounts could not join the configuration."));
   for (size_t i = 0; i < ARRAY_LEN(kStageCatalogs) && !out->error[0]; i++)
     for (xmlNodePtr r = st.records ? st.records->children : NULL; r && !out->error[0]; r = r->next) {

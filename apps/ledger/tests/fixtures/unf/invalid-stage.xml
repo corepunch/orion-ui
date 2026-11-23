@@ -1,0 +1,6 @@
+<stage format="orion-1cd-stage-v1" source="unf-odata">
+  <records>
+    <record type="Справочник.Склады" id="aa000000-0000-0000-0000-000000000005" description="Never imported" />
+  </records>
+  <documents />
+</stage>

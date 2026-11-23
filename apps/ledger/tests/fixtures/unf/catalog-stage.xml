@@ -1,0 +1,14 @@
+<stage format="orion-1cd-stage-v1" source="unf-odata">
+  <records>
+    <record type="Справочник.Номенклатура" id="aa000000-0000-0000-0000-000000000001" description="UNF item">
+      <v n="Артикул">00045</v>
+    </record>
+    <record type="Справочник.Контрагенты" id="aa000000-0000-0000-0000-000000000002" description="ООО Пример УНФ">
+      <v n="ИНН">0000000001</v><v n="КПП">000001001</v>
+    </record>
+    <record type="Справочник.Склады" id="aa000000-0000-0000-0000-000000000003" description="Главный склад УНФ" />
+    <record type="Справочник.Номенклатура" id="aa000000-0000-0000-0000-000000000004" description="Do not replace">
+      <v n="Артикул">UNF-LOCAL</v>
+    </record>
+  </records>
+</stage>
