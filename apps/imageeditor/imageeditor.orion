@@ -236,16 +236,19 @@
           <Control name="colors" class="SwatchGrid" size="large" />
         </Group>
         <Group label="Frame">
+          <Button command="anim.trace" icon="droplet-half" text="Onion Skin" size="large" />
           <Label name="frame" text="Frame" value="000/000" />
-          <Button command="anim.new_frame" icon="plus" text="New" tooltip="New frame" />
+          <Button command="anim.new_frame" icon="plus" text="New" />
+          <Button command="anim.duplicate_frame" icon="multiple-pages" text="Duplicate" />
         </Group>
       </Tab>
       <Tab label="Animation">
         <Group label="Frames">
           <Button command="anim.new_frame" icon="plus" text="New Frame" size="large" />
-          <Button command="anim.duplicate_frame" icon="copy" text="Duplicate" />
+          <Button command="anim.duplicate_frame" icon="multiple-pages" text="Duplicate" />
           <Button command="anim.delete_frame" icon="trash" text="Delete" />
           <Button command="anim.reuse_cel" icon="repeat" text="Repeat Cel" />
+          <Button command="anim.make_unique" icon="page-plus" text="Make Cel Unique" />
         </Group>
         <Group label="Playback">
           <Button command="anim.play" icon="play" checked-icon="phosphor-pause-fill" text="Play" size="large" />
@@ -260,16 +263,15 @@
           <Button command="anim.set_fps" icon="clock" text="Set Speed" />
           <Button command="anim.frame_duration" icon="hourglass" text="Frame Duration" />
           <Button command="anim.exposure_sheet" icon="list" text="Exposure Sheet" />
-          <Button command="anim.make_unique" icon="page-plus" text="Make Cel Unique" />
         </Group>
         <Group label="Onion Skin">
-          <Button command="anim.trace" icon="eye" text="Onion Skin" size="large" />
+          <Button command="anim.trace" icon="droplet-half" text="Onion Skin" size="large" />
           <Button command="anim.onion_skin" icon="settings" text="Settings" />
         </Group>
         <Group label="Export">
-          <Button command="anim.export_gif" icon="upload" text="GIF" />
-          <Button command="anim.export_apng" icon="upload" text="APNG" />
-          <Button command="anim.export_spritesheet" icon="view-grid" text="Sprite Sheet" />
+          <Button command="anim.export_gif" icon="media-image" text="GIF" />
+          <Button command="anim.export_apng" icon="media-image-plus" text="APNG" />
+          <Button command="anim.export_spritesheet" icon="dots-grid-3x3" text="Sprite Sheet" />
         </Group>
       </Tab>
       <Tab label="Picture">
@@ -282,8 +284,8 @@
           <Button command="select.all" icon="select-window" text="Select All" />
           <Button command="select.deselect" icon="square-dashed" text="Deselect" />
           <Button command="select.clear" icon="erase" text="Clear" />
-          <Button command="select.expand" icon="expand" text="Expand" />
-          <Button command="select.contract" icon="collapse" text="Contract" />
+          <Button command="select.expand" icon="plus-square" text="Expand" />
+          <Button command="select.contract" icon="minus-square" text="Contract" />
         </Group>
         <Group label="Image">
           <Button command="image.crop" icon="crop" text="Crop" />
@@ -296,7 +298,7 @@
         <Group label="Background">
           <Button command="layer.background_stock" icon="media-image-list" text="Choose Picture" size="large" />
           <Button command="layer.background_photo" icon="camera" text="From Photo" />
-          <Button command="layer.background_remove" icon="trash" text="Remove" />
+          <Button command="layer.background_remove" icon="xmark" text="Remove" />
           <Button command="view.show_background" icon="eye" text="Show" />
         </Group>
         <Group label="Fill Layer">
@@ -309,7 +311,7 @@
           <Button command="view.zoom_fit" icon="lucide-maximize" text="Fit" size="large" />
           <Button command="view.zoom_in" icon="zoom-in" text="Zoom In" />
           <Button command="view.zoom_out" icon="zoom-out" text="Zoom Out" />
-          <Button command="view.zoom_1x" icon="frame" text="Actual Size" />
+          <Button command="view.zoom_1x" icon="square" text="Actual Size" />
           <Button command="view.zoom_2x" text="2x" />
           <Button command="view.zoom_4x" text="4x" />
           <Button command="view.zoom_6x" text="6x" />
