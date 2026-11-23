@@ -363,7 +363,7 @@ void ledger_market_open(window_t *parent, const char *share) {
 script_page_t *ledger_market_test_open(const char *share, const char *json_module, ledger_market_request_fn request) {
   char error[1024]="";
   script_page_t *page=market_open_view(share,json_module,request,error,sizeof(error));
-  if (!page) return NULL;
+  if (!page) { fprintf(stderr,"[marketplace fixture] %s\n",error); return NULL; }
   if (!script_page_create_hook(page,NULL,market_page_hook)) { ledger_market_test_close(page); return NULL; }
   return page;
 }
