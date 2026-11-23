@@ -342,6 +342,7 @@ enum {
 #define LABEL_COLLAPSE_EMPTY    (1ull << 38)  // omit an empty Label or BUTTON_COMMANDLINK and its spacing from auto-layout
 #define SPRITE_BUTTON_DOUBLECLICK (1ull << 39) // send btnDoubleClicked instead of a second btnClicked
 #define BUTTON_COMMANDLINK     (1ull << 40)  // ≈ BS_COMMANDLINK: flat, bulleted, left-aligned choice (balloon label)
+#define TEXTEDIT_PASSWORD     (1ull << 42)  // TextBox only: display a mask; expose no generic text
 #define WINDOW_DRAWS_DISABLED  (1ull << 41)  // window procedure paints its own disabled state
 #define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 #define WINDOW_NOFOCUS         (1ull << 36)  // ≈ WS_EX_NOACTIVATE: a click never moves keyboard focus here; skipped by Tab

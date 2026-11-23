@@ -701,4 +701,20 @@
   <string source="The printable file could not be created.">Не удалось создать файл для печати.</string>
   <string source="The printable file could not be saved.">Не удалось сохранить файл для печати.</string>
   <string source="Automation Recipes..." where="menu">Сценарии автоматизации...</string>
+  <string source="Marketplaces..." where="menu">Маркетплейсы...</string>
+  <string source="Marketplaces" where="code">Маркетплейсы</string>
+  <string source="Wait for the previous marketplace request to stop." where="code">Подождите, пока предыдущий запрос завершится.</string>
+  <string source="Enter valid marketplace settings." where="code">Проверьте настройки маркетплейса.</string>
+  <string source="Marketplace connections are unavailable in this build." where="code">Подключение к маркетплейсам недоступно в этой сборке.</string>
+  <string source="Enter a valid API key or eBay access token." where="code">Введите действующий ключ API или токен eBay.</string>
+  <string source="The marketplace request could not start." where="code">Не удалось начать запрос к маркетплейсу.</string>
+  <string source="Marketplace response was incomplete or invalid. No preview was generated." where="code">Получены неполные или недопустимые данные. Предпросмотр не создан.</string>
+  <string source="Check the account label, UTC date range and marketplace settings." where="code">Проверьте имя аккаунта, даты UTC и настройки маркетплейса.</string>
+  <string source="Marketplace authorization failed. Check the credential, expiry and read permissions." where="code">Ошибка авторизации. Проверьте ключ, срок действия и права чтения.</string>
+  <string source="Marketplace request reached a rate or time limit. Retry with a smaller date range." where="code">Превышен лимит запросов или времени. Сократите период и повторите попытку.</string>
+  <string source="Could not reach the marketplace securely. Check your connection and try again." where="code">Не удалось безопасно подключиться. Проверьте связь и повторите попытку.</string>
+  <string source="Stopping marketplace request…" where="code">Отмена запроса…</string>
+  <string source="No eligible pick sheet is available for this snapshot." where="code">Для этого снимка нет доступного листа сборки.</string>
+  <string source="Preview this pick sheet before saving it." where="code">Откройте предпросмотр листа сборки перед сохранением.</string>
+  <string source="Use the .html extension for the printable file." where="code">Для печатной формы используйте расширение .html.</string>
 </strings>

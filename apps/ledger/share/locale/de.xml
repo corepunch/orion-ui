@@ -701,4 +701,20 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="The printable file could not be created.">Die Druckdatei konnte nicht erstellt werden.</string>
   <string source="The printable file could not be saved.">Die Druckdatei konnte nicht gespeichert werden.</string>
   <string source="Automation Recipes..." where="menu">Automationsrezepte...</string>
+  <string source="Marketplaces..." where="menu">Marktplätze...</string>
+  <string source="Marketplaces" where="code">Marktplätze</string>
+  <string source="Wait for the previous marketplace request to stop." where="code">Warten Sie, bis die vorige Marktplatzanfrage beendet ist.</string>
+  <string source="Enter valid marketplace settings." where="code">Prüfen Sie die Marktplatzeinstellungen.</string>
+  <string source="Marketplace connections are unavailable in this build." where="code">Marktplatzverbindungen sind in diesem Build nicht verfügbar.</string>
+  <string source="Enter a valid API key or eBay access token." where="code">Geben Sie einen gültigen API-Schlüssel oder eBay-Token ein.</string>
+  <string source="The marketplace request could not start." where="code">Die Marktplatzanfrage konnte nicht gestartet werden.</string>
+  <string source="Marketplace response was incomplete or invalid. No preview was generated." where="code">Die Antwort war unvollständig oder ungültig. Es wurde keine Vorschau erstellt.</string>
+  <string source="Check the account label, UTC date range and marketplace settings." where="code">Prüfen Sie Kontoname, UTC-Zeitraum und Marktplatzeinstellungen.</string>
+  <string source="Marketplace authorization failed. Check the credential, expiry and read permissions." where="code">Autorisierung fehlgeschlagen. Prüfen Sie Zugangsdaten, Ablauf und Leserechte.</string>
+  <string source="Marketplace request reached a rate or time limit. Retry with a smaller date range." where="code">Zeit- oder Ratenlimit erreicht. Versuchen Sie es mit einem kürzeren Zeitraum.</string>
+  <string source="Could not reach the marketplace securely. Check your connection and try again." where="code">Keine sichere Verbindung zum Marktplatz. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.</string>
+  <string source="Stopping marketplace request…" where="code">Marktplatzanfrage wird abgebrochen…</string>
+  <string source="No eligible pick sheet is available for this snapshot." where="code">Für diese Daten ist keine Kommissionierliste verfügbar.</string>
+  <string source="Preview this pick sheet before saving it." where="code">Öffnen Sie die Vorschau, bevor Sie die Kommissionierliste speichern.</string>
+  <string source="Use the .html extension for the printable file." where="code">Verwenden Sie die Endung .html für die Druckdatei.</string>
 </strings>

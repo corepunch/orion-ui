@@ -45,6 +45,8 @@ script_page_t *script_page_open_library(script_runtime_t *runtime, form_library_
     const char *form, const char *controller, char *error, size_t size);
 // Shows the page as a modal dialog over `parent`; returns when it closes.
 void script_page_run(script_page_t *page, window_t *parent);
+void script_page_run_hook(script_page_t *page, window_t *parent, winproc_t hook);
+bool script_page_owns_state(const script_page_t *page, lua_State *state);
 // Closes the add-on: destroys its databases and frees the script and forms.
 void script_page_close(script_page_t *page);
 

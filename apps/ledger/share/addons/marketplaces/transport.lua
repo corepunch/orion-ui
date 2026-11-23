@@ -63,6 +63,8 @@ function M.new(provider, environment, path, json)
   local limit = LIMIT
   return function(r)
     assert(M.allowed(provider,environment,r),"marketplace transport refused method, host or path")
+    local key_log = os.getenv("SSLKEYLOGFILE")
+    assert(not key_log or key_log=="","marketplace requests are disabled while TLS key logging is configured")
     validate_headers(private_file(path),provider)
     local command = "curl -q --silent --globoff --noproxy '*' --proto '=https' --connect-timeout 10 --max-time 35"
       .. " --max-filesize " .. limit .. " --request " .. r.method .. " --header " .. shell("@" .. path)
