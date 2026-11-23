@@ -77,7 +77,7 @@ single previous copy, not a substitute for independent backups.
 | Goods | Receipts and sales by item; a sale writes the goods off at average cost (Dt 90.02 Kt 41.01) |
 | Manual operations | `Documents > New Manual Operation` (Ctrl+M): entries typed by the accountant; opening balances are an operation of that kind |
 | Analytics | Each account has up to three analytics kinds (counterparties, items, employees, fixed assets, contracts, warehouses, bank accounts); every entry keeps up to three objects per side, plus tax-accounting amounts per side (tax, permanent and temporary differences as exact minor units, unset distinct from zero). Posting rules, reports and the Lua API use only the first analytics; quantity and currency stay one per entry |
-| Contracts, bank accounts, warehouses | Catalogs for 1C's contracts, bank accounts and warehouses: contracts and bank accounts on the Counterparties page, warehouses on the Items page, with `Catalogs` menu commands. Documents may refer to a contract, a warehouse and a bank account (storage only; the document form does not edit them yet) |
+| Contracts, bank accounts, warehouses | Catalogs for 1C's contracts, bank accounts and warehouses: contracts and bank accounts on the Counterparties page, warehouses on the Items page, with `Catalogs` menu commands. Documents may refer to a contract, a warehouse and a bank account; warehouse selection does not make stock accounting location-aware |
 | Payroll | Employees with salary, allowance and expense account; accrual with withheld income tax and employer contributions from the configuration's payroll taxes: flat rates with monthly or annual caps, progressive scales (cumulative as НДФЛ or annualized as Lohnsteuer), allowances with an income limit, all effective-dated by document date; payout of what is owed; payroll statement |
 | Fixed assets | Asset register; putting assets into service; straight-line depreciation in month-end closing |
 | Currencies | Currencies and exchange rates; documents in a currency post at the day's rate and keep both amounts; currency accounts are revalued at month end |
@@ -250,6 +250,9 @@ build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/lo
 ```
 
 ## Import from 1C
+
+For read-only 1С:УНФ online catalog export and warehouse quantity previews,
+see [the OData connector](docs/unf-odata.md).
 
 An experimental, read-only tool can resolve a catalog from metadata and extract it from
 an offline `1Cv8.1CD` copy without 1C and prepare XML for this importer. It is
