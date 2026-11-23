@@ -1,4 +1,4 @@
-// Fixture tests for the read-only 1C UNF connector and its catalog handoff.
+// Offline Ledger workflow fixtures, including the 1C catalog handoff.
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
 #include "apps/ledger/tests/test_databases.h"
@@ -74,6 +74,8 @@ int main(void) {
   test_local_workflow("apps/ledger/tests/bank_statement.lua");
   test_local_workflow("apps/ledger/tests/item_documents_test.lua");
   test_local_workflow("apps/ledger/tests/recipe_browser_test.lua");
+  test_local_workflow("apps/ledger/tests/ozon_marketplace_test.lua");
+  test_local_workflow("apps/ledger/tests/marketplaces_test.lua");
   test_import_unf_catalogs();
   destroy_database(fixture.ib);
   destroy_database(fixture.cfg);
