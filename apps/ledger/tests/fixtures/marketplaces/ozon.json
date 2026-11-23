@@ -1,0 +1,64 @@
+{
+  "fbs": [
+    {
+      "result": {
+        "postings": [
+          {
+            "posting_number": "02001-1000-1",
+            "order_id": "33301885134",
+            "order_number": "02001-1000",
+            "status_alias": "awaiting_packaging",
+            "delivery_schema": "fbs",
+            "products": [{"product_offer_id": "0005-BLUE", "product_id": "1904686181", "product_name": "Blue cup", "quantity": 2}],
+            "customer": {"name": "EXCLUDE-CUSTOMER"}, "addressee": {"phone": "EXCLUDE-PHONE"},
+            "barcodes": {"upper_barcode": "EXCLUDE-SHIPMENT-BARCODE"}
+          },
+          {
+            "posting_number": "02001-1001-1",
+            "status": "awaiting_packaging",
+            "products": [{"sku": 13086, "name": "Unknown SKU", "quantity": 1}]
+          }
+        ],
+        "has_next": true,
+        "cursor": "next-fbs=="
+      }
+    },
+    {
+      "postings": [
+        {"posting_number": "02001-1002-1", "status": "cancelled", "products": [{"sku": 13085, "offer_id": "0005-RED", "name": "Red cup", "quantity": 1}]},
+        {"posting_number": "02001-1003-1", "status": "awaiting_deliver", "products": [{"sku": 13085, "offer_id": "0005-RED", "quantity": 1}]}
+      ],
+      "has_next": false
+    }
+  ],
+  "fbo": [
+    {
+      "postings": [
+        {"posting_number": "02001-1004-1", "status": "awaiting_packaging", "products": [{"sku": 13085, "offer_id": "0005-RED", "quantity": 2}]}
+      ],
+      "has_next": false
+    }
+  ],
+  "stocks": [
+    {
+      "cursor": "stock-2", "total": 3,
+      "items": [
+        {"offer_id": "0005-BLUE", "product_id": 1904686181, "stocks": [
+          {"present": 8, "reserved": 3, "shipment_type": "SHIPMENT_TYPE_GENERAL", "sku": 13086, "type": "fbs"},
+          {"present": 2, "reserved": 0, "shipment_type": "SHIPMENT_TYPE_GENERAL", "sku": 13087, "type": "fbo"}
+        ]},
+        {"offer_id": "0005-RED", "product_id": 1904686182, "stocks": [
+          {"present": 0, "reserved": 0, "shipment_type": "SHIPMENT_TYPE_GENERAL", "sku": 13085, "type": "fbs"}
+        ]}
+      ]
+    },
+    {
+      "cursor": "", "total": 3,
+      "items": [
+        {"product_id": 1904686183, "stocks": [
+          {"present": 1, "reserved": 2, "sku": 13088, "type": "rfbs"}
+        ]}
+      ]
+    }
+  ]
+}
