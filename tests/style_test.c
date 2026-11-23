@@ -135,8 +135,8 @@ void test_value_parsers(void) {
 #ifndef STYLE_TEST_STANDALONE
 void test_porcelain_sheet(void) {
   TEST("theme sheets: no errors, every colour role in both appearances, and Porcelain reads them");
-  const char *sheets[] = {"base", "modern", "navy", "amber", "metro", "porcelain"};
-  for (int i = 0; i < 6; i++) {
+  const char *sheets[] = {"base", "modern", "navy", "amber", "metro", "porcelain", "silver"};
+  for (int i = 0; i < (int)(sizeof(sheets) / sizeof(sheets[0])); i++) {
     char path[64]; snprintf(path, sizeof(path), "orion/themes/%s.css", sheets[i]);
     style_sheet_t *sheet = style_sheet_load(path);
     ASSERT_NOT_NULL(sheet);
@@ -285,7 +285,7 @@ void test_literal_validation(void) {
   ASSERT_STR_EQUAL(value(sheet, query, "stroke"), "none");
   ASSERT_STR_EQUAL(value(sheet, query, "margin-left"), "auto");
   style_sheet_free(sheet);
-  const char *sheets[] = {"base", "modern", "navy", "amber", "metro", "porcelain"};
+  const char *sheets[] = {"base", "modern", "navy", "amber", "metro", "porcelain", "silver"};
   for (size_t index = 0; index < sizeof(sheets) / sizeof(sheets[0]); index++) {
     char filename[64]; snprintf(filename, sizeof(filename), "orion/themes/%s.css", sheets[index]);
     sheet = style_sheet_load(filename);

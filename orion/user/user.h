@@ -705,6 +705,14 @@ int window_caption_height(window_t const *win);
 // caption row (WINDOW_NOTITLE, or WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR merging the caption into the toolbar).
 bool caption_merged_into_toolbar(flags_t flags);
 int  caption_extent(flags_t flags);
+// The caption row laid out as a flex row of the title and its buttons: Window::titlebar's
+// flex-direction row puts them after the title (title, maximize, close), row-reverse before it
+// (close, maximize, title). Each button is a square of the row's height; the title keeps
+// Window::caption's padding on its open side. With leading buttons the title is also kept clear of
+// their span on the trailing side, so a centred title is centred on the window. Painting and
+// hit-testing both use it.
+typedef struct { irect16_t close, maximize, title; } caption_layout_t;
+caption_layout_t caption_layout(irect16_t caption, bool closable, bool maximizable);
 int statusbar_height(window_t const *win);
 int window_screen_x(window_t const *win);
 int window_screen_y(window_t const *win);

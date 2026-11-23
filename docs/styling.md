@@ -12,6 +12,7 @@ are custom properties, and `theme_t`'s metrics are control properties.
 | [`amber.css`](../orion/themes/amber.css) | Amber |
 | [`porcelain.css`](../orion/themes/porcelain.css) | Porcelain and Porcelain Dark |
 | [`metro.css`](../orion/themes/metro.css) | Metro |
+| [`silver.css`](../orion/themes/silver.css) | Silver: Mac OS X Lion's grey Aqua, glossy buttons and overlay scroll bars |
 | [`classic.css`](../orion/themes/classic.css) | Classic: Win95 bevels from per-side border colours and inset box-shadows |
 
 A theme is `base.css` followed by its own sheet, read in the theme's appearance.
@@ -75,7 +76,7 @@ apply to every part.
 
 | Property | Meaning |
 |---|---|
-| `background` | A colour, `none`, or `linear-gradient([to bottom,] top, bottom)` |
+| `background` | A colour, `none`, or `linear-gradient([to bottom,] colour [p%], colour [p%], …)`: 2–8 stops, fixed up as CSS does (missing positions spread evenly, a position before the previous one moves up to it, so `#eee 50%, #ddd 50%` is a hard edge) |
 | `border`, `border-<side>`, `border-width/-style/-color`, `border-<side>-<property>` | Solid sides; a uniform border follows the corner radius; unequal sides meet in mitred corners, as in a browser; a rounded box may have a `border-left` alone (an accent edge), which follows the corner as a browser draws it: its padding edge has the corner ellipse (r − w, r) |
 | `border-radius` | 1–4 lengths; rounded top corners with square bottom ones draw a tab |
 | `margin` | 1–4 lengths: the painted box inside the part's bounds |
@@ -100,7 +101,7 @@ apply to every part.
 | `TOOLBAR` | `Toolbar` | `STATUSBAR` | `StatusBar` |
 | `CARD` | `Card` (`:hover`, `:checked`) | `BADGE`, `BADGE_ICON` | `Badge`, `Badge::icon` (`fill`) |
 | `TOOLBAR_BUTTON` (`_LABELED`, `_SPLIT`) | `Toolbar::button` (`.labeled`, `.split`) | `TITLEBAR`, `TITLE_TOOLBAR` | `Window::titlebar`, `Window::title-toolbar` |
-| `TOOLBAR_SPLIT_ARROW`, `_SEPARATOR`, `_GRIP` | `Toolbar::split-arrow`, `::separator`, `::grip` | `WINDOW_CLOSE`, `RESIZE_GRIP` | `Window::close`, `Window::resize-grip` |
+| `TOOLBAR_SPLIT_ARROW`, `_SEPARATOR`, `_GRIP` | `Toolbar::split-arrow`, `::separator`, `::grip` | `WINDOW_CLOSE`, `WINDOW_MAXIMIZE`, `RESIZE_GRIP` | `Window::close`, `Window::maximize`, `Window::resize-grip` |
 | `RIBBON`, `RIBBON_TABS`, `_TAB`, `_CONTEXT_TAB`, `_MENU` | `Ribbon`, `Ribbon::tabs`, `::tab`, `::tab.contextual`, `::tab.menu` | `RIBBON_BUTTON`, `_GROUP`, `_SEPARATOR`, `_ARROW`, `_TOGGLE` | `Ribbon::button`, `::group`, `::separator`, `::arrow`, `::toggle` |
 | `SLIDER_TRACK`, `_THUMB`, `_TROUGH`, `_KNOB` | `Slider::track`, `::thumb`, `::trough`, `::knob` | `SCROLLBAR_*` | `Scrollbar::track`, `::thumb`, `::arrow-up` … `::corner` |
 
@@ -113,6 +114,28 @@ a `box-shadow` spread, a blurred inset shadow, corner radii other than one
 radius or the top two, and unequal border sides on a rounded box (but a lone
 `border-left`) each print
 `[theme] part …: … is not supported yet`.
+
+### The caption row
+
+A window's caption row is a flex row of its title and its buttons, laid out by
+`caption_layout()` for painting and hit-testing alike:
+
+| Rule | Effect |
+|---|---|
+| `Window::titlebar { flex-direction: row }` | title, then maximize and close at the end (the default) |
+| `Window::titlebar { flex-direction: row-reverse }` | close and maximize first, as on a Mac; the title also keeps clear of their span at the end, so a centred title is centred on the window |
+| `Window::caption { font; padding-left; padding-right; text-align }` | the title's text: `text-align: center` centres it |
+| `Window::close`, `Window::maximize` | each button is a box in a square cell as tall as the row: `content: close`/`maximize` draws the glyph, or `content: none` with a `margin`, a capsule `border-radius` and a `background` draws a round button; `:focus` while the window has focus |
+
+Silver's round red and green buttons are these two boxes:
+
+```css
+Window::titlebar { flex-direction: row-reverse; }
+Window::caption  { text-align: center; }
+Window::close, Window::maximize { content: none; margin: 5px; border-radius: 9999px;
+                                  background: linear-gradient(#F4F4F4, #D2D2D2); border: 1px solid #A5A5A5; }
+Window::close:focus { background: linear-gradient(#FBB1A9 0%, #EE5B50 45%, #D23A2F 100%); border-color: #A6322A; }
+```
 
 ### Cards and badges
 

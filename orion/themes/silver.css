@@ -1,0 +1,219 @@
+/* Silver: brushed-grey Aqua, after Mac OS X Lion. A light grey window face
+   under a gradient title bar that runs on into the toolbar; white glossy push
+   buttons and pop-ups with a hairline and a one-pixel white highlight; square
+   white fields with a darker top edge; a soft blue focus ring outside the
+   control. Pressed and default buttons and checked boxes turn Aqua blue with
+   dark ink, selection is a blue gradient row with white text (grey when the
+   window is inactive), the source list is blue-grey, and scroll bars are thin
+   overlay capsules. Labels are engraved with a white shadow underneath.
+
+   Custom properties on :root are the system colour roles (brControlBg is
+   --control-bg); see docs/styling.md for the names and the properties each
+   control reads. Silver has one appearance, light. */
+
+:root {
+  --control-bg:             #EDEDED;
+  --window-dark-bg:         #E3E3E3;
+  --workspace-bg:           #C9CDD3;
+  --active-titlebar:        #DCDCDC;
+  --active-titlebar-text:   #3C3C3C;
+  --inactive-titlebar:      #F0F0F0;
+  --inactive-titlebar-text: #A3A3A3;
+  --statusbar-bg:           #DADADA;
+  --light-edge:             #A0A0A0;
+  --dark-edge:              #C2C2C2;
+  --flare:                  #FFFFFF;
+  --accent:                 #3875D7;
+  --button-inner:           #F4F4F4;
+  --button-hover:           #E4E4E4;
+  --text-normal:            #141414;
+  --text-disabled:          #9A9A9A;
+  --text-error:             #C8261E;
+  --text-success:           #2C8B22;
+  --border-focus:           #6B9EE0;
+  --border-active:          #B0B0B0;
+  --folder-text:            #3875D7;
+  --column-view-bg:         #FFFFFF;
+  --modal-overlay:          #00000033;
+  --toolbar-foreground:     #3A3A3A;
+  --panel-dark:             #E6E6E6;
+  --panel-darker:           #E2E2E2;
+  --tab-bar-bg:             #E4E4E4;
+  --text-warning:           #B86E00;
+  --text-info:              #2864C8;
+  --text-secondary:         #6E6E6E;
+  --text-on-color:          #141414;
+  --selection-top:          #5C93E4;
+  --selection-bottom:       var(--accent);
+  --accent-text:            #FFFFFF;
+  --tooltip-background:     #F5F5F5;
+  --tooltip-text:           #1A1A1A;
+  --info-background:        #FFF9D6;
+  --info-text:              #4A4320;
+  --desktop-bg:             #5C6E8C;
+
+  /* Aqua gloss: a lit upper half meets a darker lower half at a hard edge, and the bottom picks up
+     reflected light. Default and pressed buttons are the same in blue; the focus glow is a ring. */
+  --aqua:        linear-gradient(#D3E8FC 0%, #A2CBF5 50%, #87B8F0 50%, #C4E0FA 100%);
+  --aqua-down:   linear-gradient(#A9CCF4 0%, #6FA6EA 50%, #4F8DE3 50%, #8FC0F2 100%);
+  --aqua-edge:   #5079B5;
+  --gloss:       linear-gradient(#FFFFFF 0%, #F6F6F6 50%, #EBEBEB 50%, #F4F4F4 100%);
+  --gloss-edge:  #9C9C9C;
+  --glow:        #6F9EE6B3;
+  --well-edges:  #8E8E8E #B3B3B3 #C9C9C9 #B3B3B3;   /* top darkest, as a field is lit from above */
+
+  --window-radius: 5px;
+  --button-radius: 4px;
+  --field-radius: 0;
+  --multiline-radius: 0;
+  --tab-radius: 4px;
+  --toolbar-radius: 3px;
+  --table-radius: 0;
+  --card-radius: 6px;
+  --badge-radius: 4px;
+}
+
+Window { box-shadow: 0 8px 16px #00000066; }
+Window::title { font: var(--text); }   /* a 13 px title, as Lion's */
+
+/* Round buttons before a centred title: red closes, green zooms, both grey while the window is
+   in the background. Each is a 12-14 px ball in its square cell. */
+Window::titlebar { flex-direction: row-reverse; }
+Window::caption  { text-align: center; }
+Window::close, Window::maximize {
+  content: none;
+  margin: 5px;
+  border-radius: 9999px;
+  background: linear-gradient(#F4F4F4, #D2D2D2);
+  border: 1px solid #A5A5A5;
+}
+Window::close:focus    { background: linear-gradient(#FBB1A9 0%, #EE5B50 45%, #D23A2F 100%); border-color: #A6322A; }
+Window::maximize:focus { background: linear-gradient(#CDF0AB 0%, #80C953 45%, #4E9F2D 100%); border-color: #3F8526; }
+
+/* The title bar and the toolbar below it are one gradient, ending in a hairline. */
+Window::titlebar       { background: linear-gradient(#F0F0F0, #E8E8E8); }
+Window::titlebar:focus { background: linear-gradient(#EBEBEB, #DEDEDE); }
+Window::title-toolbar  { background: linear-gradient(#DEDEDE, #CFCFCF); border-bottom: 1px solid #A3A3A3; }
+Toolbar   { background: linear-gradient(#E4E4E4, #D0D0D0); border-bottom: 1px solid #A5A5A5; }
+StatusBar { background: linear-gradient(#E2E2E2, #CCCCCC); border-top: 1px solid #A5A5A5; }
+MenuBar   { background: linear-gradient(#FAFAFA, #E2E2E2); border-bottom: 1px solid #A8A8A8; }
+
+/* Engraved labels: a white line under the ink. */
+Button, Label, CheckBox { text-shadow: 0 1px #FFFFFF99; }
+
+/* ── Push buttons and pop-ups ────────────────────────────────────────────── */
+
+Button, ComboBox {
+  background: var(--gloss);
+  border: 1px solid var(--gloss-edge);
+  border-radius: var(--button-radius);
+  box-shadow: 0 1px #FFFFFF80;
+}
+Button:hover, ComboBox:hover { background: var(--gloss); }
+Button:focus, ComboBox:focus { border-color: var(--gloss-edge); outline: 2px solid var(--glow); }
+Button:active, Button:checked, ComboBox:active { background: var(--aqua-down); border-color: var(--aqua-edge); }
+Button:default { background: var(--aqua); border: 1px solid var(--aqua-edge); color: var(--text-normal); }
+Button:default:active { background: var(--aqua-down); }
+Button:disabled, ComboBox:disabled {
+  background: linear-gradient(#FAFAFA, #F0F0F0);
+  border: 1px solid #C4C4C4;
+  text-shadow: none;
+}
+ComboBox::arrow { fill: #333333; }
+
+SegmentedControl {
+  background: var(--gloss);
+  border: 1px solid var(--gloss-edge);
+  border-radius: var(--button-radius);
+}
+SegmentedControl:focus    { border-color: var(--gloss-edge); outline: 2px solid var(--glow); }
+SegmentedControl:disabled { border-color: #C4C4C4; }
+SegmentedControl::segment          { border-radius: 3px; }
+SegmentedControl::segment:hover    { background: none; }
+SegmentedControl::segment:active   { background: linear-gradient(#BDBDBD, #D2D2D2); }
+SegmentedControl::segment:checked  { background: linear-gradient(#C2C2C2, #D6D6D6); color: var(--text-normal); }
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+
+TextEdit {
+  background: var(--column-view-bg);
+  border: 1px solid;
+  border-color: var(--well-edges);
+  box-shadow: inset 0 1px #00000014;
+  padding-left: 4px;
+}
+TextEdit:focus    { border-color: var(--well-edges); outline: 3px solid var(--glow); }
+TextEdit:disabled { border-color: #C8C8C8; background: #F7F7F7; }
+
+CheckBox::box          { background: var(--gloss); border: 1px solid var(--gloss-edge); border-radius: 3px; fill: #141414; }
+CheckBox::box:hover    { background: var(--gloss); }
+CheckBox::box:active   { background: linear-gradient(#DCDCDC, #CACACA); }
+CheckBox::box:checked  { background: var(--aqua); border-color: var(--aqua-edge); fill: #10233F; }
+CheckBox::box:focus    { outline: 2px solid var(--glow); }
+CheckBox::box:disabled { background: #F4F4F4; border-color: #C4C4C4; outline: none; }
+
+/* ── Toolbars ────────────────────────────────────────────────────────────── */
+/* No hover, as in Lion. The chosen pane of a labelled toolbar sits in a darker
+   well between two hairlines; a pressed button darkens. */
+
+Toolbar::button:hover, Toolbar::split-arrow:hover { background: none; }
+Toolbar::button:checked, Toolbar::button:default, Toolbar::split-arrow:checked, Toolbar::split-arrow:default {
+  background: linear-gradient(#C9C9C9, #BBBBBB);
+  border-radius: 0;
+  border-left: 1px solid #A3A3A3;
+  border-right: 1px solid #A3A3A3;
+  color: var(--text-normal);
+}
+Toolbar::button:active, Toolbar::split-arrow:active {
+  background: color-mix(in srgb, #000000 14%, transparent);
+  color: var(--text-normal);
+}
+Toolbar::separator { content: groove; fill: #A8A8A8; stroke: #F7F7F7; }
+
+/* ── Lists and tables ────────────────────────────────────────────────────── */
+
+TableView::header  { background: linear-gradient(#FFFFFF, #EBEBEB); border-bottom: 1px solid #B8B8B8; color: var(--text-normal); min-height: 18px; }
+TableView::row     { min-height: 19px; }
+TableView::row:hover { background: none; }
+TableView::row:checked:window-inactive,
+TableView::row:checked:window-inactive:active { background: #D4D4D4; color: var(--text-normal); }
+TableView::group   { color: #707A87; }
+TableView::frame   { border: 1px solid #A8A8A8; }
+
+/* The source list: blue-grey, as Finder's and Mail's. */
+Sidebar { background: #DCE2EA; border-right: 1px solid #B4B4B4; }
+
+Card {
+  --card-face: var(--column-view-bg);
+  margin: 2px;
+  border-radius: calc(var(--card-radius) - 1px);
+  outline: 1px solid #C4C4C4;
+}
+Card:checked  { margin: var(--ring-width); border-radius: var(--card-radius); }
+Card::plastic { border-radius: calc(var(--card-radius) - 1px); }
+
+/* ── Menus and tabs ──────────────────────────────────────────────────────── */
+
+Menu { background: #FFFFFFF2; border: 1px solid #00000026; border-radius: 5px; }
+Menu::item:hover, Menu::item:checked, Menu::item:active { border-radius: 0; margin: 0; }
+Separator { background: #BCBCBC; }
+
+TabView::tab {
+  background: var(--gloss);
+  border: 1px solid #A5A5A5;
+  border-radius: var(--tab-radius) var(--tab-radius) 0 0;
+}
+TabView::tab:hover, TabView::tab:active { background: linear-gradient(#F2F2F2, #DDDDDD); }
+TabView::tab:checked { background: linear-gradient(#FFFFFF, var(--control-bg)); }
+
+/* ── Sliders and scroll bars ─────────────────────────────────────────────── */
+
+Slider::trough        { background: linear-gradient(#9E9E9E, #C9C9C9); border-radius: 3px; }
+Slider::knob          { background: var(--gloss); border: 1px solid #8C8C8C; border-radius: 9999px; }
+Slider::knob:hover    { background: var(--gloss); }
+Slider::knob:active   { background: var(--aqua-down); border-color: var(--aqua-edge); }
+Slider::knob:disabled { background: #F4F4F4; border-color: #C4C4C4; }
+
+/* Thin dark capsules over the content, shown while scrolling. */
+Scrollbar        { --overlay: 1; }
+Scrollbar::thumb { background: #00000073; border-radius: 9999px; margin: 0; }

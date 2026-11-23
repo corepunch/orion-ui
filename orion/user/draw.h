@@ -43,6 +43,19 @@ void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h
                                   float radius, uint32_t top, uint32_t bottom);
 void render_rounded_top_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
                                       float radius, uint32_t top, uint32_t bottom);
+// A vertical gradient of up to GRADIENT_MAX_STOPS colours at positions 0..1 (CSS linear-gradient's
+// stops after fix-up: ascending, equal positions are a hard edge), interpolated premultiplied.
+#define GRADIENT_MAX_STOPS 8
+typedef struct {
+  int count;
+  uint32_t color[GRADIENT_MAX_STOPS];
+  float pos[GRADIENT_MAX_STOPS];
+} gradient_stops_t;
+// The gradient in one rounded silhouette (top_only rounds the top corners, a tab), in one pass.
+void fill_gradient_stops_rect(const gradient_stops_t *g, irect16_t r, int radius, bool top_only);
+// ramp is a 1-row premultiplied texture of the gradient, sampled from top (u = 0) to bottom (u = 1).
+void render_rounded_rect_ramp(int ramp, int ramp_width, irect16_t r, int pixel_w, int pixel_h, float radius, bool top_only);
+void shutdown_gradient_ramps(void);
 // Inset stroke of `thickness` logical pixels. One silhouette, same radius as a card.
 void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness);
 // Same colour with a different alpha (0 transparent .. 255 opaque).

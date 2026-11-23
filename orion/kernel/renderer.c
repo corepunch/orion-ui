@@ -968,6 +968,18 @@ void render_rounded_top_rect_gradient(int tex, irect16_t r, int pixel_w, int pix
   render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 1, 0, 0);
 }
 
+// A multi-stop gradient: the ramp texture sampled down the box (params1.w holds its width), inside the
+// same rounded silhouette as a two-colour gradient.
+void render_rounded_rect_ramp(int ramp, int ramp_width, irect16_t r, int pixel_w, int pixel_h, float radius, bool top_only) {
+  if (!ramp || ramp_width < 2) {
+    fprintf(stderr, "[renderer] gradient ramp rejected tex=%d width=%d\n", ramp, ramp_width);
+    fflush(stderr);
+    return;
+  }
+  render_rounded_box(ramp, r, pixel_w, pixel_h, radius, 1, 0xFFFFFFFFu, 0, 0, true, 0, 0, 0, 1, top_only ? 1 : 0,
+                     (float)ramp_width, 0);
+}
+
 void render_rounded_rect_stroke(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color, float stroke) {
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, stroke, 0, 0, 0, 0);

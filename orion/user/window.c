@@ -851,13 +851,12 @@ int window_nc_hit_test(window_t *win, int sx, int sy) {
   if (win->parent || sx < frame.x || sx >= frame.x + frame.w || sy < frame.y || sy >= frame.y + band) return HT_CLIENT;
   int caption_h = caption_extent(win->flags);
   if (caption_h > 0 && sy < frame.y + caption_h) {
-    irect16_t titlebar = rect_split_top(frame, caption_h);
-    irect16_t close_btn = rect_split_right(titlebar, caption_h);
-    irect16_t max_btn = rect_split_right(rect_trim_right(titlebar, caption_h), caption_h);
-    if (!(win->flags & (WINDOW_NOCLOSE)) && rect_contains_point(close_btn, (ipoint16_t){sx, sy})) return HT_CLOSE;
-    if ((win->flags & WINDOW_MAXIMIZEBOX) &&
-        !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP)) &&
-        rect_contains_point(max_btn, (ipoint16_t){sx, sy})) return HT_MAXBUTTON;
+    bool closable = !(win->flags & WINDOW_NOCLOSE);
+    bool maximizable = (win->flags & WINDOW_MAXIMIZEBOX) &&
+                       !(win->flags & (WINDOW_NORESIZE | WINDOW_DIALOG | WINDOW_ALWAYSINBACK | WINDOW_ALWAYSONTOP));
+    caption_layout_t at = caption_layout(rect_split_top(frame, caption_h), closable, maximizable);
+    if (closable && rect_contains_point(at.close, (ipoint16_t){sx, sy})) return HT_CLOSE;
+    if (maximizable && rect_contains_point(at.maximize, (ipoint16_t){sx, sy})) return HT_MAXBUTTON;
     return (window_is_maximized(win) || (win->flags & WINDOW_NODRAG)) ? HT_CLIENT : HT_CAPTION;
   }
   if (window_is_maximized(win) || (win->flags & WINDOW_NODRAG)) return HT_CLIENT;
