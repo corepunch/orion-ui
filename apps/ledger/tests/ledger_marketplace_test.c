@@ -2,6 +2,7 @@
 #include "test_env.h"
 #include "apps/ledger/ledger.h"
 #include "apps/ledger/marketplace_host.h"
+#include "apps/ledger/tests/test_databases.h"
 #include <stdatomic.h>
 
 #define MARKET_SHARE "apps/ledger/share"
@@ -113,10 +114,21 @@ static void test_market_dialog(void) {
 int main(void) {
   TEST_START("Ledger native marketplace");
   test_env_init();
+  DB_CLASS(db_schema_xml);
+  DB_CLASS(ledger_ib);
   g_ledger=&market_fixture;
+  market_fixture.cfg=ledger_test_writable_seed("cfg","db_schema_xml",&ledger_cfg_schema,
+    MARKET_SHARE "/configurations/ru-2003/configuration.xml");
+  market_fixture.ib=ledger_test_infobase(MARKET_SHARE "/configurations/ru-2003/demo.xml");
+  register_database("cfg",market_fixture.cfg);
+  register_database("ib",market_fixture.ib);
   snprintf(g_ledger->share_dir,sizeof(g_ledger->share_dir),"%s",MARKET_SHARE);
   atomic_init(&market_calls,0); atomic_init(&market_delay,false); atomic_init(&market_bad,false);
   test_market_dialog();
+  unregister_database("ib");
+  unregister_database("cfg");
+  destroy_database(market_fixture.ib);
+  destroy_database(market_fixture.cfg);
   test_env_shutdown();
   TEST_END();
 }
