@@ -26,6 +26,7 @@
       <Separator />
       <item name="import_1c" label="Import from 1C..." />
       <item name="recipes" label="Automation Recipes..." />
+      <item name="marketplace" label="Marketplaces..." />
       <item name="addon" label="Open Add-on..." />
       <Separator />
       <item name="quit" label="Exit" />

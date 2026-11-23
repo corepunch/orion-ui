@@ -1,12 +1,42 @@
 # Read-only Ozon and eBay workflows
 
-Run the Lua 5.4 plugins from a checkout on Linux or macOS with curl installed.
-The command fetches one seller account at a time. Nothing is scheduled,
-persisted in Ledger, sent to a third-party intermediary, or changed on the
-marketplace. These plugins are separate from Ledger's posting runtime and
-its desktop recipe browser. No live seller account was used to test them.
+## In the Ledger desktop app
 
-## Credentials
+Open **File → Marketplaces**, choose Ozon or eBay, enter a short local account
+label, and choose **Orders**, **Availability**, or both. The dialog supplies
+a seven-day UTC time range and never contacts a seller until you click
+**Load Marketplace Data**. Orders and provider availability appear separately.
+Review held orders and then choose **Preview Pick Sheet**. **Save Pick Sheet**
+writes an HTML file only after you choose the destination. The pick sheet
+keeps order splits and excludes held orders. Ledger and the marketplaces are
+not modified. Cancel or close drops the result.
+
+- **Ozon:** enter the numeric Seller Client ID and an API key with read access.
+- **eBay (advanced):** paste a short-lived seller OAuth **user access token**
+  and select Production or Sandbox. This is not a one-click eBay connection:
+  the app does not issue, store or renew OAuth credentials. See the OAuth
+  authorization instructions below.
+- Both use the masked credential field; Ledger retains no credentials in
+  settings, a local header file, or the infobase. Credentials are consumed
+  for the request and cleared. Pasting does not change your system clipboard.
+
+The packaged integrations are visible automatically in the desktop menu;
+credentials are never preloaded and network access is always user-initiated.
+Only the two bundled, reviewed provider adapters receive the narrow
+network capability. This does not change how external Lua plugins load.
+This desktop connection is supported on macOS and Linux with a compatible
+system libcurl. Linux paste uses X11/XWayland; native Wayland clipboard paste
+is not available. Windows and other builds report that the connection is
+unavailable. The desktop path does not require a shell, CLI or header file.
+
+## Optional local CLI
+
+Run the Lua 5.4 CLI from a checkout on Linux or macOS with curl installed.
+It fetches one seller account at a time. Nothing is scheduled, persisted in
+Ledger, sent to a third-party intermediary, or changed on the marketplace.
+No live seller account was used to test either path.
+
+## CLI credentials and eBay OAuth
 
 Use a separate account/key authorized by the seller, with only the corresponding
 read permissions. Keep credentials outside the repository and configuration

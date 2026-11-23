@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru">
+  <string source="Marketplaces" where="marketplace">Маркетплейсы</string>
+  <string source="Marketplace:" where="marketplace">Маркетплейс:</string>
+  <string source="Production" where="marketplace">Рабочая среда</string>
+  <string source="Sandbox" where="marketplace">Тестовая среда</string>
+  <string source="eBay Sandbox" where="marketplace">Тестовая среда eBay</string>
+  <string source="Account label:" where="marketplace">Имя магазина в Ledger:</string>
+  <string source="Ozon Client ID:" where="marketplace">Ozon Client ID:</string>
+  <string source="Example: my-shop" where="marketplace">Например: my-shop</string>
+  <string source="Load:" where="marketplace">Загрузить:</string>
+  <string source="Orders" where="marketplace">Заказы</string>
+  <string source="Availability" where="marketplace">Доступность товаров</string>
+  <string source="Orders from (UTC):" where="marketplace">Заказы с (UTC):</string>
+  <string source="Orders until (UTC):" where="marketplace">Заказы до (UTC):</string>
+  <string source="Load Marketplace Data" where="marketplace">Загрузить данные</string>
+  <string source="Cancel Request" where="marketplace">Отменить запрос</string>
+  <string source="Preview Pick Sheet" where="marketplace">Предпросмотр сборки</string>
+  <string source="Save Pick Sheet..." where="marketplace">Сохранить лист сборки…</string>
+  <string source="Close" where="marketplace">Закрыть</string>
+  <string source="Orders and availability are read-only." where="marketplace">Заказы и доступность доступны только для чтения.</string>
+  <string source="Ozon API key:" where="marketplace">Ключ API Ozon:</string>
+  <string source="eBay access token:" where="marketplace">Токен доступа eBay:</string>
+  <string source="Enter a read-only Seller API key. Ledger does not save it." where="marketplace">Введите ключ Seller API с правами чтения. Ledger его не сохраняет.</string>
+  <string source="Advanced: paste a seller OAuth user access token. Ledger does not save it." where="marketplace">Расширенный режим: вставьте пользовательский OAuth-токен продавца. Ledger его не сохраняет.</string>
+  <string source="Enter a short account label using only A-Z, 0-9, dots, dashes or underscores." where="marketplace">Введите короткое имя магазина латиницей. Можно использовать цифры, точки, дефисы и подчёркивания.</string>
+  <string source="Enter the numeric Ozon Client ID." where="marketplace">Введите числовой Ozon Client ID.</string>
+  <string source="Select Orders or Availability." where="marketplace">Выберите заказы или доступность товаров.</string>
+  <string source="Enter both UTC dates in increasing order: YYYY-MM-DDTHH:MM:SSZ." where="marketplace">Укажите начало и конец периода в UTC: YYYY-MM-DDTHH:MM:SSZ.</string>
+  <string source="Cannot start the request." where="marketplace">Не удалось начать запрос.</string>
+  <string source="Loading marketplace data..." where="marketplace">Загружаю данные маркетплейса…</string>
+  <string source="Showing the first 20 rows." where="marketplace">Показаны первые 20 строк.</string>
+  <string source="Held orders" where="marketplace">Исключены из сборки</string>
+  <string source="Marketplace availability (not Ledger stock)" where="marketplace">Доступность на маркетплейсе (не остатки Ledger)</string>
+  <string source="available: %s" where="marketplace">доступно: %s</string>
+  <string source="reserved: %s" where="marketplace">зарезервировано: %s</string>
+  <string source="listed: %s" where="marketplace">по данным площадки: %s</string>
+  <string source="Warnings" where="marketplace">Предупреждения</string>
+  <string source="The request failed." where="marketplace">Не удалось загрузить данные.</string>
+  <string source="The response could not be displayed." where="marketplace">Не удалось показать данные.</string>
+  <string source="Data loaded. Nothing was changed." where="marketplace">Данные загружены. Изменений нет.</string>
+  <string source="Orders: %d total, %d ready to pick, %d held." where="marketplace">Заказы: всего %d, к сборке %d, исключено %d.</string>
+  <string source="Marketplace availability: %d rows. Not Ledger stock." where="marketplace">Доступность на маркетплейсе: %d строк. Это не остатки Ledger.</string>
+  <string source="Request cancelled." where="marketplace">Запрос отменён.</string>
+  <string source="Inputs changed. Load marketplace data again." where="marketplace">Параметры изменились. Загрузите данные заново.</string>
+  <string source="There are no orders ready to pick." where="marketplace">Нет заказов, готовых к сборке.</string>
+  <string source="Pick sheet preview. Save it when ready." where="marketplace">Предпросмотр листа сборки. Проверьте и сохраните его.</string>
+  <string source="Preview the pick sheet before saving." where="marketplace">Перед сохранением откройте предпросмотр листа сборки.</string>
+  <string source="Pick sheet saved." where="marketplace">Лист сборки сохранён.</string>
+  <string source="Back to Results" where="marketplace">К результатам</string>
+  <string source="Paste" where="marketplace">Вставить</string>
+  <string source="Clipboard paste is unavailable. Enter the credential in the masked field." where="marketplace">Вставка из буфера недоступна. Введите ключ или токен в скрытое поле.</string>
+  <string source="Marketplace connections are unavailable in this build." where="marketplace">Подключение к маркетплейсам недоступно в этой сборке.</string>
+</strings>

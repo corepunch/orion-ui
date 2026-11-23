@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion>
+  <forms>
+    <form name="marketplace" title="Marketplaces" width="750" height="660" spacing="6" padding="12">
+      <StackView name="provider_row" orientation="horizontal" spacing="6">
+        <Label name="seller_service" text="Marketplace:" />
+        <Button name="ozon" text="Ozon" action="choose_ozon" />
+        <Button name="ebay" text="eBay" action="choose_ebay" />
+        <Space name="provider_gap" />
+        <Label name="connection" />
+        <Button name="production" text="Production" action="choose_production" />
+        <Button name="sandbox" text="Sandbox" action="choose_sandbox" />
+      </StackView>
+      <Label name="credential_notice" />
+      <GridView name="seller" spacing="6">
+        <Column name="seller_labels" width="auto">
+          <Label name="account_label" text="Account label:" />
+          <Label name="client_label" text="Ozon Client ID:" />
+          <Label name="secret_label" />
+        </Column>
+        <Column name="seller_inputs">
+          <TextBox name="account" placeholder="Example: my-shop" />
+          <TextBox name="client_id" />
+          <StackView name="credential_input" orientation="horizontal" spacing="6">
+            <TextBox name="secret" flags="TEXTEDIT_PASSWORD,flexspace" />
+            <Button name="paste" text="Paste" action="paste" />
+          </StackView>
+        </Column>
+      </GridView>
+      <StackView name="scope" orientation="horizontal" spacing="10">
+        <Label name="fetch_label" text="Load:" />
+        <CheckBox name="orders" text="Orders" />
+        <CheckBox name="stock" text="Availability" />
+      </StackView>
+      <GridView name="window" spacing="6">
+        <Column name="date_labels" width="auto">
+          <Label name="from_label" text="Orders from (UTC):" />
+          <Label name="until_label" text="Orders until (UTC):" />
+        </Column>
+        <Column name="date_inputs">
+          <TextBox name="from" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
+          <TextBox name="until_date" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
+        </Column>
+      </GridView>
+      <Label name="status" />
+      <Label name="order_summary" />
+      <Label name="stock_summary" />
+      <MultiEdit name="results" flags="WINDOW_NOFOCUS,WINDOW_NOTABSTOP,vscroll,flexspace" />
+      <Label name="error" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Button name="fetch" text="Load Marketplace Data" action="fetch" flags="BUTTON_DEFAULT" />
+        <Button name="stop" text="Cancel Request" action="stop" />
+        <Space name="actions_gap" />
+        <Button name="review" text="Back to Results" action="review" />
+        <Button name="preview" text="Preview Pick Sheet" action="preview" />
+        <Button name="save" text="Save Pick Sheet..." action="save" />
+        <Button name="cancel" text="Close" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

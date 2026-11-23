@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="de">
+  <string source="Marketplaces" where="marketplace">Marktplätze</string>
+  <string source="Marketplace:" where="marketplace">Marktplatz:</string>
+  <string source="Production" where="marketplace">Produktion</string>
+  <string source="Sandbox" where="marketplace">Sandbox</string>
+  <string source="eBay Sandbox" where="marketplace">eBay-Sandbox</string>
+  <string source="Account label:" where="marketplace">Interner Kontoname:</string>
+  <string source="Ozon Client ID:" where="marketplace">Ozon-Client-ID:</string>
+  <string source="Example: my-shop" where="marketplace">Beispiel: mein-shop</string>
+  <string source="Load:" where="marketplace">Laden:</string>
+  <string source="Orders" where="marketplace">Bestellungen</string>
+  <string source="Availability" where="marketplace">Verfügbarkeit</string>
+  <string source="Orders from (UTC):" where="marketplace">Bestellungen ab (UTC):</string>
+  <string source="Orders until (UTC):" where="marketplace">Bestellungen bis (UTC):</string>
+  <string source="Load Marketplace Data" where="marketplace">Daten laden</string>
+  <string source="Cancel Request" where="marketplace">Abruf abbrechen</string>
+  <string source="Preview Pick Sheet" where="marketplace">Pickliste prüfen</string>
+  <string source="Save Pick Sheet..." where="marketplace">Pickliste speichern…</string>
+  <string source="Close" where="marketplace">Schließen</string>
+  <string source="Orders and availability are read-only." where="marketplace">Bestellungen und Verfügbarkeit werden nur gelesen.</string>
+  <string source="Ozon API key:" where="marketplace">Ozon-API-Schlüssel:</string>
+  <string source="eBay access token:" where="marketplace">eBay-Zugriffstoken:</string>
+  <string source="Enter a read-only Seller API key. Ledger does not save it." where="marketplace">Geben Sie einen Seller-API-Schlüssel mit Leserechten ein. Ledger speichert ihn nicht.</string>
+  <string source="Advanced: paste a seller OAuth user access token. Ledger does not save it." where="marketplace">Erweitert: Fügen Sie ein OAuth-Benutzerzugriffstoken für Ihr Verkäuferkonto ein. Ledger speichert es nicht.</string>
+  <string source="Enter a short account label using only A-Z, 0-9, dots, dashes or underscores." where="marketplace">Geben Sie einen kurzen Kontonamen ein. Erlaubt sind A–Z, 0–9, Punkt, Bindestrich und Unterstrich.</string>
+  <string source="Enter the numeric Ozon Client ID." where="marketplace">Geben Sie die numerische Ozon-Client-ID ein.</string>
+  <string source="Select Orders or Availability." where="marketplace">Wählen Sie Bestellungen oder Verfügbarkeit aus.</string>
+  <string source="Enter both UTC dates in increasing order: YYYY-MM-DDTHH:MM:SSZ." where="marketplace">Geben Sie Start und Ende aufsteigend in UTC an: YYYY-MM-DDTHH:MM:SSZ.</string>
+  <string source="Cannot start the request." where="marketplace">Der Abruf konnte nicht gestartet werden.</string>
+  <string source="Loading marketplace data..." where="marketplace">Marktplatzdaten werden geladen…</string>
+  <string source="Showing the first 20 rows." where="marketplace">Die ersten 20 Zeilen werden angezeigt.</string>
+  <string source="Held orders" where="marketplace">Zurückgestellte Bestellungen</string>
+  <string source="Marketplace availability (not Ledger stock)" where="marketplace">Verfügbarkeit auf dem Marktplatz (kein Ledger-Bestand)</string>
+  <string source="available: %s" where="marketplace">verfügbar: %s</string>
+  <string source="reserved: %s" where="marketplace">reserviert: %s</string>
+  <string source="listed: %s" where="marketplace">laut Marktplatz: %s</string>
+  <string source="Warnings" where="marketplace">Warnungen</string>
+  <string source="The request failed." where="marketplace">Der Abruf ist fehlgeschlagen.</string>
+  <string source="The response could not be displayed." where="marketplace">Die Antwort konnte nicht angezeigt werden.</string>
+  <string source="Data loaded. Nothing was changed." where="marketplace">Daten geladen. Nichts wurde geändert.</string>
+  <string source="Orders: %d total, %d ready to pick, %d held." where="marketplace">Bestellungen: %d insgesamt, %d zur Kommissionierung, %d zurückgestellt.</string>
+  <string source="Marketplace availability: %d rows. Not Ledger stock." where="marketplace">Verfügbarkeit am Marktplatz: %d Zeilen. Kein Ledger-Bestand.</string>
+  <string source="Request cancelled." where="marketplace">Abruf abgebrochen.</string>
+  <string source="Inputs changed. Load marketplace data again." where="marketplace">Die Angaben haben sich geändert. Laden Sie die Daten erneut.</string>
+  <string source="There are no orders ready to pick." where="marketplace">Keine Bestellungen zur Kommissionierung.</string>
+  <string source="Pick sheet preview. Save it when ready." where="marketplace">Vorschau der Pickliste. Prüfen Sie die Liste vor dem Speichern.</string>
+  <string source="Preview the pick sheet before saving." where="marketplace">Prüfen Sie die Pickliste vor dem Speichern.</string>
+  <string source="Pick sheet saved." where="marketplace">Pickliste gespeichert.</string>
+  <string source="Back to Results" where="marketplace">Zu den Ergebnissen</string>
+  <string source="Paste" where="marketplace">Einfügen</string>
+  <string source="Clipboard paste is unavailable. Enter the credential in the masked field." where="marketplace">Einfügen aus der Zwischenablage ist nicht verfügbar. Geben Sie die Zugangsdaten in das maskierte Feld ein.</string>
+  <string source="Marketplace connections are unavailable in this build." where="marketplace">Marktplatzverbindungen sind in diesem Build nicht verfügbar.</string>
+</strings>

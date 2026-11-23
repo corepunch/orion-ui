@@ -55,6 +55,20 @@
     <function name="import" lua="true" export="import" />
     <function name="addon" lua="true" export="addon" />
     <function name="recipes" lua="true" export="recipes" />
+    <function name="marketplace" lua="true" export="marketplace" />
+    <function name="market_start" lua="true" export="market_start">
+      <arg name="provider" type="string" />
+      <arg name="options" type="string" />
+      <arg name="client" type="string" />
+      <returns type="nresults" />
+    </function>
+    <function name="market_status" lua="true" export="market_status"><returns type="nresults" /></function>
+    <function name="market_supported" lua="true" export="market_supported"><returns type="bool" /></function>
+    <function name="market_dates" lua="true" export="market_dates"><returns type="nresults" /></function>
+    <function name="market_preview" lua="true" export="market_preview"><returns type="nresults" /></function>
+    <function name="market_cancel" lua="true" export="market_cancel"><returns type="bool" /></function>
+    <function name="market_paste" lua="true" export="market_paste"><returns type="bool" /></function>
+    <function name="market_save" lua="true" export="market_save"><returns type="bool" /></function>
     <function name="recipe_file" lua="true" export="recipe_file">
       <returns type="nresults" />
     </function>

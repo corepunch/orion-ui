@@ -785,7 +785,14 @@ window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc
 }
 
 void script_page_run(script_page_t *page, window_t *parent) {
+  script_page_run_hook(page,parent,NULL);
+}
+bool script_page_owns_state(const script_page_t *page, lua_State *state) {
+  return page && state && page->L == state;
+}
+void script_page_run_hook(script_page_t *page, window_t *parent, winproc_t hook) {
   if (!page) return;
+  page->hook = hook;
   page->modal = true;
   page->closing = false;
   show_dialog_from_form(page->form, script_page_title(page), parent, script_page_window_proc, page);

@@ -3,6 +3,7 @@
 // only behavior the declarations cannot express.
 
 #include "ledger.h"
+#include "marketplace_host.h"
 #include <orion/commdlg/commdlg.h>
 #include <orion/user/file.h>
 #include <time.h>
@@ -799,11 +800,25 @@ static int ledger_ui_recipe_file(lua_State *L) {
   free(bytes);
   return 1;
 }
-static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
+static void ledger_ui_marketplace(lua_State *L) {
+  (void)L;
+  ledger_market_open(g_ledger->main_win,g_ledger->share_dir);
+}
+static int ledger_ui_market_start(lua_State *L, const char *provider, const char *options, const char *client) {
+  return ledger_market_start(L,provider,options,client);
+}
+static int ledger_ui_market_status(lua_State *L) { return ledger_market_status(L); }
+static int ledger_ui_market_dates(lua_State *L) { return ledger_market_dates(L); }
+static bool ledger_ui_market_supported(lua_State *L) { (void)L; return ledger_market_supported(); }
+static int ledger_ui_market_preview(lua_State *L) { return ledger_market_preview(L); }
+static bool ledger_ui_market_cancel(lua_State *L) { return ledger_market_cancel(L); }
+static bool ledger_ui_market_paste(lua_State *L) { return ledger_market_paste(L); }
+static bool ledger_ui_save_print_html_as(lua_State *L, const char *html, const char *basename, const char *title) {
   const size_t size = strlen(html);
   if (size > 8 * 1024 * 1024 || strncmp(html, "<!doctype html>", 15))
     return luaL_error(L, "invalid printable HTML");
-  char path[LEDGER_PATH_MAX * 2] = "item-labels.html", filter[128];
+  char path[LEDGER_PATH_MAX * 2], filter[128];
+  snprintf(path,sizeof(path),"%s",basename);
   const char *description = ui_tr("Printable HTML (*.html)");
   size_t desc_size = strlen(description);
   if (desc_size + sizeof("*.html") + 2 > sizeof(filter)) return luaL_error(L, "print filter too long");
@@ -814,9 +829,9 @@ static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
   if (!get_save_filename(&ofn)) return false;
   const char *extension = strrchr(path, '.');
   if (!extension || strcmp(extension, ".html"))
-    return luaL_error(L, "%s", ui_tr("Use the .html extension for printable labels."));
+    return luaL_error(L, "%s", ui_tr("Use the .html extension for the printable file."));
   if (axPathExists(path) &&
-      message_box(g_ledger->main_win, ui_tr("Replace the existing printable file?"), ui_tr("Print Item Labels"), MB_YESNO) != IDYES)
+      message_box(g_ledger->main_win, ui_tr("Replace the existing printable file?"), ui_tr(title), MB_YESNO) != IDYES)
     return false;
   char temporary[sizeof(path) + 8];
   snprintf(temporary, sizeof(temporary), "%s.tmp", path);
@@ -829,6 +844,13 @@ static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
     return luaL_error(L, "%s", ui_tr("The printable file could not be saved."));
   }
   return true;
+}
+static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
+  return ledger_ui_save_print_html_as(L,html,"item-labels.html","Print Item Labels");
+}
+static bool ledger_ui_market_save(lua_State *L) {
+  const char *html = ledger_market_printable(L);
+  return html && ledger_ui_save_print_html_as(L,html,"marketplace-pick-list.html","Marketplaces");
 }
 static void ledger_ui_assistant(lua_State *L) { ledger_open_assistant(); }
 static void ledger_ui_help(lua_State *L) {
@@ -868,6 +890,7 @@ bool ledger_ui_open(const char *directory) {
 }
 void ledger_ui_close(void) {
   if (!g_ledger || !g_ledger->runtime) return;
+  ledger_market_shutdown();
   script_runtime_release(g_ledger->runtime, g_ledger->controller);
   script_runtime_close(g_ledger->runtime); g_ledger->runtime = NULL;
 }

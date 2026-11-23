@@ -46,7 +46,7 @@ else ifeq ($(UNAME_S),Darwin)
 ARCH     ?= arm64
 CFLAGS   += -arch $(ARCH)
 LDFLAGS  += -arch $(ARCH)
-LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox -framework CoreMedia -framework CoreVideo -framework AppKit -framework CoreFoundation
+LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox -framework CoreMedia -framework CoreVideo -framework AppKit -framework CoreFoundation -lobjc
 KERNEL_INPUT_OBJ = $(BUILD_DIR)/audio_input_apple.o $(BUILD_DIR)/media_export_apple.o
 # Scener encodes reel videos with VideoToolbox.
 SCENER_LIBS = -framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation
@@ -59,7 +59,7 @@ component_id_flags = -Wl,-install_name,@rpath/$(notdir $@)
 GEM_NM   = nm -g
 GEM_SYM  = T _gem_get_interface
 else ifeq ($(UNAME_S),Linux)
-LIBS     += -lGL -lutil
+LIBS     += -lGL -lutil -ldl
 LDFLAGS_TEST += -lEGL
 CFLAGS   += -fPIC
 LIB_EXT  = so

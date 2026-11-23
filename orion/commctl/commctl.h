@@ -480,6 +480,15 @@ typedef struct {
 
 result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Opt-in TextBox password field, separate from the generic text APIs.
+// Call on the UI thread. Always clears the field, including on short output
+// or error. The caller owns (and must securely erase) the returned buffer.
+#define TEXTEDIT_PASSWORD_CAPACITY 8193
+bool textedit_take_password(window_t *win, char *out, size_t capacity);
+// Reads the system clipboard only for an explicit paste request. A successful
+// paste replaces the current masked value; failure leaves it intact.
+bool textedit_paste_password(window_t *win);
 result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_image(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
