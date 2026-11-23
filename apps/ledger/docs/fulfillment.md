@@ -11,11 +11,13 @@ Export or prepare a local JSON file using the
 [example batch](../tests/fixtures/fulfillment/orders.json). Each selected order
 needs a unique string `id`, an explicit `"status": "open"`,
 `"selected": true`, a short `recipient` (an internal packing alias works), and
-`lines` with exact string `sku`, optional exact string `variant`, and positive
+`lines` with exact string `sku`, optional exact strings `variant` and `barcode`, and positive
 whole-number `quantity`. Use the same full human-readable characteristic
 (such as `Navy / 105 cm / straight handle`) on every line of that variant.
 Omit `variant` for legacy or truly variant-free goods; missing variants form a
-separate group and are never merged with a named variant.
+separate group and are never merged with a named variant. When present, the
+barcode is also part of the exact grouping key; two barcodes on the same SKU
+and variant stay separate.
 Do not include customer addresses, access keys, or other marketplace data.
 Unselected orders may omit recipient and lines. An explicitly selected closed
 or cancelled order aborts the batch. SKUs and variants are case-sensitive,
@@ -35,7 +37,7 @@ Run from the repository root with Lua 5.4:
   mv pick-list.tmp pick-list.html)
 ```
 
-Open the HTML locally and print. Each SKU/variant combination appears once,
+Open the HTML locally and print. Each SKU/variant/barcode combination appears once,
 with the full variant before the total and order IDs. Duplicate lines within
 one order combine only when both values match. Recipients are intentionally
 omitted from this sheet.

@@ -27,24 +27,28 @@ end
 
 local function pick_order(a, b)
   if a.sku ~= b.sku then return a.sku < b.sku end
-  return (a.variant or "") < (b.variant or "")
+  if a.variant ~= b.variant then return (a.variant or "") < (b.variant or "") end
+  return (a.barcode or "") < (b.barcode or "")
 end
 
--- Empty strings are invalid variants, so "" is an unambiguous key for
--- legacy lines. Separate tables keep arbitrary SKU/variant strings distinct.
-local function get_pick(index, sku, variant)
+-- Empty variant/barcode keys denote absent source data. Do not conflate
+-- distinct barcodes, or a supplied barcode with an unspecified one.
+local function get_pick(index, sku, variant, barcode)
   local variants = index[sku]
   if not variants then variants = {}; index[sku] = variants end
-  return variants, variant or ""
+  local key = variant or ""
+  local barcodes = variants[key]
+  if not barcodes then barcodes = {}; variants[key] = barcodes end
+  return barcodes, barcode or ""
 end
 
 function M.plan(input, json)
   local array_mt = json and getmetatable(json.array())
   fields(input, {orders=true}, "batch")
   array(input.orders, MAX_ORDERS, array_mt, "orders")
-  local orders, picks, seen_orders, by_sku, line_count = {}, {}, {}, {}, 0
+  local orders, picks, seen_orders, by_sku, line_count, barcodes = {}, {}, {}, {}, 0, false
   local order_fields = {id=true, recipient=true, status=true, selected=true, lines=true}
-  local line_fields = {sku=true, variant=true, quantity=true}
+  local line_fields = {sku=true, variant=true, barcode=true, quantity=true}
 
   for _, src in ipairs(input.orders) do
     fields(src, order_fields, "order")
@@ -69,12 +73,18 @@ function M.plan(input, json)
           required_text(variant, 512, "variant")
           assert(variant == variant:match("^%s*(.-)%s*$"), "variant has surrounding whitespace")
         end
+        local barcode = raw.barcode
+        if barcode ~= nil then
+          barcodes = true
+          required_text(barcode,100,"barcode")
+          assert(barcode == barcode:match("^%s*(.-)%s*$"), "barcode has surrounding whitespace")
+        end
         local qty = raw.quantity
         assert(math.type(qty) == "integer" and qty > 0 and qty <= MAX_QUANTITY, "invalid pick quantity")
-        local variants, key = get_pick(selected_lines, sku, variant)
+        local variants, key = get_pick(selected_lines, sku, variant, barcode)
         local line = variants[key]
         if not line then
-          line = {sku=sku, variant=variant, quantity=0}
+          line = {sku=sku, variant=variant, barcode=barcode, quantity=0}
           variants[key] = line
           order.lines[#order.lines + 1] = line
         end
@@ -83,10 +93,10 @@ function M.plan(input, json)
       table.sort(order.lines, pick_order)
       orders[#orders + 1] = order
       for _, line in ipairs(order.lines) do
-        local variants, key = get_pick(by_sku, line.sku, line.variant)
+        local variants, key = get_pick(by_sku, line.sku, line.variant, line.barcode)
         local pick = variants[key]
         if not pick then
-          pick = {sku=line.sku, variant=line.variant, quantity=0, orders={}}
+          pick = {sku=line.sku, variant=line.variant, barcode=line.barcode, quantity=0, orders={}}
           variants[key] = pick
           picks[#picks + 1] = pick
         end
@@ -99,7 +109,7 @@ function M.plan(input, json)
   table.sort(orders, function(a, b) return a.id < b.id end)
   table.sort(picks, pick_order)
   for _, pick in ipairs(picks) do table.sort(pick.orders, function(a, b) return a.id < b.id end) end
-  return {orders=orders, picks=picks}
+  return {orders=orders, picks=picks, barcodes=barcodes}
 end
 
 local function escape(value)
@@ -125,15 +135,17 @@ small { color:#333; }
 end
 
 function M.pick_list(plan)
+  local heading = plan.barcodes and '<th>Barcode</th>' or ''
   local out = {'<h1>Batch pick list</h1>', '<p>Pick each SKU and variant together, then split quantities into the listed orders.</p>',
-    '<table><thead><tr><th>Picked</th><th>SKU</th><th>Variant</th><th>Total</th><th>Split by order ID</th></tr></thead><tbody>'}
+    '<table><thead><tr><th>Picked</th><th>SKU</th><th>Variant</th>' .. heading .. '<th>Total</th><th>Split by order ID</th></tr></thead><tbody>'}
   for _, pick in ipairs(plan.picks) do
     local splits = {}
     for _, part in ipairs(pick.orders) do
       splits[#splits + 1] = ("%s × %d"):format(escape(part.id), part.quantity)
     end
-    out[#out + 1] = ('<tr><td><input type="checkbox" aria-label="Mark picked"></td><th scope="row">%s</th><td class="variant">%s</td><td>%d</td><td>%s</td></tr>')
-      :format(escape(pick.sku), escape(pick.variant or "Not specified"), pick.quantity, table.concat(splits, "<br>"))
+    local barcode = plan.barcodes and ('<td>' .. escape(pick.barcode or "") .. '</td>') or ''
+    out[#out + 1] = ('<tr><td><input type="checkbox" aria-label="Mark picked"></td><th scope="row">%s</th><td class="variant">%s</td>%s<td>%d</td><td>%s</td></tr>')
+      :format(escape(pick.sku), escape(pick.variant or "Not specified"), barcode, pick.quantity, table.concat(splits, "<br>"))
   end
   out[#out + 1] = "</tbody></table>"
   return document("Batch pick list", out)
@@ -145,10 +157,12 @@ function M.order_labels(plan)
   for _, order in ipairs(plan.orders) do
     out[#out + 1] = ('<article><small>%s</small><h2>Order %s</h2><p>Recipient: %s</p>')
       :format(notice, escape(order.id), escape(order.recipient))
-    out[#out + 1] = '<table><thead><tr><th>SKU</th><th>Variant</th><th>Quantity</th></tr></thead><tbody>'
+    local heading = plan.barcodes and '<th>Barcode</th>' or ''
+    out[#out + 1] = '<table><thead><tr><th>SKU</th><th>Variant</th>' .. heading .. '<th>Quantity</th></tr></thead><tbody>'
     for _, line in ipairs(order.lines) do
-      out[#out + 1] = ('<tr><th scope="row">%s</th><td class="variant">%s</td><td>%d</td></tr>')
-        :format(escape(line.sku), escape(line.variant or "Not specified"), line.quantity)
+      local barcode = plan.barcodes and ('<td>' .. escape(line.barcode or "") .. '</td>') or ''
+      out[#out + 1] = ('<tr><th scope="row">%s</th><td class="variant">%s</td>%s<td>%d</td></tr>')
+        :format(escape(line.sku), escape(line.variant or "Not specified"), barcode, line.quantity)
     end
     out[#out + 1] = '</tbody></table></article>'
   end

@@ -257,6 +257,9 @@ build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/lo
   optional local photo, size, variant, and a dated quantity reference.
 - [Prepare a pick list and internal packing labels](docs/fulfillment.md) from
   explicitly exported local order JSON; no carrier or marketplace connection.
+- [Read seller orders and availability from Ozon and eBay](docs/marketplaces.md)
+  with local Lua adapters. Prepare a pick list without updating listings,
+  stock, order status or Ledger.
 - [Review a ClientBank statement](docs/bank-statement-preview.md) locally
   before reconciliation; no automatic posting or EDI.
 - [User feedback and validation gaps](docs/unf-workflows.md) link the workflows
