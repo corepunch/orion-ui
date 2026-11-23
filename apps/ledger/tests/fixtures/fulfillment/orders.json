@@ -1,0 +1,20 @@
+{
+  "orders": [
+    {
+      "id": "O-102",
+      "recipient": "Packing recipient B",
+      "status": "open",
+      "selected": true,
+      "lines": [{"sku": "0007", "quantity": 2}, {"sku": "A-15", "quantity": 1}, {"sku": "0007", "quantity": 3}]
+    },
+    {
+      "id": "O-101",
+      "recipient": "Packing recipient A",
+      "status": "open",
+      "selected": true,
+      "lines": [{"sku": "0007", "quantity": 4}]
+    },
+    {"id": "O-103", "status": "closed", "selected": false},
+    {"id": "O-104", "status": "open", "selected": false}
+  ]
+}

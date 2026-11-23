@@ -113,7 +113,8 @@ on the snapshot.
   stock accounting is item/account based, not per-warehouse; the OData snapshot
   does not change accounting calculations.
 - Ledger has document printing/export with templates. Dedicated barcode
-  scanning, label formats and label printing are not implemented by this PR.
+  scanning and regulatory/carrier formats are not implemented. See the
+  [internal item-label workflow](item-labels.md).
 - Keep the connector, label templates, scanner workflows, and warehouse-report
   presentation in Lua. Keep posting, reversal and typed database integrity in
   the core, with a narrow reusable API before adding per-warehouse valuation.

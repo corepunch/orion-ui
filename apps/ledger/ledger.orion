@@ -56,6 +56,7 @@
       <item name="new_item" label="New Item..." />
       <item name="edit_item" label="Edit Item..." />
       <item name="delete_item" label="Delete Item..." />
+      <item name="labels" label="Print Item Labels..." />
       <Separator />
       <item name="new_employee" label="New Employee..." />
       <item name="edit_employee" label="Edit Employee..." />
@@ -183,6 +184,7 @@
       <Group label="Items">
         <Button command="catalog.new_item" icon="ledger-nav-items" text="New" size="large" tooltip="New item" />
         <Button command="catalog.edit_item" icon="ledger-edit" text="Edit" tooltip="Edit item" />
+        <Button command="catalog.labels" icon="ledger-print" text="Labels" tooltip="Print item labels" />
         <Button command="catalog.delete_item" icon="ledger-delete" text="Delete" tooltip="Delete item" />
       </Group>
       <Group label="Warehouses">

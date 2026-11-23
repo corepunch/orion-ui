@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru">
+  <string source="Print Item Labels" where="labels">Печать этикеток</string>
+  <string source="Item:" where="labels">Товар:</string>
+  <string source="Copies:" where="labels">Копий:</string>
+  <string source="Barcode override:" where="labels">Другой штрихкод:</string>
+  <string source="Use item SKU" where="labels">Использовать артикул</string>
+  <string source="US Letter instead of A4" where="labels">US Letter вместо A4</string>
+  <string source="Label roll" where="labels">Рулон этикеток</string>
+  <string source="Roll width (mm):" where="labels">Ширина рулона (мм):</string>
+  <string source="Roll height (mm):" where="labels">Высота этикетки (мм):</string>
+  <string source="Item" where="labels">Товар</string>
+  <string source="SKU" where="labels">Артикул</string>
+  <string source="Copies" where="labels">Копий</string>
+  <string source="Add to Batch" where="labels">Добавить в очередь</string>
+  <string source="Clear Batch" where="labels">Очистить очередь</string>
+  <string source="Save Printable Labels" where="labels">Сохранить для печати</string>
+  <string source="Close" where="labels">Закрыть</string>
+  <string source="Choose only one paper option." where="labels">Выберите один формат бумаги.</string>
+  <string source="Choose an item from the catalog." where="labels">Выберите товар из справочника.</string>
+  <string source="Labels in batch: %d" where="labels">Этикеток в очереди: %d</string>
+  <string source="Saved. Open the file and print at actual size." where="labels">Сохранено. Откройте файл и напечатайте в масштабе 100%.</string>
+</strings>

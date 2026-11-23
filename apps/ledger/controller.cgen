@@ -54,6 +54,11 @@
     <function name="language" lua="true" export="language" />
     <function name="import" lua="true" export="import" />
     <function name="addon" lua="true" export="addon" />
+    <function name="labels" lua="true" export="labels" />
+    <function name="save_print_html" lua="true" export="save_print_html">
+      <arg name="html" type="string" />
+      <returns type="bool" />
+    </function>
     <function name="assistant" lua="true" export="assistant" />
     <function name="help" lua="true" export="help" />
     <function name="tutorial" lua="true" export="tutorial">

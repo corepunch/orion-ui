@@ -691,4 +691,13 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." where="labels">Wählen Sie „Bearbeiten“, um den Beleg zu öffnen, oder „Soll/Haben“, um zu den Buchungen zu wechseln. Ein Entwurf hat keine Buchungen.</string>
   <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." where="labels">Wählen Sie in der Berichtsliste die Summen- und Saldenliste. Legen Sie den Zeitraum über „Einstellungen“ (Strg+R) fest.</string>
   <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." where="labels">Lesen Sie von links nach rechts: Anfangssaldo, Soll- und Habenumsatz und dann den Schlusssaldo. Vergleichen Sie die Soll- und Habenumsätze in der Summenzeile.</string>
+  <string source="Print Item Labels..." where="menu">Artikeletiketten drucken...</string>
+  <string source="Labels" where="items_page">Etiketten</string>
+  <string source="Print item labels" where="items_page">Artikeletiketten drucken</string>
+  <string source="Printable HTML (*.html)">Druckbares HTML (*.html)</string>
+  <string source="Print Item Labels">Artikeletiketten drucken</string>
+  <string source="Replace the existing printable file?">Die vorhandene Druckdatei ersetzen?</string>
+  <string source="Use the .html extension for printable labels.">Verwenden Sie die Dateiendung .html.</string>
+  <string source="The printable file could not be created.">Die Druckdatei konnte nicht erstellt werden.</string>
+  <string source="The printable file could not be saved.">Die Druckdatei konnte nicht gespeichert werden.</string>
 </strings>
