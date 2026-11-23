@@ -37,7 +37,7 @@
       <div class="hero-copy">
         <div class="eyebrow">Doppelte Buchführung · Windows, macOS, Linux</div>
         <h1>Buchhaltung, die <em>keinen Berater braucht</em></h1>
-        <p class="lead">Ledger führt Belege, Buchungen, Lohn, Anlagen, Fremdwährungen und den Monatsabschluss. Was sonst ein Berater oder Programmierer anpasst, regeln hier Konfigurationstabellen, fertige Lua-Skripte aus der Bibliothek und Bausteine, die Sie mit der Maus verbinden.</p>
+        <p class="lead">Ledger führt Belege, Buchungen, Lohn, Anlagen, Fremdwährungen und den Monatsabschluss. Für den Arbeitsalltag gibt es 18 Lua-Rezepte mit Schlagwortsuche: von der Duplikatprüfung bis zu Etikettendruck und Kommissionierung.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#download">Kostenlos laden</a>
           <a class="btn btn-ghost" href="#scripts">So geht es ohne Programmierer</a>
@@ -93,6 +93,7 @@
       <p>Linux: <code>tar xzf ledger-linux-x86_64.tar.gz</code> und <code>./ledger/bin/ledger</code>. Benötigt OpenGL, X11 oder XWayland und libxml2.</p>
     </div>
     <p class="dl-more">Alle Builds und SHA-256-Prüfsummen stehen auf der <a href="https://github.com/corepunch/orion-ui/releases">Release-Seite</a>.</p>
+    <p class="dl-more">Die neuen Rezepte beziehen sich auf den <a href="https://github.com/corepunch/orion-ui/tree/main/apps/ledger">aktuellen Quellcode</a>. In veröffentlichten Downloads sind sie möglicherweise noch nicht enthalten.</p>
   </div>
 </section>
 
@@ -129,55 +130,47 @@
 <section class="band" id="scripts">
   <div class="wrap">
     <div class="head">
-      <div class="eyebrow">Skripte <span class="pill">in Entwicklung</span></div>
-      <h2>Eine Lua-Bibliothek statt eines Programmierers</h2>
-      <p>Typische Anpassungen, für die sonst ein Berater kommt, liegen schon in der Bibliothek: Verzugszinsen, Mahnlauf, Kontoauszug, Provisionen, Prüfungen vor dem Buchen. Skript über ein Schlagwort finden, für den Mandanten aktivieren, Parameter anpassen. Lua liest sich wie normaler Text.</p>
+      <div class="eyebrow">Automatisierung</div>
+      <h2>18 fertige Lua-Rezepte</h2>
+      <p>Öffnen Sie <strong>Datei → Automationsrezepte</strong> und suchen Sie nach Aufgabe oder Schlagwort. Prüfen Sie das Druckergebnis oder geplante Änderungen vorab. Die Vorschau ändert keine Daten.</p>
     </div>
     <div class="lib" data-lib data-count="%1 von %2 gefunden">
       <div class="lib-bar">
-        <input id="lib-search" type="search" placeholder="Suche: Mahnung, Bank, Lohn, #lager…" aria-label="Skripte durchsuchen" autocomplete="off">
+        <input id="lib-search" type="search" placeholder="Suche: Etiketten, Kontoauszug, #lager…" aria-label="Skripte durchsuchen" autocomplete="off">
         <span class="lib-count" aria-live="polite"></span>
       </div>
       <div class="tags" role="group" aria-label="Schlagwörter"></div>
       <div class="cards">
-        <article class="card" data-tags="mahnwesen,zinsen,monatlich"><h3>Verzugszinsen auf offene Posten</h3><p>Berechnet Zinsen auf Forderungen 1400, die älter als N Tage sind, und bucht sie auf 2650.</p></article>
-        <article class="card" data-tags="mahnwesen,druck"><h3>Mahnlauf mit drei Stufen</h3><p>Stellt fällige Posten je Kunde zusammen und druckt Zahlungserinnerung, 1. und 2. Mahnung.</p></article>
-        <article class="card" data-tags="bank,import"><h3>Kontoauszug importieren</h3><p>Liest CSV- oder MT940-Dateien der Bank und legt Zahlungseingänge und Überweisungen an.</p></article>
-        <article class="card" data-tags="bank,zahlungen"><h3>Skonto automatisch buchen</h3><p>Erkennt Zahlungen innerhalb der Skontofrist und bucht die Differenz mit Steuerkorrektur.</p></article>
-        <article class="card" data-tags="lohn,vertrieb"><h3>Provision für den Vertrieb</h3><p>Berechnet die Provision vom Umsatz je Verkäufer und fügt sie der Lohnabrechnung hinzu.</p></article>
-        <article class="card" data-tags="lager,prüfung"><h3>Keine negativen Bestände</h3><p>Verhindert das Buchen einer Ausgangsrechnung, wenn der Artikel nicht mehr am Lager ist.</p></article>
-        <article class="card" data-tags="vertrieb,druck"><h3>Rechnungen per E-Mail</h3><p>Erzeugt die Rechnung aus der Vorlage und sendet sie an die Adresse des Geschäftspartners.</p></article>
-        <article class="card" data-tags="abschluss,forderungen"><h3>Pauschalwertberichtigung</h3><p>Bildet zum Monatsende eine Wertberichtigung auf den Forderungsbestand.</p></article>
-        <article class="card" data-tags="mitarbeiter,kasse"><h3>Reisekostenabrechnung</h3><p>Bucht Belege und Pauschalen einer Dienstreise und erstattet den Rest aus der Kasse.</p></article>
-        <article class="card" data-tags="steuer,abschluss,prüfung"><h3>Umsatzsteuer-Kennzahlen</h3><p>Stellt Umsätze und Vorsteuer des Zeitraums nach Steuersätzen für die Voranmeldung zusammen.</p></article>
-        <article class="card" data-tags="bank,kasse,prüfung"><h3>Kassen- und Bankabgleich</h3><p>Vergleicht die Salden 1000 und 1200 mit dem Auszug und zeigt Abweichungen je Tag.</p></article>
-        <article class="card" data-tags="anlagen,abschluss"><h3>GWG-Sofortabschreibung</h3><p>Schreibt geringwertige Wirtschaftsgüter im Monat der Anschaffung voll ab.</p></article>
-        <div class="lib-empty" hidden>Dieses Skript gibt es noch nicht. Beschreiben Sie die Aufgabe, dann kommt es in die Bibliothek.</div>
+        <article class="card" data-tags="import,artikel"><h3>Artikel importieren</h3><p>Zeigt vorab, welche Artikel aus einer CSV-Datei übernommen würden.</p></article>
+        <article class="card" data-tags="import,geschäftspartner"><h3>Geschäftspartner importieren</h3><p>Zeigt den Übernahmeplan für Geschäftspartner anhand ihrer Steuerdaten.</p></article>
+        <article class="card" data-tags="import,währungen"><h3>Wechselkurse importieren</h3><p>Prüft Währung, Datum und Kurs vor der Übernahme.</p></article>
+        <article class="card" data-tags="artikel,preise"><h3>Preise aktualisieren</h3><p>Zeigt die geplanten Preisänderungen nach Artikelnummer.</p></article>
+        <article class="card" data-tags="duplikate,artikel"><h3>Doppelte Artikel finden</h3><p>Zeigt mögliche Duplikate im Artikelstamm, ohne Datensätze zusammenzuführen.</p></article>
+        <article class="card" data-tags="duplikate,geschäftspartner"><h3>Doppelte Geschäftspartner finden</h3><p>Zeigt mögliche Duplikate zur manuellen Prüfung.</p></article>
+        <article class="card" data-tags="duplikate,belege"><h3>Doppelte Belege finden</h3><p>Zeigt Belege mit übereinstimmenden Merkmalen.</p></article>
+        <article class="card" data-tags="prüfung,stammdaten"><h3>Pflichtfelder prüfen</h3><p>Findet Stammdatensätze mit leeren Feldern.</p></article>
+        <article class="card" data-tags="prüfung,stammdaten"><h3>Stammdatenfeld ersetzen</h3><p>Zeigt vorab, welche Datensätze eine Sammeländerung betrifft.</p></article>
+        <article class="card" data-tags="lager,berichte"><h3>Bestände nach Konten</h3><p>Zeigt Artikelbestände für die gewählten Bestandskonten.</p></article>
+        <article class="card" data-tags="geschäftspartner,berichte"><h3>Salden nach Geschäftspartner</h3><p>Zeigt Salden nach Geschäftspartner für gewählte Konten und Zeiträume.</p></article>
+        <article class="card" data-tags="prüfung,abschluss"><h3>Vor dem Abschluss prüfen</h3><p>Zeigt nicht gebuchte Belege und weitere Hinweise vor dem Periodenabschluss.</p></article>
+        <article class="card" data-tags="lager,druck,etiketten"><h3>Artikeletiketten drucken</h3><p>Code-128-Etiketten einzeln oder gesammelt auf A4, Letter oder Rollen drucken.</p></article>
+        <article class="card" data-tags="artikel,druck"><h3>Artikelkarte drucken</h3><p>Eine Karte mit Artikelnummer, Maßen und Varianten. Fotos lassen sich mit dem separaten Werkzeug hinzufügen; die HTML-Datei ist im Browser als PDF speicherbar.</p></article>
+        <article class="card" data-tags="lager,kommissionierung,aufträge"><h3>Aufträge gesammelt kommissionieren</h3><p>Gruppiert Positionen aus einer lokalen JSON-Datei nach Artikelnummer, Variante und Barcode. Die Zuordnung zum Auftrag bleibt erhalten.</p></article>
+        <article class="card" data-tags="lager,druck,etiketten,aufträge"><h3>Interne Packetiketten drucken</h3><p>Erstellt Packetiketten pro Auftrag. Keine Versandetiketten für Paketdienste.</p></article>
+        <article class="card" data-tags="bank,kontoauszug,prüfung"><h3>Kontoauszug vorab prüfen</h3><p>Liest eine lokale 1CClientBankExchange-Datei und zeigt Bewegungen und Abweichungen. Ohne Bankverbindung oder Buchungen.</p></article>
+        <article class="card" data-tags="belege,artikel,berichte"><h3>Belege zu einem Artikel finden</h3><p>Findet Belege nach Artikelnummer und zeigt alle Positionen je Treffer.</p></article>
+        <div class="lib-empty" hidden>Keine Treffer. Suchen Sie nach einem anderen Begriff oder entfernen Sie den Schlagwortfilter.</div>
       </div>
     </div>
     <div class="two code-wide">
       <div class="copy">
-        <h3>Ein Skript hat zehn Zeilen, kein Pflichtenheft</h3>
-        <p>Jedes Skript trägt Schlagwörter und eine Beschreibung, die Bibliothek durchsuchen Sie wie einen App-Store. Skripte buchen über dieselbe Buchungslogik wie Belege: Die Buchungen landen im Journal, Auswertungen rechnen neu, „Buchung stornieren“ nimmt alles zurück.</p>
-        <ul class="ticks">
-          <li>Schlagwörter und Suche direkt im Programm</li>
-          <li>Parameter werden im Formular gepflegt, ohne Code</li>
-          <li>Eigene Skripte lassen sich für andere veröffentlichen</li>
-        </ul>
+        <h3>Ergebnis vor der Übernahme prüfen</h3>
+        <p>Wählen Sie eine unterstützte lokale CSV-, JSON- oder Kontoauszugsdatei, geben Sie die Parameter ein und starten Sie die Vorschau. Druckergebnisse speichern Sie als HTML und öffnen sie im Browser.</p>
+        <p><a href="https://github.com/corepunch/orion-ui/blob/main/apps/ledger/AUTOMATION.md">Anleitung zur Automatisierung</a></p>
       </div>
-      <pre class="code" aria-label="Beispiel eines Lua-Skripts"><span class="c">-- @name  Verzugszinsen auf offene Posten</span>
-<span class="c">-- @tags  mahnwesen, zinsen, monatlich</span>
-<span class="k">local</span> zins = ledger.rate(<span class="s">"basiszins"</span>) + <span class="n">0.05</span>
-
-<span class="k">for</span> _, op <span class="k">in</span> ledger.overdue(<span class="s">"1400"</span>, <span class="n">30</span>) <span class="k">do</span>
-  ledger.post{
-    date   = period.last_day,
-    debit  = { <span class="s">"1400"</span>, op.partner },
-    credit = <span class="s">"2650"</span>,
-    amount = op.amount * zins * op.days / <span class="n">365</span>,
-    text   = <span class="s">"Verzugszinsen "</span> .. op.partner.name,
-  }
-<span class="k">end</span></pre>
+      <pre class="code" aria-label="Lua"><span class="c">-- Doppelte Artikel finden</span>
+<span class="k">local</span> result = ledger.automation.preview(<span class="s">"duplicates.items"</span>, {})
+print(#result)</pre>
     </div>
   </div>
 </section>
@@ -371,6 +364,8 @@
         <li>Derselbe Export wird nie doppelt eingelesen</li>
         <li>Eine fehlerhafte Datei hinterlässt keinen einzigen Datensatz</li>
       </ul>
+      <p><strong>1C:Unternehmensverwaltung (УНФ).</strong> Ein separates Kommandozeilenwerkzeug liest Artikel, Geschäftspartner und Lager aus einer freigegebenen OData-v3-Schnittstelle. Bestandsmengen werden separat zur Prüfung ausgegeben. Es werden keine Buchungen erzeugt und keine Daten in 1C geändert. Geprüft mit Testdaten, nicht mit einer produktiven УНФ-Instanz.</p>
+      <p><a href="https://github.com/corepunch/orion-ui/blob/main/apps/ledger/docs/unf-odata.md">OData-Verbindung zu УНФ einrichten</a></p>
     </div>
     <div class="shots">
       <figure class="shot natural"><img src="../img/de/import-command.png" width="822" height="346" alt="In der Ledger-Befehlssuche ist „Aus 1C importieren“ ausgewählt" loading="lazy"><figcaption>Der Befehl „Aus 1C importieren“ in der Ledger-Befehlssuche.</figcaption></figure>
@@ -408,7 +403,7 @@
     </div>
     <ul class="road">
       <li class="done"><span class="when">Fertig</span><h3>Komplette Buchführung</h3><p>Belege, Buchungen mit Objekten, Lohn, Anlagen, Währungen, Monatsabschluss, Auswertungen, Druckformulare, EnterpriseData-Import.</p></li>
-      <li><span class="when">In Entwicklung</span><h3>Lua-Skripte und Bibliothek</h3><p>Skripte mit Schlagwörtern und Beschreibung, Suche im Programm, Parameter im Formular.</p></li>
+      <li class="done"><span class="when">Im Quellcode</span><h3>18 Automationsrezepte</h3><p>Schlagwortsuche, Vorschau, Etiketten und Artikelkarten, Kommissionierung und Kontoauszüge.</p></li>
       <li><span class="when">Danach</span><h3>Visueller Baukasten</h3><p>Belege, Bedingungen, Skripte, Buchungen und Druck als Bausteine, mit der Maus verbunden.</p></li>
     </ul>
   </div>
