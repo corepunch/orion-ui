@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru">
+  <string source="Automation Recipes" where="browser">Сценарии автоматизации</string>
+  <string source="Search by task" where="browser">Поиск по задаче</string>
+  <string source="Tags, comma separated" where="browser">Теги через запятую</string>
+  <string source="Search" where="browser">Поиск</string>
+  <string source="Recipe" where="browser">Сценарий</string>
+  <string source="Tags" where="browser">Теги</string>
+  <string source="Select Recipe" where="browser">Выбрать сценарий</string>
+  <string source="Open Item Labels" where="browser">Открыть этикетки товаров</string>
+  <string source="Load Data File..." where="browser">Загрузить файл данных...</string>
+  <string source="SKU or bank account, when needed" where="browser">Артикул или банковский счёт, если нужен</string>
+  <string source="Parameters (JSON)" where="browser">Параметры (JSON)</string>
+  <string source="Preview" where="browser">Предпросмотр</string>
+  <string source="Save Print Result" where="browser">Сохранить печатную форму</string>
+  <string source="Close" where="browser">Закрыть</string>
+  <string source="Recipes found: %d" where="browser">Найдено сценариев: %d</string>
+  <string source="Select a recipe first." where="browser">Сначала выберите сценарий.</string>
+  <string source="Print preview ready. Save the printable result to open or print it." where="browser">Печатная форма готова. Сохраните её, чтобы открыть или распечатать.</string>
+  <string source="Preview the current parameters before saving." where="browser">Перед сохранением проверьте текущие параметры.</string>
+  <string source="Saved. Open the file to view or print the result." where="browser">Сохранено. Откройте файл для просмотра или печати.</string>
+</strings>

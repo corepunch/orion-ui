@@ -767,6 +767,38 @@ static void ledger_ui_labels(lua_State *L) {
   script_page_run(page, g_ledger->main_win);
   script_page_close(page);
 }
+static void ledger_ui_recipes(lua_State *L) {
+  char path[LEDGER_PATH_MAX + 48], error[1024] = "";
+  snprintf(path, sizeof(path), "%s/stdplugs/automation/browser.orion", g_ledger->share_dir);
+  script_page_t *page = script_page_open(path, error, sizeof(error));
+  if (!page) { message_box(g_ledger->main_win, error, ui_tr("Automation Recipes"), MB_OK); return; }
+  script_page_run(page, g_ledger->main_win);
+  script_page_close(page);
+}
+static int ledger_ui_recipe_preview(lua_State *L, const char *id, const char *params) {
+  return ledger_script_recipe_preview(L, id, params);
+}
+static int ledger_ui_recipe_file(lua_State *L) {
+  char path[LEDGER_PATH_MAX * 2] = "", filter[176];
+  size_t n = strlen(ui_tr("Recipe data (*.json;*.csv;*.txt)"));
+  if (n + sizeof("*.json;*.csv;*.txt\0") + 1 > sizeof(filter)) return luaL_error(L, "recipe filter too long");
+  memcpy(filter, ui_tr("Recipe data (*.json;*.csv;*.txt)"), n + 1);
+  memcpy(filter + n + 1, "*.json;*.csv;*.txt\0", sizeof("*.json;*.csv;*.txt\0"));
+  openfilename_t ofn = {.lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win,
+    .lpstrFile = path, .nMaxFile = sizeof(path), .lpstrFilter = filter, .Flags = OFN_FILEMUSTEXIST};
+  if (!get_open_filename(&ofn)) { lua_pushnil(L); return 1; }
+  FILE *file = fopen(path, "rb");
+  if (!file) return luaL_error(L, "%s", ui_tr("The recipe data file could not be opened."));
+  char *bytes = malloc(1048577);
+  if (!bytes) { fclose(file); return luaL_error(L, "out of memory"); }
+  size_t size = fread(bytes, 1, 1048577, file);
+  bool ok = !ferror(file) && size <= 1048576 && !memchr(bytes, '\0', size);
+  fclose(file);
+  if (!ok) { free(bytes); return luaL_error(L, "%s", ui_tr("Choose a text data file no larger than 1 MiB.")); }
+  lua_pushlstring(L, bytes, size);
+  free(bytes);
+  return 1;
+}
 static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
   const size_t size = strlen(html);
   if (size > 8 * 1024 * 1024 || strncmp(html, "<!doctype html>", 15))

@@ -700,4 +700,5 @@
   <string source="Use the .html extension for printable labels.">Укажите расширение .html для печати этикеток.</string>
   <string source="The printable file could not be created.">Не удалось создать файл для печати.</string>
   <string source="The printable file could not be saved.">Не удалось сохранить файл для печати.</string>
+  <string source="Automation Recipes..." where="menu">Сценарии автоматизации...</string>
 </strings>

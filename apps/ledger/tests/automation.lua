@@ -6,7 +6,7 @@ local function fails(fn, fragment)
 end
 local function approx(a, b) assert(math.abs(a - b) < 0.00001, tostring(a) .. " ~= " .. tostring(b)) end
 local function count(t) return #ledger.fetch("ib", t) end
-assert(#A.recipes == 12 and #A.nodes == 16)
+assert(#A.recipes == 18 and #A.nodes == 16)
 assert(#A.search("прайса", {"цены"}, "recipe") == 1)
 assert(#A.search("задвоились", {"дубли"}, "recipe") == 2)
 assert(#A.search("", {"дубли", "контрагенты"}, "recipe") == 1)
@@ -132,4 +132,4 @@ fails(function() A.execute({nodes={{id="x",type="parse.csv",input="missing"}},ou
 fails(function() A.execute({nodes={{id="x",type="source.rows",params={rows={}}},{id="p",type="parse.csv",input="x"}},output="p"}) end, "incompatible node ports")
 fails(function() A.execute({nodes={{id="x",type="source.text",params={text='a;b\n"unterminated'}} ,{id="csv",type="parse.csv",input="x"}},output="csv"}) end, "unterminated")
 fails(function() A.execute({nodes={{id="x",type="source.text",params={text='a;a\n1;2'}} ,{id="csv",type="parse.csv",input="x"}},output="csv"}) end, "duplicate CSV header")
-print("Ledger automation: 12 recipes, 16 node types and real API integration passed")
+print("Ledger automation: 18 recipes, 16 node types and real API integration passed")

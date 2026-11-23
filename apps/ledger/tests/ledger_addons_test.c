@@ -179,6 +179,33 @@ static int seed_debts(void) {
   return sale;
 }
 
+static void test_recipe_browser(void) {
+  TEST("automation recipe browser: actual form, localized tag filtering and native read-only preview");
+  ASSERT_TRUE(ledger_ui_open(SHARE));
+  char error[512] = "";
+  script_page_t *page = script_page_open(SHARE "/stdplugs/automation/browser.orion", error, sizeof(error));
+  ASSERT(page, error);
+  ASSERT_NOT_NULL(script_page_create(page, NULL));
+  ASSERT_EQUAL(count_rows("ledger_recipes", 0), 18);
+  set_text(page, "query", "ПЕЧАТЬ");
+  set_text(page, "tags", " СКЛАД , ЭТИКЕТКИ ");
+  ASSERT_TRUE(script_page_perform(page, "search"));
+  ASSERT_EQUAL(count_rows("ledger_recipes", 0), 2);
+  script_page_close(page);
+  lua_State *L = luaL_newstate();
+  ASSERT_NOT_NULL(L);
+  const char *params = "{\"rows\":[{\"sku\":\"00013\",\"name\":\"Label fixture\",\"copies\":1}]}";
+  ASSERT_EQUAL(ledger_script_recipe_preview(L, "print.item_labels", params), 2);
+  ASSERT(lua_isstring(L, -2) && lua_toboolean(L, -1), "built-in preview returns printable HTML");
+  ASSERT(strstr(lua_tostring(L, -2), "00013"), "print preview keeps leading zeroes");
+  lua_settop(L, 0);
+  ASSERT_EQUAL(ledger_script_recipe_preview(L, "execute", "{}"), 2);
+  ASSERT(lua_isnil(L, -2) && strstr(lua_tostring(L, -1), "unsupported"), "unknown operation is refused");
+  lua_close(L);
+  ledger_ui_close();
+  PASS();
+}
+
 static void test_item_label_queue(void) {
   TEST("item labels add-on: the real form queues SKU labels and rejects invalid copies");
   ASSERT_TRUE(ledger_ui_open(SHARE));
@@ -387,6 +414,7 @@ int main(int argc, char **argv) {
   setup();
   test_ledger_module();
   test_item_label_queue();
+  test_recipe_browser();
   test_penalties();
   test_german_accounts();
   test_reverse_dialog();

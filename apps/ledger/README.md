@@ -383,7 +383,7 @@ and a pilot method for measuring task coverage and human time saved.
 
 ## Local automation recipes and nodes
 
-[Local Lua automation](AUTOMATION.md) adds 12 ready-made recipes, 16 typed node
+[Local Lua automation](AUTOMATION.md) adds **File → Automation Recipes** with 18 ready-made recipes, 16 typed node
 operations, tag/task search, change previews and transactional catalog writes.
 Business logic is Lua. API signatures, registration/argument guards and reference
 are generated from XML; record metadata comes from `ledger.orion`. A headless
