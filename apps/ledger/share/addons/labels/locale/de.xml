@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="de">
+  <string source="Print Item Labels" where="labels">Artikeletiketten drucken</string>
+  <string source="Item:" where="labels">Artikel:</string>
+  <string source="Copies:" where="labels">Kopien:</string>
+  <string source="Barcode override:" where="labels">Abweichender Barcode:</string>
+  <string source="Use item SKU" where="labels">Artikelnummer verwenden</string>
+  <string source="US Letter instead of A4" where="labels">US Letter statt A4</string>
+  <string source="Label roll" where="labels">Etikettenrolle</string>
+  <string source="Roll width (mm):" where="labels">Rollenbreite (mm):</string>
+  <string source="Roll height (mm):" where="labels">Etikettenhöhe (mm):</string>
+  <string source="Item" where="labels">Artikel</string>
+  <string source="SKU" where="labels">Artikelnummer</string>
+  <string source="Copies" where="labels">Kopien</string>
+  <string source="Add to Batch" where="labels">Zur Liste hinzufügen</string>
+  <string source="Clear Batch" where="labels">Liste leeren</string>
+  <string source="Save Printable Labels" where="labels">Druckdatei speichern</string>
+  <string source="Close" where="labels">Schließen</string>
+  <string source="Choose only one paper option." where="labels">Wählen Sie nur ein Papierformat.</string>
+  <string source="Choose an item from the catalog." where="labels">Wählen Sie einen Artikel aus dem Katalog.</string>
+  <string source="Labels in batch: %d" where="labels">Etiketten in der Liste: %d</string>
+  <string source="Saved. Open the file and print at actual size." where="labels">Gespeichert. Öffnen Sie die Datei und drucken Sie in Originalgröße.</string>
+</strings>

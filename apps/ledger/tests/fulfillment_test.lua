@@ -1,0 +1,66 @@
+local json = dofile("share/lua/orion/json.lua")
+local workflow = dofile("apps/ledger/share/addons/fulfillment/pick_lists.lua")
+local file = assert(io.open("apps/ledger/tests/fixtures/fulfillment/orders.json", "r"))
+local source = file:read("*a")
+file:close()
+local function fixture() return json.decode(source) end
+local assertions = 0
+local function eq(actual, expected)
+  assertions = assertions + 1
+  assert(actual == expected, ("%s ~= %s"):format(tostring(actual), tostring(expected)))
+end
+local function includes(page, fragment) eq(page:find(fragment, 1, true) ~= nil, true) end
+local function rejects(change, problem)
+  local input = fixture()
+  change(input)
+  local ok, error_text = pcall(workflow.plan, input, json)
+  eq(ok, false)
+  includes(error_text, problem)
+end
+
+local plan = workflow.plan(fixture(), json)
+eq(#plan.orders, 2)
+eq(#plan.picks, 2)
+eq(plan.picks[1].sku, "0007")
+eq(plan.picks[1].quantity, 9)
+eq(plan.picks[1].orders[1].id, "O-101")
+eq(plan.picks[1].orders[1].quantity, 4)
+eq(plan.picks[1].orders[2].id, "O-102")
+eq(plan.picks[1].orders[2].quantity, 5)
+eq(plan.orders[1].recipient, "Packing recipient A")
+eq(plan.orders[2].lines[2].sku, "A-15")
+eq(plan.orders[2].lines[2].quantity, 1)
+
+local pick = workflow.pick_list(plan)
+includes(pick, "O-101 × 4<br>O-102 × 5")
+eq(pick:find("Packing recipient", 1, true), nil)
+eq(pick:find("O-103", 1, true), nil)
+eq(pick:find("O-104", 1, true), nil)
+local labels = workflow.order_labels(plan)
+includes(labels, "Packing recipient A")
+includes(labels, "Packing recipient B")
+includes(labels, "Not a carrier shipping label.")
+eq(labels:find("O-104", 1, true), nil)
+
+local altered = fixture()
+altered.orders[1].id = [[A "<&>]]
+altered.orders[1].recipient = "<img src=x>"
+altered.orders[1].lines[1].sku = "<script>"
+local safe = workflow.plan(altered, json)
+includes(workflow.pick_list(safe), "&lt;script&gt;")
+local rendered = workflow.order_labels(safe)
+includes(rendered, "A &quot;&lt;&amp;&gt;")
+includes(rendered, "&lt;img src=x&gt;")
+eq(rendered:find("<img", 1, true), nil)
+rejects(function(x) x.orders[3].selected = true end, "not open")
+rejects(function(x) x.orders[1].selected = false; x.orders[2].selected = false end, "no selected open orders")
+rejects(function(x) x.orders[1].lines[1].quantity = 0 end, "invalid pick quantity")
+rejects(function(x) x.orders[1].lines[1].quantity = 1.5 end, "invalid pick quantity")
+rejects(function(x) x.orders[1].lines[1].sku = " 0007" end, "surrounding whitespace")
+rejects(function(x) x.orders[1].lines[1].sku = 7 end, "invalid SKU")
+rejects(function(x) x.orders[1].id = x.orders[2].id end, "duplicate order ID")
+rejects(function(x) x.orders[1].recipient = "" end, "invalid recipient")
+rejects(function(x) x.orders[1].address = "do not ingest" end, "unexpected field")
+rejects(function(x) x.orders[1].lines = {} end, "must be an array")
+rejects(function(x) x.orders[1].selected = nil end, "selected must be explicit")
+print(("Ledger fulfillment: %d checks passed"):format(assertions))

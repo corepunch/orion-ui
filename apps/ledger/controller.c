@@ -4,6 +4,7 @@
 
 #include "ledger.h"
 #include <orion/commdlg/commdlg.h>
+#include <orion/user/file.h>
 #include <time.h>
 #include <ctype.h>
 #include <orion/script/script_internal.h>
@@ -652,7 +653,8 @@ static void ledger_ui_status(lua_State *L, const char *text, const char *subtitl
 }
 // Native capabilities retain window/storage ownership. Workflow lives in controller.lua.
 static int ledger_ui_selected(lua_State *L, const char *name) {
-  uint32_t id = !strcmp(name, "entries") ? ID_ENTRIES_PAGE_ENTRIES : !strcmp(name, "documents") ? ID_JOURNAL_PAGE_DOCUMENTS : 0;
+  uint32_t id = !strcmp(name, "entries") ? ID_ENTRIES_PAGE_ENTRIES : !strcmp(name, "documents") ? ID_JOURNAL_PAGE_DOCUMENTS :
+                !strcmp(name, "items") ? ID_ITEMS_PAGE_ITEMS : 0;
   if (!id) return luaL_error(L, "unknown selection '%s'", name);
   const int *record = selected(id);
   return record ? *record : 0;
@@ -757,6 +759,45 @@ static void ledger_ui_configuration(lua_State *L) { select_configuration(); }
 static void ledger_ui_language(lua_State *L) { select_language(); }
 static void ledger_ui_import(lua_State *L) { import_from_1c(); }
 static void ledger_ui_addon(lua_State *L) { ledger_open_addon(); }
+static void ledger_ui_labels(lua_State *L) {
+  char path[LEDGER_PATH_MAX + 48], error[1024] = "";
+  snprintf(path, sizeof(path), "%s/addons/labels/labels.orion", g_ledger->share_dir);
+  script_page_t *page = script_page_open(path, error, sizeof(error));
+  if (!page) { message_box(g_ledger->main_win, error, ui_tr("Print Item Labels"), MB_OK); return; }
+  script_page_run(page, g_ledger->main_win);
+  script_page_close(page);
+}
+static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
+  const size_t size = strlen(html);
+  if (size > 8 * 1024 * 1024 || strncmp(html, "<!doctype html>", 15))
+    return luaL_error(L, "invalid printable HTML");
+  char path[LEDGER_PATH_MAX * 2] = "item-labels.html", filter[128];
+  const char *description = ui_tr("Printable HTML (*.html)");
+  size_t desc_size = strlen(description);
+  if (desc_size + sizeof("*.html") + 2 > sizeof(filter)) return luaL_error(L, "print filter too long");
+  memcpy(filter, description, desc_size + 1);
+  memcpy(filter + desc_size + 1, "*.html\0", sizeof("*.html\0"));
+  openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win,
+    .lpstrFile = path, .nMaxFile = sizeof(path), .lpstrFilter = filter, .Flags = OFN_PATHMUSTEXIST };
+  if (!get_save_filename(&ofn)) return false;
+  const char *extension = strrchr(path, '.');
+  if (!extension || strcmp(extension, ".html"))
+    return luaL_error(L, "%s", ui_tr("Use the .html extension for printable labels."));
+  if (axPathExists(path) &&
+      message_box(g_ledger->main_win, ui_tr("Replace the existing printable file?"), ui_tr("Print Item Labels"), MB_YESNO) != IDYES)
+    return false;
+  char temporary[sizeof(path) + 8];
+  snprintf(temporary, sizeof(temporary), "%s.tmp", path);
+  FILE *file = fopen(temporary, "wbx");
+  if (!file) return luaL_error(L, "%s", ui_tr("The printable file could not be created."));
+  const bool written = fwrite(html, 1, size, file) == size;
+  const bool closed = fclose(file) == 0;
+  if (!written || !closed || !file_replace(temporary, path)) {
+    remove(temporary);
+    return luaL_error(L, "%s", ui_tr("The printable file could not be saved."));
+  }
+  return true;
+}
 static void ledger_ui_assistant(lua_State *L) { ledger_open_assistant(); }
 static void ledger_ui_help(lua_State *L) {
   char path[LEDGER_PATH_MAX + 32];

@@ -249,6 +249,19 @@ new entries:
 build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/locale/ru.xml
 ```
 
+## Local inventory and fulfillment documents
+
+- [Print item labels](docs/item-labels.md) from the Items page: a single
+  Code 128 label, a batch, or one exact-size page per roll label.
+- [Preview product cards](docs/product-card.md): catalog article/name plus
+  optional local photo, size, variant, and a dated quantity reference.
+- [Prepare a pick list and internal packing labels](docs/fulfillment.md) from
+  explicitly exported local order JSON; no carrier or marketplace connection.
+- [Review a ClientBank statement](docs/bank-statement-preview.md) locally
+  before reconciliation; no automatic posting or EDI.
+- [User feedback and validation gaps](docs/unf-workflows.md) link the workflows
+  to their practical limitations and the remaining checks.
+
 ## Import from 1C
 
 For read-only 1С:УНФ online catalog export and warehouse quantity previews,

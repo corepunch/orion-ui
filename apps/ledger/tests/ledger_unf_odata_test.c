@@ -9,12 +9,16 @@ static void *unf_find_by(database_t *db, int table, const char *field, const cha
   return (void *)send_db_message(db, dbFind, MAKEDWORD(table, ledger_field(db, table, field)), (void *)value);
 }
 
-static void test_unf_odata_adapter(void) {
-  TEST("1C UNF OData: offline metadata, paging, security and stock fixture");
+static void test_local_workflow(const char *filename) {
+  TEST(filename);
   lua_State *L = luaL_newstate();
   ASSERT_TRUE(L);
   luaL_openlibs(L);
-  int result = luaL_dofile(L, "apps/ledger/tests/unf_odata_test.lua");
+  lua_createtable(L, 0, 1);
+  lua_pushstring(L, filename);
+  lua_seti(L, -2, 0);
+  lua_setglobal(L, "arg");
+  int result = luaL_dofile(L, filename);
   char err[512] = "";
   if (result != LUA_OK) snprintf(err, sizeof(err), "%s", lua_tostring(L, -1));
   lua_close(L);
@@ -63,7 +67,11 @@ int main(void) {
   fixture.ib = ledger_test_infobase("apps/ledger/share/configurations/ru-2003/demo.xml");
   register_database("cfg", fixture.cfg);
   register_database("ib", fixture.ib);
-  test_unf_odata_adapter();
+  test_local_workflow("apps/ledger/tests/unf_odata_test.lua");
+  test_local_workflow("apps/ledger/tests/label_sheet_test.lua");
+  test_local_workflow("apps/ledger/tests/product_card_test.lua");
+  test_local_workflow("apps/ledger/tests/fulfillment_test.lua");
+  test_local_workflow("apps/ledger/tests/bank_statement.lua");
   test_import_unf_catalogs();
   destroy_database(fixture.ib);
   destroy_database(fixture.cfg);

@@ -691,4 +691,13 @@
   <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." where="labels">Нажмите «Изменить», чтобы открыть документ, или «Дт/Кт», чтобы перейти к проводкам. У непроведённого документа проводок нет.</string>
   <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." where="labels">Выберите «Оборотно-сальдовая ведомость» в списке отчётов. Задайте период через «Настройки» (Ctrl+R).</string>
   <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." where="labels">Читайте слева направо: начальное сальдо, обороты по дебету и кредиту и конечное сальдо. Сравните итоговые обороты по дебету и кредиту в строке «Итого».</string>
+  <string source="Print Item Labels..." where="menu">Печать этикеток...</string>
+  <string source="Labels" where="items_page">Этикетки</string>
+  <string source="Print item labels" where="items_page">Печать этикеток товаров</string>
+  <string source="Printable HTML (*.html)">HTML для печати (*.html)</string>
+  <string source="Print Item Labels">Печать этикеток</string>
+  <string source="Replace the existing printable file?">Заменить существующий файл для печати?</string>
+  <string source="Use the .html extension for printable labels.">Укажите расширение .html для печати этикеток.</string>
+  <string source="The printable file could not be created.">Не удалось создать файл для печати.</string>
+  <string source="The printable file could not be saved.">Не удалось сохранить файл для печати.</string>
 </strings>

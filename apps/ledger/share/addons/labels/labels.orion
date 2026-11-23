@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion>
+  <databases>
+    <database name="label_print" class="db_schema_xml">
+      <table name="queue" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="item_id" type="integer" relation="ib.items.id" />
+        <field name="sku" type="string" length="64" />
+        <field name="copies" type="integer" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="labels" title="Print Item Labels" width="580" height="490" spacing="6" padding="10">
+      <GridView name="fields" spacing="6">
+        <Column name="field_labels" width="auto">
+          <Label name="item_label" text="Item:" />
+          <Label name="copies_label" text="Copies:" />
+          <Label name="barcode_label" text="Barcode override:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="item" source="ib.items" display="name" value="id" />
+          <TextBox name="copies" type="integer" />
+          <TextBox name="barcode" placeholder="Use item SKU" />
+        </Column>
+      </GridView>
+      <StackView name="paper" orientation="horizontal" spacing="8">
+        <CheckBox name="letter" text="US Letter instead of A4" />
+        <CheckBox name="roll" text="Label roll" />
+        <Space name="paper_gap" />
+      </StackView>
+      <GridView name="size_fields" spacing="4">
+        <Column name="size_labels" width="auto">
+          <Label name="width_label" text="Roll width (mm):" />
+          <Label name="height_label" text="Roll height (mm):" />
+        </Column>
+        <Column name="size_values">
+          <TextBox name="width" type="integer" />
+          <TextBox name="height" type="integer" />
+        </Column>
+      </GridView>
+      <TableView name="queue" source="label_print.queue" flags="flexspace,vscroll">
+        <Column field="item.name" title="Item" width="0" min-width="100" />
+        <Column field="sku" title="SKU" width="100" />
+        <Column field="copies" title="Copies" width="60" />
+      </TableView>
+      <Label name="summary" />
+      <Label name="error" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Button name="add" text="Add to Batch" action="add" />
+        <Button name="clear" text="Clear Batch" action="clear" />
+        <Space name="actions_gap" />
+        <Button name="save" text="Save Printable Labels" action="save" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Close" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

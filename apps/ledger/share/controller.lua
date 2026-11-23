@@ -36,6 +36,7 @@ local forms = {new = "document", new_operation = "operation", new_payroll = "pay
 local commands = {
   ["file.save"] = ui.save, ["file.configuration"] = ui.configuration, ["file.language"] = ui.language,
   ["file.import_1c"] = ui.import, ["file.addon"] = ui.addon,
+  ["catalog.labels"] = ui.labels,
   ["file.organization"] = function() ui.form("organization") end,
   ["file.quit"] = function() ui.window("quit") end,
   ["help.assistant"] = ui.assistant, ["help.find_command"] = ui.assistant,
