@@ -138,6 +138,7 @@ void shutdown_ui_textures(void) {
   SAFE_DELETE(ui_white_texture, R_DeleteTexture);
   SAFE_DELETE(ui_checker_texture, R_DeleteTexture);
   SAFE_DELETE(ui_transparency_checker_texture, R_DeleteTexture);
+  shutdown_gradient_ramps();
 }
 
 void shutdown_white_texture(void) {

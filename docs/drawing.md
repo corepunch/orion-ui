@@ -105,6 +105,15 @@ Navy inactive tabs fade from their current face colour to `brTabBarBg` at the
 bottom, giving a recessed shadow. Selected tabs use equal `brControlBg` endpoints
 to merge with the pane.
 
+`fill_gradient_stops_rect(&stops, r, radius, top_only)` paints a vertical gradient
+of 2 to `GRADIENT_MAX_STOPS` (8) colours, the stops of a CSS `linear-gradient()`
+after fix-up (`gradient_stops_t`: ascending positions 0..1; two stops at one
+position are a hard edge, as Aqua's gloss has). The stops are baked once into a
+small premultiplied ramp texture, cached by value, and the rounded-rect shader
+samples it down the box in the same single pass and silhouette as the two-colour
+gradient; `top_only` rounds only the top corners. The box painter uses it for any
+`background: linear-gradient()` with more than two stops or with positions.
+
 `THEME_PART_PAGE` paints the Page background with `brPanelDarker`, including pane
 margins and splitter gaps. The tab strip uses `brTabBarBg`, lighter than the Page
 background and darker than inactive tab faces (`brPanelDark`).

@@ -1,7 +1,7 @@
 // The built-in themes. Every theme paints with the CSS box painter (theme_box.c)
 // over orion/themes/base.css and its own sheet: Modern and Light are
 // modern.css in the dark and light appearance; Navy, Amber, Porcelain (Light
-// and Dark), Metro and Classic have their own sheets. This file keeps the
+// and Dark), Metro, Silver and Classic have their own sheets. This file keeps the
 // window chrome, the labels and the instances; every part, colour and radius
 // comes from the sheets (docs/styling.md). The templates hold the chrome
 // geometry the sheets do not set yet.
@@ -12,27 +12,20 @@
 #include <orion/user/theme.h>
 #include <orion/user/style.h>
 
-#define MODERN_CAPTION_TEXT_INSET 8
-
 // ── Window chrome and labels ─────────────────────────────────────────────────
 
+// The caption row: the titlebar, then its buttons and title where caption_layout() puts them. The
+// buttons are the Window::close and Window::maximize parts, the title Window::caption's text.
 void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption,
                                        const char *title, ctrl_state_t state, bool maximizable) {
-  bool focused = (state & CTRL_FOCUSED) != 0;
+  bool focused = (state & CTRL_FOCUSED) != 0, closable = !(state & CTRL_NO_CLOSE);
+  ctrl_state_t look = focused ? CTRL_FOCUSED : CTRL_NORMAL;
   uint32_t title_color = get_sys_color(focused ? brActiveTitlebarText : brInactiveTitlebarText);
-  theme_css_draw_part(THEME_PART_TITLEBAR, titlebar, focused ? CTRL_FOCUSED : CTRL_NORMAL, NULL);
-  irect16_t close = rect_split_right(caption, caption.h);
-  if (!(state & CTRL_NO_CLOSE)) {
-    draw_theme_icon_in_rect(THEME_ICON_CLOSE, close, title_color);
-    caption = rect_trim_right(caption, close.w);
-  }
-  if (maximizable) {
-    draw_theme_icon_in_rect(THEME_ICON_MAXIMIZE, rect_split_right(caption, caption.h),
-                            title_color);
-    caption = rect_trim_right(caption, caption.h);
-  }
-  caption = rect_trim_left(caption, MODERN_CAPTION_TEXT_INSET);
-  draw_text_clipped("Text", title, &caption, title_color, 0);
+  theme_css_draw_part(THEME_PART_TITLEBAR, titlebar, look, NULL);
+  caption_layout_t at = caption_layout(caption, closable, maximizable);
+  if (closable) theme_css_draw_part(THEME_PART_WINDOW_CLOSE, at.close, look, NULL);
+  if (maximizable) theme_css_draw_part(THEME_PART_WINDOW_MAXIMIZE, at.maximize, look, NULL);
+  draw_text_clipped("Window::caption", title, &at.title, title_color, 0);
 }
 
 void theme_draw_statusbar_text(irect16_t r, const char *text) {
@@ -168,4 +161,7 @@ theme_t *theme_classic_instance(void) {
 
 theme_t *theme_metro_instance(void) {
   return css_theme(THEME_METRO, "Metro", true, THEME_METRO, "orion/themes/metro.css");
+}
+theme_t *theme_silver_instance(void) {
+  return css_theme(THEME_SILVER, "Silver", false, THEME_SILVER, "orion/themes/silver.css");
 }

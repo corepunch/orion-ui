@@ -203,6 +203,45 @@ static void test_titlebar_bounds(void) {
   PASS();
 }
 
+static result_t caption_test_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  return msg == evCreate || msg == evPaint || msg == evDestroy;
+}
+
+static void test_caption_layout(void) {
+  TEST("caption buttons follow Window::titlebar's flex-direction in painting and hit-testing");
+  test_env_init();
+  irect16_t row = R(0, 0, 300, 24);
+  set_theme(THEME_MODERN);   // row: title, maximize, close
+  caption_layout_t at = caption_layout(row, true, true);
+  ASSERT_EQUAL(at.close.x, 276);
+  ASSERT_EQUAL(at.maximize.x, 252);
+  ASSERT_EQUAL(at.title.x, 8);
+  ASSERT_EQUAL(at.title.x + at.title.w, 252);
+  at = caption_layout(row, false, false);
+  ASSERT_EQUAL(at.close.w, 0);
+  ASSERT_EQUAL(at.title.x + at.title.w, 300);
+  set_theme(THEME_SILVER);   // row-reverse: close, maximize, then a title centred on the window
+  at = caption_layout(row, true, true);
+  ASSERT_EQUAL(at.close.x, 0);
+  ASSERT_EQUAL(at.maximize.x, 24);
+  ASSERT_EQUAL(at.title.x, 56);
+  ASSERT_EQUAL(at.title.x + at.title.w, 252);
+
+  window_t *win = test_env_create_window("Prefs", 40, 30, 300, 200, caption_test_proc, NULL);
+  ASSERT_NOT_NULL(win);
+  win->flags |= WINDOW_MAXIMIZEBOX;
+  int mid = win->frame.y + caption_extent(win->flags) / 2;
+  ASSERT_EQUAL(window_nc_hit_test(win, win->frame.x + 4, mid), HT_CLOSE);
+  ASSERT_EQUAL(window_nc_hit_test(win, win->frame.x + caption_extent(win->flags) + 4, mid), HT_MAXBUTTON);
+  ASSERT_EQUAL(window_nc_hit_test(win, win->frame.x + win->frame.w - 4, mid), HT_CAPTION);
+  set_theme(THEME_MODERN);
+  ASSERT_EQUAL(window_nc_hit_test(win, win->frame.x + 4, mid), HT_CAPTION);
+  ASSERT_EQUAL(window_nc_hit_test(win, win->frame.x + win->frame.w - 4, mid), HT_CLOSE);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_appearance_follows_system(void) {
   TEST("APPEARANCE_SYSTEM switches a theme to its counterpart; pinned appearances and themes without one stay");
   test_env_init();
@@ -248,6 +287,7 @@ int main(void) {
   test_control_parts();
   test_all_parts();
   test_titlebar_bounds();
+  test_caption_layout();
   test_appearance_follows_system();
   TEST_END();
 }

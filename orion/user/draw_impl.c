@@ -112,6 +112,27 @@ int caption_extent(flags_t flags) {
   return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : ui_px("Window::titlebar", "height");
 }
 
+caption_layout_t caption_layout(irect16_t caption, bool closable, bool maximizable) {
+  caption_layout_t at = {{0}};
+  bool leading = ui_keyword_is("Window::titlebar", "flex-direction", "row-reverse");
+  irect16_t rest = caption;
+  int span = 0;
+  if (closable) {
+    at.close = leading ? rect_split_left(rest, rest.h) : rect_split_right(rest, rest.h);
+    rest = leading ? rect_trim_left(rest, at.close.w) : rect_trim_right(rest, at.close.w);
+    span += at.close.w;
+  }
+  if (maximizable) {
+    at.maximize = leading ? rect_split_left(rest, rest.h) : rect_split_right(rest, rest.h);
+    rest = leading ? rect_trim_left(rest, at.maximize.w) : rect_trim_right(rest, at.maximize.w);
+    span += at.maximize.w;
+  }
+  int pad_left = ui_px("Window::caption", "padding-left"), pad_right = ui_px("Window::caption", "padding-right");
+  at.title = leading ? rect_trim_right(rect_trim_left(rest, pad_left), MAX(span, pad_right))
+                     : rect_trim_left(rect_trim_right(rest, pad_right), pad_left);
+  return at;
+}
+
 int titlebar_height(window_t const *win) {
   int t = caption_extent(win->flags);
   if (win->flags & WINDOW_TOOLBAR) {
@@ -425,6 +446,66 @@ void fill_gradient_rounded_top_rect(uint32_t top, uint32_t bottom, irect16_t r, 
   float scale = MAX(1.0f, axGetScaling());
   render_rounded_top_rect_gradient(ui_white_texture, r, (int)(r.w * scale + 0.5f),
                                    (int)(r.h * scale + 0.5f), MAX(0, radius) * scale, top, bottom);
+}
+
+// Ramps for multi-stop gradients, baked once per distinct set of stops.
+#define RAMP_WIDTH 256
+#define RAMP_CACHE 32
+static struct { gradient_stops_t stops; uint32_t tex; } g_ramps[RAMP_CACHE];
+static unsigned g_ramp_next;
+
+static uint32_t lerp_color(uint32_t a, uint32_t b, float t) {
+  uint32_t out = 0;
+  for (int shift = 0; shift < 32; shift += 8) {
+    float ca = (float)((a >> shift) & 255), cb = (float)((b >> shift) & 255);
+    out |= (uint32_t)(ca + (cb - ca) * t + 0.5f) << shift;
+  }
+  return out;
+}
+
+static uint32_t gradient_ramp(const gradient_stops_t *g) {
+  for (int i = 0; i < RAMP_CACHE; i++)
+    if (g_ramps[i].tex && !memcmp(&g_ramps[i].stops, g, sizeof(*g))) return g_ramps[i].tex;
+  uint32_t px[RAMP_WIDTH];   // 0xAABBGGRR: R, G, B, A bytes in memory, straight alpha
+  for (int x = 0; x < RAMP_WIDTH; x++) {
+    float t = (float)x / (RAMP_WIDTH - 1);
+    uint32_t c = g->color[g->count - 1];
+    if (t <= g->pos[0]) c = g->color[0];
+    else for (int i = 0; i + 1 < g->count; i++) {
+      if (t > g->pos[i + 1]) continue;
+      float span = g->pos[i + 1] - g->pos[i];
+      c = lerp_color(g->color[i], g->color[i + 1], span > 0 ? (t - g->pos[i]) / span : 1.0f);
+      break;
+    }
+    px[x] = c;
+  }
+  unsigned slot = g_ramp_next++ % RAMP_CACHE;
+  if (g_ramps[slot].tex) R_DeleteTexture(g_ramps[slot].tex);
+  g_ramps[slot].stops = *g;
+  g_ramps[slot].tex = R_CreateTextureSRGBA8(RAMP_WIDTH, 1, px, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  if (!g_ramps[slot].tex) {
+    fprintf(stderr, "[draw] gradient ramp allocation failed stops=%d\n", g->count);
+    fflush(stderr);
+  }
+  return g_ramps[slot].tex;
+}
+
+void shutdown_gradient_ramps(void) {
+  for (int i = 0; i < RAMP_CACHE; i++) SAFE_DELETE(g_ramps[i].tex, R_DeleteTexture);
+}
+
+void fill_gradient_stops_rect(const gradient_stops_t *g, irect16_t r, int radius, bool top_only) {
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  if (!g || g->count < 2 || g->count > GRADIENT_MAX_STOPS) {
+    fprintf(stderr, "[draw] gradient rejected stops=%d (want 2..%d)\n", g ? g->count : 0, GRADIENT_MAX_STOPS);
+    fflush(stderr);
+    return;
+  }
+  uint32_t ramp = gradient_ramp(g);
+  if (!ramp) return;
+  float scale = MAX(1.0f, axGetScaling());
+  render_rounded_rect_ramp((int)ramp, RAMP_WIDTH, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
+                           MAX(0, radius) * scale, top_only);
 }
 
 void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness) {

@@ -1,7 +1,9 @@
 // The CSS box painter: draws a theme part from the cascaded box properties of
 // its element and part (orion/themes/base.css lists them).
 //
-//   background        a colour, none, or linear-gradient([to bottom,] top, bottom)
+//   background        a colour, none, or linear-gradient([to bottom,] colour [p%], colour [p%], ...)
+//                     with 2..8 stops (CSS fix-up: missing positions spread evenly, a position
+//                     before the previous one is moved up to it, so p% p% is a hard edge)
 //                     or plastic(colour gloss rim lift bevel shadow-colour): the glossy plastic
 //                     surface, one shader pass over the whole bounds whose shadow stays inside
 //                     the margin; :hover, :active, :checked and :disabled drive the shader
@@ -47,6 +49,7 @@ typedef struct {
   unsigned generation;
   bool background, gradient;
   uint32_t top, bottom;
+  gradient_stops_t stops;     // more than two stops, or two not at 0% and 100%: painted from a ramp
   int border_width[4];        // top, right, bottom, left
   uint32_t border_color[4];
   int radius[4];              // top-left, top-right, bottom-right, bottom-left; -1 capsule
@@ -156,6 +159,7 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_TUTORIAL_SPOT]          = {"Tutorial", "spot"},
   [THEME_PART_SWATCH]                 = {"SwatchGrid", "swatch"},
   [THEME_PART_SWATCH_PAGER]           = {"SwatchGrid", "pager"},
+  [THEME_PART_WINDOW_MAXIMIZE]        = {"Window", "maximize"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────
@@ -271,6 +275,55 @@ static void box_report(const char *what, theme_part_t part, const char *value) {
 
 // scope: the window's classes, #id and instance sheet (ui_window_scope), or NULL.
 // vars: the window's own custom properties (ui_style.h), or NULL.
+// The stops of a linear-gradient()'s argument list, fixed up as CSS does. Each item is a colour,
+// optionally followed by a percentage; commas and spaces inside parentheses belong to the colour.
+static bool box_gradient(char *args, gradient_stops_t *g) {
+  memset(g, 0, sizeof(*g));
+  char *items[GRADIENT_MAX_STOPS + 1]; int n = 0, depth = 0;
+  items[n++] = args;
+  for (char *c = args; *c; c++) {
+    if (*c == '(') depth++;
+    else if (*c == ')') depth--;
+    else if (*c == ',' && !depth) { if (n > GRADIENT_MAX_STOPS) return false; *c = 0; items[n++] = c + 1; }
+  }
+  int first = !strncmp(items[0] + strspn(items[0], " "), "to bottom", 9) ? 1 : 0;
+  g->count = n - first;
+  if (g->count < 2 || g->count > GRADIENT_MAX_STOPS) return false;
+  bool placed[GRADIENT_MAX_STOPS] = {0};
+  for (int i = 0; i < g->count; i++) {
+    char *item = items[first + i], *end = item + strlen(item), *space = NULL;
+    while (end > item && end[-1] == ' ') *--end = 0;
+    depth = 0;
+    for (char *c = item; *c; c++) {
+      if (*c == '(') depth++; else if (*c == ')') depth--; else if (*c == ' ' && !depth) space = c;
+    }
+    if (space && end > space + 1 && end[-1] == '%') {
+      char *num_end; float pct = strtof(space + 1, &num_end);
+      if (num_end != end - 1) return false;
+      *space = 0;
+      g->pos[i] = pct / 100.0f; placed[i] = true;
+    }
+    if (!style_parse_color(item, &g->color[i])) return false;
+  }
+  if (!placed[0]) { g->pos[0] = 0; placed[0] = true; }
+  if (!placed[g->count - 1]) { g->pos[g->count - 1] = 1; placed[g->count - 1] = true; }
+  for (int i = 1; i < g->count; i++) if (placed[i] && g->pos[i] < g->pos[i - 1]) g->pos[i] = g->pos[i - 1];
+  for (int i = 1; i < g->count - 1; i++) {
+    if (placed[i]) continue;
+    int next = i; while (!placed[next]) next++;
+    float from = g->pos[i - 1], step = (g->pos[next] - from) / (float)(next - i + 1);
+    for (int k = i; k < next; k++) { g->pos[k] = from + step * (float)(k - i + 1); placed[k] = true; }
+  }
+  return true;
+}
+
+static bool box_opaque(const theme_box_t *b) {
+  if (!b->background) return false;
+  if (!b->stops.count) return (b->top >> 24) == 0xFF && (b->bottom >> 24) == 0xFF;
+  for (int i = 0; i < b->stops.count; i++) if ((b->stops.color[i] >> 24) != 0xFF) return false;
+  return true;
+}
+
 static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
   const style_sheet_t *s = scope ? ui_scope_stylesheet(scope) : theme_stylesheet(get_theme());
   memset(b, 0, sizeof(*b));
@@ -292,20 +345,19 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
   b->fill = b->color;
   style_color(s, q, "fill", &b->fill);
 
-  char v[256];
+  char v[512];
   if (style_value(s, q, "background", v, sizeof(v)) || style_value(s, q, "background-color", v, sizeof(v))) {
     if (!strcmp(v, "none") || !strcmp(v, "transparent")) {}
     else if (!strncmp(v, "linear-gradient(", 16)) {
-      char *args = v + 16, *end = strrchr(args, ')');
-      if (end) *end = 0;
-      char *first = args, *comma = strchr(args, ',');
-      if (comma && !strncmp(first + strspn(first, " "), "to bottom", 9)) { first = comma + 1; comma = strchr(first, ','); }
-      // split at the comma between the two colours, outside parentheses
-      int depth = 0; comma = NULL;
-      for (char *c = first; *c; c++) { if (*c == '(') depth++; else if (*c == ')') depth--; else if (*c == ',' && !depth) { comma = c; break; } }
-      if (comma) *comma = 0;
-      if (comma && style_parse_color(first, &b->top) && style_parse_color(comma + 1, &b->bottom)) b->background = b->gradient = true;
-      else box_report("background", part, v);
+      char args[sizeof(v)], *end;
+      snprintf(args, sizeof(args), "%s", v + 16);
+      if ((end = strrchr(args, ')'))) *end = 0;
+      gradient_stops_t g;
+      if (end && box_gradient(args, &g)) {
+        b->background = b->gradient = true;
+        b->top = g.color[0]; b->bottom = g.color[g.count - 1];
+        if (g.count > 2 || g.pos[0] != 0 || g.pos[1] != 1) b->stops = g;
+      } else box_report("background", part, v);
     } else if (!strncmp(v, "plastic(", 8)) {
       char *end = strrchr(v, ')');
       if (end) *end = 0;
@@ -481,6 +533,13 @@ static void box_fill(uint32_t top, uint32_t bottom, bool gradient, irect16_t r, 
   else fill_rect(top, r);
 }
 
+// The box's own background in r.
+static void box_face(const theme_box_t *b, irect16_t r, int radius, bool top_only) {
+  if (!b->background || r.w <= 0 || r.h <= 0) return;
+  if (b->stops.count) fill_gradient_stops_rect(&b->stops, r, radius, top_only);
+  else box_fill(b->top, b->bottom, b->gradient, r, radius, top_only);
+}
+
 static void box_paint(const theme_box_t *b, irect16_t r) {
   if (b->plastic.on) {
     const int *pr = b->radius;
@@ -510,28 +569,28 @@ static void box_paint(const theme_box_t *b, irect16_t r) {
     draw_rect_shadow(r, (float)radius, (float)b->shadows[i].blur, (ipoint16_t){b->shadows[i].dx, b->shadows[i].dy},
                      b->shadows[i].color);
   }
-  bool opaque = b->background && (b->top >> 24) == 0xFF && (b->bottom >> 24) == 0xFF;
+  bool opaque = box_opaque(b);
   if (uniform && bw[0] > 0 && (b->border_color[0] >> 24) != 0 && (opaque || (radius > 0 && !top_only))) {
     uint32_t edge = b->border_color[0];
     if (opaque) {   // the face covers the middle of the edge-coloured shape
       box_fill(edge, edge, false, r, radius, top_only);
-      box_fill(b->top, b->bottom, b->gradient, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
+      box_face(b, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
     } else {
-      if (b->background) box_fill(b->top, b->bottom, b->gradient, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
+      box_face(b, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
       stroke_rounded_rect(edge, r, radius, bw[0]);
     }
   } else if (radius > 0 && !top_only && !uniform && bw[3] > 0 && !bw[0] && !bw[1] && !bw[2]) {
     // An accent edge on a rounded box: the left border is a plain rectangle clipped by the box's own
     // silhouette, drawn in one pass with the face so both share it (a transparent edge shows the face).
     bool visible = (b->border_color[3] >> 24) != 0;
-    if (!visible) { if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, false); }
+    if (!visible) box_face(b, r, radius, false);
     else if (b->background && !b->gradient) fill_rounded_rect_edged(b->top, r, radius, b->border_color[3], bw[3]);
     else {
-      if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, false);
+      box_face(b, r, radius, false);
       fill_rounded_rect_edged(0, r, radius, b->border_color[3], bw[3]);
     }
   } else {
-    if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, top_only);
+    box_face(b, r, radius, top_only);
     if (bw[0] > 0 || bw[1] > 0 || bw[2] > 0 || bw[3] > 0) fill_border_sides(r, bw, b->border_color);
   }
   irect16_t inner = R(r.x + bw[3], r.y + bw[0], r.w - bw[1] - bw[3], r.h - bw[0] - bw[2]);

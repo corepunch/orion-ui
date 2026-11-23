@@ -115,10 +115,11 @@ typedef enum {
   THEME_PORCELAIN = 5,  // flat + cool white business palette: white wells, indigo selection
   THEME_PORCELAIN_DARK = 6, // Porcelain's dark counterpart: graphite wells, indigo selection
   THEME_METRO = 7,  // square, flat dark creative workspace
-  THEME_LAST      = THEME_METRO,
+  THEME_SILVER = 8, // light brushed-grey Aqua: glossy buttons, blue focus glow, overlay scroll bars
+  THEME_LAST      = THEME_SILVER,
 } theme_style_t;
 
-// Makefile THEME_<app>=classic|modern|light|navy|amber|porcelain|porcelain_dark|metro → -DORION_THEME=<name>
+// Makefile THEME_<app>=classic|modern|light|navy|amber|porcelain|porcelain_dark|metro|silver → -DORION_THEME=<name>
 #define THEME_classic  THEME_CLASSIC
 #define THEME_modern   THEME_MODERN
 #define THEME_light    THEME_LIGHT
@@ -127,6 +128,7 @@ typedef enum {
 #define THEME_porcelain THEME_PORCELAIN
 #define THEME_porcelain_dark THEME_PORCELAIN_DARK
 #define THEME_metro    THEME_METRO
+#define THEME_silver   THEME_SILVER
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
 // class/part pairs. Bounds and interaction state come from the caller.
@@ -155,7 +157,7 @@ typedef enum {
   THEME_PART_WINDOW_BORDER,
   THEME_PART_RESIZE_GRIP,
   THEME_PART_TITLEBAR,
-  THEME_PART_WINDOW_CLOSE,
+  THEME_PART_WINDOW_CLOSE,     // the caption's close button; CTRL_FOCUSED while its window has focus
   THEME_PART_STATUSBAR,
   THEME_PART_MENU_BAR,
   THEME_PART_MENU_POPUP,
@@ -213,6 +215,7 @@ typedef enum {
   THEME_PART_TUTORIAL_SPOT,    // the ring a tutorial step draws around what it points at
   THEME_PART_SWATCH,           // a SwatchGrid swatch's frame, over its colour; CTRL_SELECTED is the chosen one
   THEME_PART_SWATCH_PAGER,     // half of a SwatchGrid's pager: the previous or the next page of colours
+  THEME_PART_WINDOW_MAXIMIZE,  // the caption's maximize button; CTRL_FOCUSED while its window has focus
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -294,6 +297,7 @@ theme_t *theme_amber_instance(void);
 theme_t *theme_porcelain_instance(void);
 theme_t *theme_porcelain_dark_instance(void);
 theme_t *theme_metro_instance(void);
+theme_t *theme_silver_instance(void);
 
 // ── Style sheets ──────────────────────────────────────────────────────────────
 //

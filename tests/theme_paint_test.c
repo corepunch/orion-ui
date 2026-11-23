@@ -57,6 +57,14 @@ static void paint_border_sides(irect16_t r, const int w[4], const uint32_t c[4])
   if (w[1] > 0) paint_fill(c[1], rect_split_right(r, w[1]));
 }
 #define fill_border_sides paint_border_sides
+static gradient_stops_t recorded_stops;
+static void paint_gradient_stops(const gradient_stops_t *g, irect16_t r, int radius, bool top_only) {
+  recorded_stops = *g;
+  recorded_radius = radius;
+  paint_fill(g->color[0], rect_split_top(r, r.h / 2));
+  paint_fill(g->color[g->count - 1], rect_trim_top(r, r.h / 2));
+}
+#define fill_gradient_stops_rect paint_gradient_stops
 #define fill_gradient_rounded_rect paint_gradient
 #define fill_gradient_rounded_top_rect paint_gradient_top
 #define fill_rounded_rect paint_rounded
@@ -81,6 +89,7 @@ theme_t *paint_porcelain_instance(void);
 #undef fill_rounded_rect
 #undef fill_gradient_rounded_rect
 #undef fill_gradient_rounded_top_rect
+#undef fill_gradient_stops_rect
 #undef theme_classic_instance
 #undef theme_modern_instance
 #undef theme_navy_instance
@@ -533,6 +542,46 @@ static void test_control_parts(void) {
   PASS();
 }
 
+static bool gradient_of(const char *css, gradient_stops_t *g) {
+  char args[256];
+  snprintf(args, sizeof(args), "%s", css);
+  return box_gradient(args, g);
+}
+#define ASSERT_POS(g, i, p) ASSERT_TRUE(fabsf((g).pos[i] - (p)) < 0.001f)
+
+static void test_gradient_stops(void) {
+  TEST("linear-gradient takes 2-8 stops, fixes up their positions as CSS does, and paints from them");
+  gradient_stops_t g;
+  ASSERT_TRUE(gradient_of("to bottom, red, blue 30%, white", &g));
+  ASSERT_EQUAL(g.count, 3);
+  ASSERT_POS(g, 0, 0); ASSERT_POS(g, 1, 0.3f); ASSERT_POS(g, 2, 1);
+  ASSERT_EQUAL(g.color[1], WEB(0x0000FF));
+  ASSERT_TRUE(gradient_of("#fff 0%, #eee 50%, #ddd 40%, #ccc", &g));   // a hard edge: 40% moves up to 50%
+  ASSERT_POS(g, 1, 0.5f); ASSERT_POS(g, 2, 0.5f); ASSERT_POS(g, 3, 1);
+  ASSERT_TRUE(gradient_of("#000, #111, #222, #333", &g));              // missing positions spread evenly
+  ASSERT_POS(g, 1, 1.0f / 3); ASSERT_POS(g, 2, 2.0f / 3);
+  ASSERT_TRUE(gradient_of("rgba(0, 0, 0, 0.5) 10%, color-mix(in srgb, red 50%, blue)", &g));
+  ASSERT_EQUAL(g.count, 2);
+  ASSERT_POS(g, 0, 0.1f); ASSERT_POS(g, 1, 1);
+  ASSERT_FALSE(gradient_of("red", &g));
+  ASSERT_FALSE(gradient_of("red, blue 5px", &g));
+  ASSERT_FALSE(gradient_of("#000, #111, #222, #333, #444, #555, #666, #777, #888", &g));
+
+  paint_with_theme(THEME_SILVER);
+  memset(pixels, 0, sizeof(pixels));
+  memset(&recorded_stops, 0, sizeof(recorded_stops));
+  theme_css_draw_part(THEME_PART_BUTTON, R(10, 10, 80, 24), CTRL_NORMAL, NULL);
+  ASSERT_EQUAL(recorded_stops.count, 4);
+  ASSERT_POS(recorded_stops, 1, 0.5f); ASSERT_POS(recorded_stops, 2, 0.5f);
+  ASSERT_EQUAL(pixels[10][50], WEB(0x9C9C9C));   // the hairline, then the face inside it from the stops
+  ASSERT_EQUAL(pixels[15][50], WEB(0xFFFFFF));
+  ASSERT_EQUAL(pixels[30][50], WEB(0xF4F4F4));
+  memset(&recorded_stops, 0, sizeof(recorded_stops));
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 24), CTRL_FOCUSED, NULL);
+  ASSERT_EQUAL(recorded_stops.count, 0);   // two stops at the ends keep the two-colour path
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
@@ -554,5 +603,6 @@ int main(void) {
   test_navy_caption_bar();
   test_panel_shades_and_tabs();
   test_amber_business_surfaces();
+  test_gradient_stops();
   TEST_END();
 }

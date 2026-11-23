@@ -178,6 +178,11 @@ vec4 frag() {
     vec3 bottom = edge.rgb;
     // Texture coordinates are flipped for the compositor: top is tex.y = 1.
     float y = clamp(1.0 - tex.y, 0.0, 1.0);
+    if (params1.w > 1.5) {   // a multi-stop gradient: a premultiplied ramp of params1.w texels, top to bottom
+      vec4 ramp = ui_texture(vec2((0.5 + y * (params1.w - 1.0)) / params1.w, 0.5));
+      float k = alpha * aa * col.a;
+      return ui_clipped(vec4(ramp.rgb * col.rgb * k, ramp.a * k));
+    }
     float a = mix(tint.a, edge.a, y) * alpha * aa * col.a;
     outColor = vec4(mix(tint_rgb, bottom, y) * col.rgb * a, a);
     return ui_clipped(outColor);

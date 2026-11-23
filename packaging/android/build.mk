@@ -37,7 +37,7 @@ FLAGS := -std=c11 -D_DEFAULT_SOURCE -fPIC -O2 -g -Wall -Wextra -Wno-missing-fiel
 	-I. -I$(DEPS)/include/libxml2 -I$(GLUE) -Ivendor/freetype/include -Iorion/user/image_deps_config -Ivendor/libpng -Ivendor/libjpeg \
 	-Ivendor/libnsbmp/include -Ivendor/zlib -Ivendor/bmplib -Iorion/user/bmplib_config -I$(BUILD_ROOT)/bmplib-generated -DORION_ALLOW_HIGHDPI=1
 ifeq ($(THEME_$(APP)),)
-else ifeq ($(filter classic modern light navy amber porcelain porcelain_dark metro,$(THEME_$(APP))),)
+else ifeq ($(filter classic modern light navy amber porcelain porcelain_dark metro silver,$(THEME_$(APP))),)
 $(error unknown THEME_$(APP)=$(THEME_$(APP)))
 endif
 APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THEME_$(APP)))

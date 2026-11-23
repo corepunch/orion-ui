@@ -298,7 +298,13 @@ Window::titlebar       { background: var(--inactive-titlebar); }
 Window::titlebar:focus { background: var(--active-titlebar); }
 Window::title-toolbar  { background: var(--window-dark-bg); }
 Window::resize-grip    { content: dots; fill: var(--text-disabled); }
-Window::close          { content: close; }
+/* The caption row: a flex row of the title and its buttons (caption_layout()); row-reverse puts the
+   buttons first. The buttons take the title bar's ink, the title is Window::caption's text. */
+Window::titlebar       { flex-direction: row; }
+Window::caption        { font: var(--text); padding-left: 8px; padding-right: 0; }
+Window::close          { content: close; color: var(--inactive-titlebar-text); }
+Window::maximize       { content: maximize; color: var(--inactive-titlebar-text); }
+Window::close:focus, Window::maximize:focus { color: var(--active-titlebar-text); }
 ComboBox::arrow        { content: arrow-updown; }
 
 /* ── Editing, docking and dragging ────────────────────────────────────────── */

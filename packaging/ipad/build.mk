@@ -32,7 +32,7 @@ COMPILER := xcrun --sdk $(SDK) clang
 MIN_FLAG := $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
 FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-declarations -MMD -MP -I. -I"$(SDK_PATH)/usr/include/libxml2" -Ivendor/freetype/include -Iorion/user/image_deps_config -Ivendor/libpng -Ivendor/libjpeg -Ivendor/libnsbmp/include -Ivendor/zlib -Ivendor/bmplib -Iorion/user/bmplib_config -I$(BUILD_ROOT)/bmplib-generated -DORION_ALLOW_HIGHDPI=1
 ifeq ($(THEME_$(APP)),)
-else ifeq ($(filter classic modern light navy amber porcelain porcelain_dark metro,$(THEME_$(APP))),)
+else ifeq ($(filter classic modern light navy amber porcelain porcelain_dark metro silver,$(THEME_$(APP))),)
 $(error unknown THEME_$(APP)=$(THEME_$(APP)))
 endif
 APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THEME_$(APP)))
