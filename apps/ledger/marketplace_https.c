@@ -68,9 +68,11 @@ unavailable:
 }
 
 bool ledger_market_https_available(void) {
-  pthread_once(&curl_once, load_curl);
   const char *key_log = getenv("SSLKEYLOGFILE");
-  return api.available && (!key_log || !*key_log);
+  // Some TLS backends open the log during global initialization.
+  if (key_log && *key_log) return false;
+  pthread_once(&curl_once, load_curl);
+  return api.available;
 }
 
 static bool ebay_query_ok(const char *tail) {
