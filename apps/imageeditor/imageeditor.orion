@@ -255,7 +255,7 @@
           <Button command="anim.first_frame" icon="rewind" text="First" />
           <Button command="anim.prev_frame" icon="fast-arrow-left" text="Previous" />
           <Button command="anim.next_frame" icon="fast-arrow-right" text="Next" />
-          <Button command="anim.last_frame" icon="forward" text="Last" />
+          <Button command="anim.last_frame" icon="skip-next" text="Last" />
           <Button command="anim.loop" icon="refresh" text="Loop" />
         </Group>
         <Group label="Timing">
