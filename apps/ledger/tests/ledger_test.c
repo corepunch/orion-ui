@@ -2384,6 +2384,37 @@ static bool turnovers_reconcile(const char *stage) {
   return ok;
 }
 
+static void test_import_stage_payroll(void) {
+  TEST("1CD payroll accruals and tax slices aggregate by person on reimport");
+  const char *stage = "apps/ledger/tests/fixtures/onecd/stage_payroll.xml";
+  ledger_stage_import_t r;
+  for (int pass = 0; pass < 2; pass++) {
+    ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r), r.error);
+    ASSERT_EQUAL(r.detail_fields, 2);
+    db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "PAYROLL-TEST");
+    ASSERT(doc, "payroll document imported");
+    if (!doc) return;
+    int field = ledger_field(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id");
+    result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_PAYROLL_LINES, field), (void *)(intptr_t)doc->id);
+    ASSERT(rows && !rows->next, "one line per person, including on reimport");
+    if (rows) {
+      db_payroll_line_t *line = *(db_payroll_line_t **)rows->data;
+      ASSERT(fabs(line->amount - 1200.75) < .001 && fabs(line->withheld - 156) < .001, "accrual and all tax slices are summed");
+    }
+    free_result_list(rows);
+    doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "PAYOUT-TEST");
+    ASSERT(doc, "payout document imported");
+    if (!doc) return;
+    rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_PAYROLL_LINES, field), (void *)(intptr_t)doc->id);
+    ASSERT(rows && !rows->next, "payout rows aggregate by person on reimport");
+    if (rows) {
+      db_payroll_line_t *line = *(db_payroll_line_t **)rows->data;
+      ASSERT(fabs(line->amount - 950.25) < .001 && fabs(line->net - 950.25) < .001 && fabs(line->withheld - 120) < .001, "payout and tax retain source values");
+    }
+    free_result_list(rows);
+  }
+}
+
 static void test_import_stage_documents(void) {
   TEST("1CD staging import: documents keep their 1C entries, analytics resolve, imported postings are guarded");
   ledger_stage_import_t r;
@@ -2964,6 +2995,7 @@ int main(int argc, char **argv) {
   test_infobase_extensions();
   test_import_stage_chart();
   test_import_stage_catalogs();
+  test_import_stage_payroll();
   test_import_stage_documents();
   test_import_stage_reports();
   test_import_stage_snapshot();

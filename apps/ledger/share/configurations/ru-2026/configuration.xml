@@ -193,6 +193,7 @@
     <import_document id="18" source_type="Документ.РегламентнаяОперация"                    doc_type_id="9"/>
     <import_document id="19" source_type="Документ.ПринятиеКУчетуОС"                       doc_type_id="14"/>
     <import_document id="20" source_type="Документ.НачислениеЗарплаты"                      doc_type_id="11"/>
+    <import_document id="21" source_type="Документ.ВедомостьНаВыплатуЗарплатыВКассу" doc_type_id="12"/>
   </import_documents>
   <print_forms>
     <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="vat-invoice.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 23.01.2026 № 26); ФНС от 26.12.2025 № СД-4-3/11730@"/>

@@ -1024,7 +1024,7 @@ static int vat_rate_for(stage_t *st, const char *enum_name, const char *date) {
 }
 
 static bool supported_detail_section(const char *name) {
-  const char *sections[] = { "РасчетыСКонтрагентами", "РасшифровкаПлатежа", "БухСправка", "РасчетыПоНалогамИСборам" };
+  const char *sections[] = { "РасчетыСКонтрагентами", "РасшифровкаПлатежа", "БухСправка", "РасчетыПоНалогамИСборам", "Взносы" };
   for (size_t i = 0; i < ARRAY_LEN(sections); i++) if (!strcmp(sections[i], name)) return true;
   return false;
 }
@@ -1136,7 +1136,63 @@ static bool import_asset_lines(stage_t *st, int doc_id, xmlNodePtr doc, const ch
   return true;
 }
 
+static double payroll_value(xmlNodePtr row, const char *name) {
+  char buf[64];
+  v_text(row, name, buf, sizeof(buf));
+  return buf[0] ? strtod(buf, NULL) : 0;
+}
+
+// 1C stores accruals by employment, but tax by person. Ledger's employee
+// catalog represents people, so resolve employment through its source catalog.
+static bool import_1c_payroll(stage_t *st, int doc_id, xmlNodePtr doc, const char *type) {
+  db_payroll_line_t *lines = NULL;
+  size_t count = 0;
+  bool ok = true, payout = !strcmp(type, "Документ.ВедомостьНаВыплатуЗарплатыВКассу");
+  static const char *payout_tax_fields[] = { "Сумма", "СуммаСПревышения", "СуммаСПревышенияПоСтавке18",
+    "СуммаСПревышенияПоСтавке20", "СуммаСПревышенияПоСтавке22" };
+  static const char *tax_fields[] = { "Налог", "НалогСПревышения", "НалогСПревышенияПоСтавке18",
+    "НалогСПревышенияПоСтавке20", "НалогСПревышенияПоСтавке22" };
+  for (xmlNodePtr t = doc->children; t && ok; t = t->next) {
+    if (!is_el(t, "table")) continue;
+    char name[80]; attr(t, "n", name, sizeof(name));
+    bool accrual = !strcmp(name, payout ? "Зарплата" : "Начисления"), tax = !strcmp(name, "НДФЛ");
+    if (!accrual && !tax) continue;
+    for (xmlNodePtr row = t->children; row; row = row->next) {
+      if (!is_el(row, "row")) continue;
+      int emp_id = ref_id(st, row, "ФизическоеЛицо");
+      if (accrual && !emp_id) {
+        char guid[40]; v_ref(row, "Сотрудник", guid, sizeof(guid));
+        emp_id = ref_id(st, record_by_guid(st, guid), "ФизическоеЛицо");
+      }
+      if (!emp_id) { note(st, "%s: a payroll line names an employee that was not imported", type, ""); continue; }
+      size_t i = 0;
+      while (i < count && lines[i].employee_id != emp_id) i++;
+      if (i == count) {
+        db_payroll_line_t *more = realloc(lines, (count + 1) * sizeof(*lines));
+        if (!more) { ok = false; break; }
+        lines = more; memset(&lines[count], 0, sizeof(*lines));
+        send_db_message(st->ib, dbInitRecord, TABLE_PAYROLL_LINES, &lines[count]);
+        lines[count].document_id = doc_id; lines[count].employee_id = emp_id; count++;
+      }
+      if (accrual) {
+        double amount = payroll_value(row, payout ? "КВыплате" : "Результат");
+        lines[i].amount += amount;
+        if (payout) lines[i].net += amount;
+      }
+      if (tax) for (size_t j = 0; j < ARRAY_LEN(tax_fields); j++)
+        lines[i].withheld += payroll_value(row, payout ? payout_tax_fields[j] : tax_fields[j]);
+    }
+  }
+  for (size_t i = 0; i < count && ok; i++) {
+    ok = send_db_message(st->ib, dbInsert, TABLE_PAYROLL_LINES, &lines[i]) != 0;
+  }
+  free(lines);
+  return ok;
+}
+
 static bool import_payroll_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *type) {
+  if (!strcmp(type, "Документ.НачислениеЗарплаты") || !strcmp(type, "Документ.ВедомостьНаВыплатуЗарплатыВКассу"))
+    return import_1c_payroll(st, doc_id, doc, type);
   for (xmlNodePtr t = doc->children; t; t = t->next) {
     if (!is_el(t, "table")) continue;
     bool employees = false;

@@ -163,6 +163,7 @@
     <import_document id="17" source_type="Документ.РегламентнаяОперация"                    doc_type_id="8"/>
     <import_document id="18" source_type="Документ.ПринятиеКУчетуОС"                       doc_type_id="13"/>
     <import_document id="19" source_type="Документ.НачислениеЗарплаты"                      doc_type_id="10"/>
+    <import_document id="20" source_type="Документ.ВедомостьНаВыплатуЗарплатыВКассу" doc_type_id="11"/>
   </import_documents>
   <print_forms>
     <print_form id="1" report="" doc_type_id="2" name="Товарная накладная ТОРГ-12" template="goods-delivery-note.html" basis="Постановление Госкомстата России от 25.12.1998 № 132" />
