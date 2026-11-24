@@ -1192,8 +1192,10 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
   char source[32];
   attr(root, "source", source, sizeof(source));
   const bool unf_catalogs = !strcmp(source, "unf-odata");
-  if (unf_catalogs && (xml->intSubset || xml->extSubset || !unf_catalog_stage(root))) {
-    snprintf(out->error, sizeof(out->error), "%s", ui_tr("The 1C UNF stage must contain catalogs only."));
+  if (xml->intSubset || xml->extSubset || (unf_catalogs && !unf_catalog_stage(root))) {
+    const char *error = unf_catalogs ? ui_tr("The 1C UNF stage must contain catalogs only.") :
+      ui_tr("The file is not a 1C staging file (orion-1cd-stage-v1).");
+    snprintf(out->error, sizeof(out->error), "%s", error);
     xmlFreeDoc(xml);
     return false;
   }
@@ -1224,6 +1226,8 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
   if (!out->error[0]) import_analytic_records(&st);
   if (!out->error[0]) report_unimported(&st);
   if (!out->error[0]) import_rates(&st, root);
+  xmlNodePtr constants = child(root, "constants");
+  if (constants) tally(&st, "Константа", 0, 0, (int)xmlChildElementCount(constants));
   st.documents = child(root, "documents");
   if (!out->error[0] && !index_movements(&st, root)) snprintf(out->error, sizeof(out->error), "%s", ui_tr("Out of memory."));
   for (xmlNodePtr d = st.documents ? st.documents->children : NULL; d && !out->error[0]; d = d->next) if (is_el(d, "document")) import_document(&st, d);

@@ -171,6 +171,16 @@ static void cb_populate_from_database(window_t *win, const combobox_params_t *pa
   free_result_list(results);
 }
 
+static int cb_selection(window_t *win, combobox_state_t *state) {
+  if (!state) return kComboBoxError;
+  int index = state->selection;
+  if (index >= 0 && (uint32_t)index < win->cursor_pos &&
+      !strcmp(state->texts[index], win->title)) return index;
+  for (uint32_t i = 0; i < win->cursor_pos; i++)
+    if (!strcmp(state->texts[i], win->title)) return (int)i;
+  return kComboBoxError;
+}
+
 // Combobox control window procedure
 result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   combobox_state_t *state = (combobox_state_t *)win->userdata;
@@ -344,7 +354,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return (result_t)strlen(win->title);
     case cbGetCurrentSelection:
     case cbGetCurrentValue: {
-      int selection = state ? state->selection : kComboBoxError;
+      int selection = cb_selection(win, state);
       int value = msg == cbGetCurrentSelection || selection == kComboBoxError ? selection :
         state->values ? state->values[selection] : kComboBoxError;
       if (lparam) *(int *)lparam = value;

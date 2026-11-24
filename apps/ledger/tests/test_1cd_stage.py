@@ -54,7 +54,8 @@ def ref_t(tg):
 # metadata GUIDs
 CATALOG, BANKS, OTHER, ENUM, DOC, CHART, KINDS, REG, INFO = (G(n) for n in (100, 101, 102, 200, 300, 31, 400, 500, 900))
 TYPEG = {n: G(10000 + n) for n in (100, 101, 102, 200, 300, 31, 400)}
-ENUM_A, ENUM_B = G(201), G(202)
+ENUM_A, ENUM_B, ENUM_C = G(201), G(202), G(203)
+CONST = G(901)
 
 
 def deflate_files(table_fields, files):
@@ -78,12 +79,12 @@ def build_tables():
         ent.append('{%s,"%s",%d}' % (guid, kind, number))
     for guid, kind, number in ((CATALOG, 'Reference', 100), (BANKS, 'Reference', 101), (OTHER, 'Reference', 102),
                                (ENUM, 'Enum', 200), (DOC, 'Document', 300), (CHART, 'Acc', 31), (KINDS, 'Chrc', 400),
-                               (REG, 'AccRg', 500), (REG, 'AccRgED', 501), (INFO, 'InfoRg', 900)):
+                               (REG, 'AccRg', 500), (REG, 'AccRgED', 501), (INFO, 'InfoRg', 900), (CONST, 'Const', 901)):
         add(guid, kind, number)
     flds = {1001: 'Название', 1002: 'Сальдо', 1003: 'Флаг', 1004: 'Контакт', 1005: 'Файл', 1006: 'Вид',
-            3001: 'Контрагент', 3002: 'Вид', 3003: 'Прочее', 879: 'Валютный', 880: 'Количественный',
+            1007: 'НеизвестныйТип', 3001: 'Контрагент', 3002: 'Вид', 3003: 'Прочее', 879: 'Валютный', 880: 'Количественный',
             884: 'Суммовой', 885: 'Валютный', 886: 'Количественный', 601: 'Организация', 602: 'Сумма',
-            603: 'Количество', 604: 'Валюта', 1012: 'Тип', 3012: 'Сумма'}
+            603: 'Количество', 604: 'Валюта', 1012: 'Тип', 3012: 'Сумма', 9011: 'Значение'}
     for number in flds:
         add(G(50000 + number), 'Fld', number)
     add(G(51010), 'VT', 1010)
@@ -92,15 +93,18 @@ def build_tables():
     files = {
         'root': '{2,%s,""}' % G(1),
         G(1): '{1,{0,%s,"1.2.3.4"}}' % hdr(G(2), 'Тестовая'),
+        CONST: obj(CONST, 'ОкруглятьИтоги', [G(10901)], fld(G(59011), 'Значение', B)),
         CATALOG: obj(CATALOG, 'Контрагенты', [TYPEG[100]],
                      fld(G(51001), 'Название', S) + fld(G(50000 + 1002), 'Сальдо', N) + fld(G(50000 + 1003), 'Флаг', B)
                      + fld(G(50000 + 1004), 'Контакт', S, '{"N",10,2,0}', '{"D","D"}', B, ref_t(TYPEG[101]))
                      + fld(G(50000 + 1005), 'Файл', ref_t('e199ca70-93cf-46ce-a54b-6edc88c3a296'))
                      + fld(G(50000 + 1006), 'Вид', ref_t(TYPEG[200]))
+                     + fld(G(50000 + 1007), 'НеизвестныйТип', ref_t(G(60000)))
                      + ',{0,%s}' % hdr(G(51010), 'Контакты') + fld(G(50000 + 1012), 'Тип', S)),
         BANKS: obj(BANKS, 'Банки', [TYPEG[101]]),
         OTHER: obj(OTHER, 'Прочее', [TYPEG[102]]),
-        ENUM: obj(ENUM, 'Виды', [TYPEG[200]], ',{0,%s},{0,%s}' % (hdr(ENUM_A, 'Первый'), hdr(ENUM_B, 'Второй'))),
+        ENUM: obj(ENUM, 'Виды', [TYPEG[200]], ',{0,%s},{0,%s},{0,%s}' %
+                  (hdr(ENUM_A, 'Первый'), hdr(ENUM_B, 'Второй'), hdr(ENUM_C, 'Третий'))),
         DOC: obj(DOC, 'Приход', [TYPEG[300]],
                  fld(G(50000 + 3001), 'Контрагент', ref_t(TYPEG[100])) + fld(G(50000 + 3002), 'Вид', ref_t(TYPEG[200]))
                  + fld(G(50000 + 3003), 'Прочее', ref_t(TYPEG[102]))
@@ -129,13 +133,17 @@ class StageFixture(unittest.TestCase):
         self.out = Path(self.tmp.name) / 'stage.xml'
         tables = build_tables()
         v = G
+        const_fields = [F('_RECORDKEY', 'B', length=4), F('_FLD9011', 'L')]
+        tables.append(fake.FixtureTable('_Const901', const_fields, [
+            fake.encode_row(const_fields, {'_RECORDKEY': T(1), '_FLD9011': True})]))
         # catalogs
         cat_f = [F('_IDRREF', 'B', length=16), F('_VERSION', 'RV'), F('_MARKED', 'L'), F('_PREDEFINEDID', 'B', length=16),
                  F('_PARENTIDRREF', 'B', length=16), F('_FOLDER', 'L'), F('_CODE', 'NVC', length=9), F('_DESCRIPTION', 'NVC', length=50),
                  F('_FLD1001', 'NVC', length=30), F('_FLD1002', 'N', length=15, precision=2), F('_FLD1003', 'L'),
                  F('_FLD1004_TYPE', 'B', length=1), F('_FLD1004_L', 'L'), F('_FLD1004_N', 'N', length=10, precision=2),
                  F('_FLD1004_T', 'DT'), F('_FLD1004_S', 'NVC', length=20), F('_FLD1004_RTREF', 'B', length=4),
-                 F('_FLD1004_RRREF', 'B', length=16), F('_FLD1005', 'I', null_exists=True), F('_FLD1006RREF', 'B', length=16)]
+                 F('_FLD1004_RRREF', 'B', length=16), F('_FLD1005', 'I', null_exists=True), F('_FLD1006RREF', 'B', length=16),
+                 F('_FLD1007RREF', 'B', length=16)]
         self.cat_f = cat_f
         k1, k2, k3, k4 = v(1001), v(1002), v(1003), v(1004)
         base = dict(_FOLDER=True)
@@ -150,7 +158,7 @@ class StageFixture(unittest.TestCase):
                 _FLD1004_S='строка', _FLD1005=(1, len(storage)), _FLD1006RREF=R(ENUM_B)),
             cat(k2, '2', 'Бета', _FLD1002='0.00', _FLD1004_TYPE=b'\x08', _FLD1004_RTREF=T(101),
                 _FLD1004_RRREF=R(self.bank_guid), _FLD1006RREF=R(ENUM_A)),
-            cat(k3, '3', 'Гамма', _FLD1004_TYPE=b'\x03', _FLD1004_N='12.34'),
+            cat(k3, '3', 'Гамма', _FLD1004_TYPE=b'\x03', _FLD1004_N='12.34', _FLD1007RREF=R(G(70000))),
             cat(v(1005), '5', 'Дельта', _FLD1004_TYPE=b'\x09', _FLD1004_S='x'),
             cat(k4, '4', 'Группа', _FOLDER=False, _MARKED=True, _FLD1004_TYPE=b'\x01', _PARENTIDRREF=R(k1)),
         ]
@@ -169,8 +177,9 @@ class StageFixture(unittest.TestCase):
         tables.append(fake.FixtureTable('_Reference102', bank_f, [fake.encode_row(
             bank_f, {'_IDRREF': R(self.other_guid), '_CODE': 'P1', '_DESCRIPTION': 'Вытянутый', '_FOLDER': True})]))
         enum_f = [F('_IDRREF', 'B', length=16), F('_ENUMORDER', 'N', length=10)]
-        tables.append(fake.FixtureTable('_Enum200', enum_f, [fake.encode_row(enum_f, {'_IDRREF': R(ENUM_A), '_ENUMORDER': 0}),
-                                                            fake.encode_row(enum_f, {'_IDRREF': R(ENUM_B), '_ENUMORDER': 1})]))
+        tables.append(fake.FixtureTable('_Enum200', enum_f, [
+            fake.encode_row(enum_f, {'_IDRREF': R(guid), '_ENUMORDER': order})
+            for order, guid in enumerate((ENUM_A, ENUM_B, ENUM_C))]))
         # document with a tabular section
         doc_f = [F('_IDRREF', 'B', length=16), F('_VERSION', 'RV'), F('_MARKED', 'L'), F('_DATE_TIME', 'DT'), F('_NUMBER', 'NVC', length=11),
                  F('_POSTED', 'L'), F('_FLD3001RREF', 'B', length=16), F('_FLD3002RREF', 'B', length=16), F('_FLD3003RREF', 'B', length=16)]
@@ -328,10 +337,16 @@ class StageExportTest(StageFixture):
         self.assertEqual(blob.find('segment').attrib, {'encoding': 'base64', 'bytes': '3'})
         self.assertEqual(blob.findtext('segment'), 'YWJj')
         self.assertEqual(beta.find('v[@n="Файл"]').get('t'), 'null')
+        self.assertEqual(alpha.find('v[@n="НеизвестныйТип"]').attrib,
+                         {'n': 'НеизвестныйТип', 't': 'ref', 'empty': 'true'})
+        self.assertEqual(gamma.find('v[@n="НеизвестныйТип"]').get('t'), 'undecoded')
         enum = alpha.find('v[@n="Вид"]')
         self.assertEqual(enum.attrib, {'n': 'Вид', 't': 'enum', 'type': 'Перечисление.Виды', 'name': 'Второй', 'id': ENUM_B})
         listed = {(e.get('name'), e.get('order')) for e in root.find('enums')}
-        self.assertEqual(listed, {('Первый', '0'), ('Второй', '1')})
+        self.assertEqual(listed, {('Первый', '0'), ('Второй', '1'), ('Третий', '2')})
+        constant = root.find('constants/constant')
+        self.assertEqual(constant.attrib, {'type': 'Константа.ОкруглятьИтоги', 'key': '00000001'})
+        self.assertEqual(constant.findtext('v[@n="Значение"]'), 'true')
 
     def test_compressed_value_storage(self):
         source = b'\xef\xbb\xbf{}'
@@ -384,10 +399,11 @@ class StageExportTest(StageFixture):
     def test_undecoded_marker_and_summary(self):
         root = self.export()
         marks = [e for e in root.iter('v') if e.get('t') == 'undecoded']
-        self.assertEqual(len(marks), 1)
-        self.assertEqual((marks[0].get('n'), marks[0].get('reason')), ('Контакт', 'unsupported value type code 9'))
-        self.assertEqual(root.find('summary/undecoded').get('count'), '1')
-        self.assertIn('undecoded markers: 1', self.result.stdout)
+        self.assertEqual({(mark.get('n'), mark.get('reason')) for mark in marks}, {
+            ('Контакт', 'unsupported value type code 9'),
+            ('НеизвестныйТип', 'reference target type unknown')})
+        self.assertEqual(root.find('summary/undecoded').get('count'), '2')
+        self.assertIn('undecoded markers: 2', self.result.stdout)
         self.assertIn('unsupported value type code 9', self.result.stdout)
 
 

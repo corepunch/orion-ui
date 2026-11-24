@@ -40,6 +40,7 @@ FLD_RE = re.compile(r'^_FLD(\d+)(DT|CT)?(RREF)?$', re.I)
 PART_RE = re.compile(r'^(.*?)(_TYPE|_L|_N|_T|_S|_RTREF|_RRREF)$', re.I)
 ZERO16 = bytes(16)
 VALUE_STORAGE = 'e199ca70-93cf-46ce-a54b-6edc88c3a296'
+UUID_TYPE = 'fc01b5df-97fe-449b-83d4-218a090e681e'
 VALUE_STORAGE_MAX = 8 * 1024 * 1024
 VALUE_STORAGE_STAGE_MAX = 16 * 1024 * 1024
 
@@ -74,6 +75,10 @@ def decode_value_storage(raw):
         segments.append(body[cursor:cursor + size])
         cursor += size
     return text, segments
+
+
+def has_type(pattern, guid):
+    return any(len(p) > 1 and str(p[0]) == '#' and str(p[1]).lower() == guid for p in (pattern or []))
 
 
 def ref_uuid(raw):
@@ -146,8 +151,7 @@ class Stage:
         self.records = {}              # (kind, number, id16) -> El (catalog-like and documents)
         self.pending = []
         self.pulled = set()
-        self.enums = {}                # (number, id16) -> (name, order)
-        self.enum_names = {}
+        self.enum_names = {}           # number -> {id16: (name, order)}
         self.exported_rows = Counter()  # table name -> rows exported
         self.undecoded = Counter()      # (location, reason) -> count
         self.escaped = 0
@@ -246,6 +250,8 @@ class Stage:
             if kind == 'B':
                 if field.length == 16 and not any(data):
                     return {'t': 'uuid', 'empty': 'true'}, None
+                if field.length == 16 and has_type(pattern, UUID_TYPE):
+                    return {'t': 'uuid'}, ref_uuid(data)
                 return self.undec(loc, f'raw bytes B({field.length})', data)
         except (ValueError, OverflowError, UnicodeError, struct.error) as exc:
             return self.undec(loc, f'{kind}: {exc}', data)
@@ -287,13 +293,12 @@ class Stage:
             if not any(raw):
                 attrs['empty'] = 'true'
                 return attrs, None
-            found = self.enum_value(info, raw)
+            found = self.enum_values(info).get(raw)
             if found is None:
                 attrs.update(id=ref_uuid(raw), dangling='true')
                 self.dangling.append((loc, info.name, ref_uuid(raw)))
                 return attrs, None
             attrs.update(name=found[0], id=ref_uuid(raw))
-            self.enums[(info.number, raw)] = found
             return attrs, None
         attrs = {'t': 'ref', 'type': info.name}
         if not any(raw):
@@ -307,8 +312,8 @@ class Stage:
             self.require(info, raw)
         return attrs, None
 
-    def enum_value(self, info, raw):
-        """(name, order) of an enum value: row in _EnumN matched by GUID to the metadata value header."""
+    def enum_values(self, info):
+        """Rows in _EnumN matched by GUID to the metadata value headers."""
         if info.number not in self.enum_names:
             table = self.meta.object_table(info)
             names = {}
@@ -326,7 +331,7 @@ class Stage:
                 if name is not None:
                     values[ref] = (name, order)
             self.enum_names[info.number] = values
-        return self.enum_names[info.number].get(raw)
+        return self.enum_names[info.number]
 
     def require(self, info, raw):
         key = (info.kind, info.number, raw)
@@ -433,8 +438,7 @@ class Stage:
             if fname is None:
                 self.unnamed[loc] += 1
                 fname = base
-            if field.type == 'I' and any(len(p) > 1 and str(p[0]) == '#' and
-                                         str(p[1]).lower() == VALUE_STORAGE for p in (pattern or [])):
+            if field.type == 'I' and has_type(pattern, VALUE_STORAGE):
                 out.append((side, number, self.value_storage(table, row, field, fname, floc)))
                 continue
             if base in lay.composite:
@@ -444,6 +448,8 @@ class Stage:
                 null, data = self.cell(row, field)
                 if null:
                     attrs, text = {'t': 'null'}, None
+                elif target is None and not any(data):
+                    attrs, text = {'t': 'ref', 'empty': 'true'}, None
                 elif target is None:
                     attrs, text = self.undec(floc, 'reference target type unknown', data)
                 else:
@@ -1047,6 +1053,19 @@ class Exporter(Stage):
             if kind == 'Document' and self.nonempty(info):
                 for raw, row in self.index(info).items():
                     self.export_object(info, raw, row)
+        constants = El('constants')
+        for (kind, _), info in sorted(meta.objects.items()):
+            if kind != 'Const' or not self.nonempty(info):
+                continue
+            table = self.table_for(info)
+            key = self.layout(table).get('_RECORDKEY')
+            for row in M.live_rows(self.db, table):
+                attrs = {'type': info.name}
+                if key:
+                    attrs['key'] = self.cell(row, key)[1].hex()
+                constant = constants.add(El('constant', attrs))
+                constant.kids.extend(value for _, _, value in self.fields(table, row, info, info.name))
+                self.exported_rows[table.name] += 1
         self.drain()
         header.add(El('missing-catalogs', {'names': ','.join(missing)}))
         sec = root.add(El('chart-of-accounts'))
@@ -1076,11 +1095,15 @@ class Exporter(Stage):
             regs.add(reg)
         if rates.kids:
             root.add(rates)
+        if constants.kids:
+            root.add(constants)
         enums = root.add(El('enums'))
-        for (number, raw), (name, order) in sorted(self.enums.items(), key=lambda kv: (kv[0][0], kv[1][1], kv[0][1])):
-            info = meta.type_by_number[number]
-            enums.add(El('enum', {'type': info.name, 'name': name, 'id': ref_uuid(raw), 'order': str(order)}))
-            self.exported_rows[meta.object_table(info).name] += 1
+        for (kind, _), info in sorted(meta.objects.items()):
+            if kind != 'Enum' or not self.nonempty(info):
+                continue
+            for raw, (name, order) in sorted(self.enum_values(info).items(), key=lambda kv: (kv[1][1], kv[0])):
+                enums.add(El('enum', {'type': info.name, 'name': name, 'id': ref_uuid(raw), 'order': str(order)}))
+                self.exported_rows[meta.object_table(info).name] += 1
         skipped, partial = self.skipped()
         root.add(skipped)
         root.add(partial)
@@ -1232,7 +1255,9 @@ def summary_text(root, exporter, size):
         lines.append(f'{tag}: {len(sections[tag].kids)}')
     for reg in sections['registers'].kids:
         lines.append(f'register {reg.attrs["type"]}: {len(reg.kids)} movements')
-    lines.append(f'enums referenced: {len(sections["enums"].kids)}')
+    if 'constants' in sections:
+        lines.append(f'constant values: {len(sections["constants"].kids)}')
+    lines.append(f'enum values: {len(sections["enums"].kids)}')
     sk = sections['skipped']
     lines.append(f'skipped: {sk.attrs["tables"]} tables / {sk.attrs["rows"]} rows; partial tables: {sections["partial-tables"].attrs["tables"]}')
     lines.append(f'dangling references: {len(exporter.dangling)}')
