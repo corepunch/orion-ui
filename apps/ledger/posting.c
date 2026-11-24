@@ -1087,6 +1087,19 @@ db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg) {
 // configuration's own record.
 bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
   bool ok = true;
+  result_node_t *stale_units = fetch(cfg, TABLE_UNITS, NULL, 0);
+  EACH_RECORD(db_unit_t, u, stale_units)
+    if (u->id >= LEDGER_EXT_ID_BASE && !find(ib, TABLE_EXT_UNITS, u->id)) ok &= db_schema_xml_overlay_remove(cfg, TABLE_UNITS, u->id);
+  free_result_list(stale_units);
+  result_node_t *units = fetch(ib, TABLE_EXT_UNITS, NULL, 0);
+  EACH_RECORD(db_ext_unit_t, e, units) {
+    db_unit_t u = { .id = e->id };
+    snprintf(u.code, sizeof(u.code), "%s", e->code);
+    snprintf(u.name, sizeof(u.name), "%s", e->name);
+    bool exists = find(cfg, TABLE_UNITS, u.id) != NULL;
+    ok &= (exists ? db_schema_xml_overlay_update(cfg, TABLE_UNITS, &u) : db_schema_xml_overlay_insert(cfg, TABLE_UNITS, &u)) != NULL;
+  }
+  free_result_list(units);
   result_node_t *stale = fetch(cfg, TABLE_ACCOUNTS, NULL, 0);
   EACH_RECORD(db_account_t, a, stale)
     if (a->id >= LEDGER_EXT_ID_BASE && !find(ib, TABLE_EXT_ACCOUNTS, a->id)) ok &= db_schema_xml_overlay_remove(cfg, TABLE_ACCOUNTS, a->id);
@@ -1109,18 +1122,18 @@ bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
   free_result_list(stale);
   result_node_t *kinds = fetch(ib, TABLE_EXT_SUBCONTO_KINDS, NULL, 0);
   EACH_RECORD(db_ext_subconto_kind_t, k, kinds) {
-    if (find(cfg, TABLE_SUBCONTO_KINDS, k->id)) continue;
+    bool exists = find(cfg, TABLE_SUBCONTO_KINDS, k->id) != NULL;
     db_subconto_kind_t kind = { .id = k->id };
     snprintf(kind.code, sizeof(kind.code), "%s", k->code);
     snprintf(kind.name, sizeof(kind.name), "%s", k->name);
     snprintf(kind.table, sizeof(kind.table), "%s", k->table);
-    ok &= db_schema_xml_overlay_insert(cfg, TABLE_SUBCONTO_KINDS, &kind) != NULL;
+    ok &= (exists ? db_schema_xml_overlay_update(cfg, TABLE_SUBCONTO_KINDS, &kind) : db_schema_xml_overlay_insert(cfg, TABLE_SUBCONTO_KINDS, &kind)) != NULL;
   }
   free_result_list(kinds);
   result_node_t *accounts = fetch(ib, TABLE_EXT_ACCOUNTS, NULL, 0);
   EACH_RECORD(db_ext_account_t, e, accounts) {
     db_account_t *known = find(cfg, TABLE_ACCOUNTS, e->id);
-    if (known) {  // an account matched by code: fill the slots the configuration lacks
+    if (known && e->id < LEDGER_EXT_ID_BASE) {  // an account matched by code: fill the slots the configuration lacks
       db_account_t merged = *known;
       int *slots[3] = { &merged.subconto_kind_id, &merged.subconto2_kind_id, &merged.subconto3_kind_id };
       const int given[3] = { e->subconto_kind_id, e->subconto2_kind_id, e->subconto3_kind_id };
@@ -1135,7 +1148,7 @@ bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
     snprintf(a.name, sizeof(a.name), "%s", e->name);
     snprintf(a.kind, sizeof(a.kind), "%s", e->kind);
     snprintf(a.section, sizeof(a.section), "%s", e->section);
-    ok &= db_schema_xml_overlay_insert(cfg, TABLE_ACCOUNTS, &a) != NULL;
+    ok &= (known ? db_schema_xml_overlay_update(cfg, TABLE_ACCOUNTS, &a) : db_schema_xml_overlay_insert(cfg, TABLE_ACCOUNTS, &a)) != NULL;
   }
   free_result_list(accounts);
   return ok;

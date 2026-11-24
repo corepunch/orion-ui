@@ -565,6 +565,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `bik` | `string` |  |
 | `swift` | `string` |  |
 | `corr_account` | `string` |  |
+| `bank_id` | `integer` | banks.id |
 
 ## `ib.warehouses`
 
@@ -657,6 +658,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `vat_minor` | `int64` |  |
 | `total_minor` | `int64` |  |
 | `posted` | `boolean` |  |
+| `source_posted_state` | `string` |  |
 
 ## `ib.doc_lines`
 
@@ -1045,3 +1047,47 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `config_name` | `string` |  |
 | `config_version` | `string` |  |
 | `imported_date` | `date` |  |
+
+## `ib.banks`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `name` | `string` |  |
+| `bik` | `string` |  |
+| `swift` | `string` |  |
+| `corr_account` | `string` |  |
+| `city` | `string` |  |
+
+## `ib.departments`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `name` | `string` |  |
+| `code` | `string` |  |
+| `organization_id` | `integer` | organizations.id |
+
+## `ib.import_document_details`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `document_id` | `integer` | documents.id |
+| `section_name` | `string` |  |
+| `line_number` | `integer` |  |
+| `field_name` | `string` |  |
+| `value_type` | `string` |  |
+| `value` | `string` |  |
+| `reference_type` | `string` |  |
+| `reference_guid` | `string` |  |
+| `is_empty` | `boolean` |  |
+| `is_dangling` | `boolean` |  |
+
+## `ib.ext_units`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `code` | `string` |  |
+| `name` | `string` |  |

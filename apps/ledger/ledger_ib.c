@@ -269,6 +269,20 @@ static int reserve_document_id(database_t *db) {
 }
 
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == dbGetFieldText && LOWORD(wparam) == TABLE_ENTRIES && lparam) {
+    db_field_text_t *field = lparam;
+    if (field->record && field->field && field->buf && field->buf_sz) {
+      bool debit = !strcmp(field->field, "debit_quantity"), credit = !strcmp(field->field, "credit_quantity");
+      if (debit || credit) {
+        const db_entry_t *entry = field->record;
+        if (debit ? entry->debit_quantity_set : entry->credit_quantity_set)
+          ui_format_number((double)(debit ? entry->debit_quantity_milli : entry->credit_quantity_milli) / 1000.0,
+                           3, field->buf, field->buf_sz);
+        else field->buf[0] = '\0';
+        return true;
+      }
+    }
+  }
   db_document_t reserved_doc;
   if (msg == dbReserveKey && LOWORD(wparam) == TABLE_DOCUMENTS) return reserve_document_id(db);
   if (msg == dbInsert && LOWORD(wparam) == TABLE_DOCUMENTS && lparam &&

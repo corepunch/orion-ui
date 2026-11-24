@@ -74,8 +74,8 @@ class LazyObject:
                 raise ValueError('invalid blob size')
             out.append(block[6:6 + chunk_size])
             remaining -= chunk_size
-            if nxt == 0:
-                break
+            if nxt == 0 and remaining > 0:
+                raise ValueError('truncated blob chain')
             pos = nxt
         return b''.join(out)[:size]
 

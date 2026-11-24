@@ -17,6 +17,7 @@ sys.modules[spec.name] = fake
 spec.loader.exec_module(fake)
 sys.path.insert(0, str(HERE.parent / 'tools'))
 from onecd_stage import decode_value_storage, ref_uuid
+from onecd_meta import LazyObject
 
 F = fake.FixtureField
 
@@ -123,6 +124,32 @@ def build_tables():
     tables = [deflate_files(cf, files), deflate_files(cf, params)]
     tables[0].name, tables[1].name = 'CONFIG', 'PARAMS'
     return tables
+
+
+class LazyObjectTests(unittest.TestCase):
+    def test_blob_chain_rejects_premature_end_and_cycles(self):
+        class Database:
+            page_size = 256
+
+            def __init__(self, pages):
+                self.pages = pages
+
+            def object_pages(self, _):
+                return len(self.pages) * self.page_size, list(range(len(self.pages)))
+
+            def read_page(self, page):
+                return self.pages[page]
+
+        def chunk(next_chunk, data):
+            return (struct.pack('<Ih', next_chunk, len(data)) + data).ljust(256, b'\0')
+
+        obj = LazyObject(Database([chunk(0, b'abc')]), 1)
+        self.assertEqual(obj.read_chain(0, 3), b'abc')
+        with self.assertRaisesRegex(ValueError, 'truncated blob chain'):
+            obj.read_chain(0, 4)
+        obj = LazyObject(Database([chunk(1, b'abc'), chunk(1, b'def')]), 1)
+        with self.assertRaisesRegex(ValueError, 'invalid blob chain'):
+            obj.read_chain(0, 7)
 
 
 class StageFixture(unittest.TestCase):

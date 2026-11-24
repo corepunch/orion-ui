@@ -376,11 +376,21 @@ on the machine holding the snapshot and open only the XML in Ledger.
 
 The import transaction brings in accounts, analytics, catalogs, and historical
 documents using the 1C movements. Configured types open in their corresponding
-Ledger forms. An incoming organization with a different tax ID is held back
-when the destination already has an INN. Imported documents keep their
-original movements and are protected from posting again. Repeat imports retain
-source GUIDs. Ledger saves the import report as `import-1cd-report.txt` beside
-the infobase.
+Ledger classifications. Open a migrated document to review its original posting
+status, entries, lines, and source details. Payment breakdowns, counterparty and
+tax settlements, and accounting notes appear under **Source Details**.
+
+**Catalogs > Banks and Departments** shows imported banks and departments.
+Bank accounts retain their local details and link to a bank when the importer can
+resolve it. Units match the configuration by code before name. New units and
+account extensions are stored in the destination infobase. An incoming
+organization with a different INN is held back. Departments and bank accounts
+owned by that organization require a matching destination organization.
+
+Repeat imports retain source GUIDs and refresh imported records and document
+details. The report lists catalog records marked for deletion that remain
+available to historical references. Ledger saves the report as
+`import-1cd-report.txt` beside the infobase.
 
 For selective inspection, `inspect_1cd.py` accepts an immutable HTTPS snapshot
 with a strong ETag and byte ranges. Full staging takes a local path and hashes

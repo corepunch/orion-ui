@@ -176,6 +176,7 @@ typedef struct {
   int updated;                           // records found again through their source identity
   int entries;                           // register movements written as entries
   int lines;                             // rows of tabular sections written as document lines
+  int detail_fields;                     // source fields written as document details
   struct { char type[128]; int added, updated, removed, held; } counts[48];  // per 1C metadata type
   int count_types;
   char notes[4096];                      // held-back or unmapped items, one per line

@@ -84,6 +84,8 @@
       <item name="new_warehouse" label="New Warehouse..." />
       <item name="edit_warehouse" label="Edit Warehouse..." />
       <item name="delete_warehouse" label="Delete Warehouse..." />
+      <Separator />
+      <item name="reference" label="Banks and Departments..." />
     </menu>
     <menu name="view" label="View">
       <item name="back" label="Back" shortcut="Alt+Left" />
@@ -182,6 +184,7 @@
         <Button command="catalog.new_bank_account" icon="ledger-payroll" text="New" size="large" tooltip="New bank account" />
         <Button command="catalog.edit_bank_account" icon="ledger-edit" text="Edit" tooltip="Edit bank account" />
         <Button command="catalog.delete_bank_account" icon="ledger-delete" text="Delete" tooltip="Delete bank account" />
+        <Button command="catalog.reference" text="Banks and Departments" />
       </Group>
       <Group label="Items">
         <Button command="catalog.new_item" icon="ledger-nav-items" text="New" size="large" tooltip="New item" />
@@ -716,6 +719,7 @@
         <field name="bik" type="string" length="16" />
         <field name="swift" type="string" length="16" />
         <field name="corr_account" type="string" length="64" />
+        <field name="bank_id" type="integer" relation="banks.id" on-delete="deny" />
       </table>
       <!-- Warehouses (1C Склады). kind: wholesale, retail, ... -->
       <table name="warehouses">
@@ -805,6 +809,7 @@
         <field name="vat_minor" type="int64" />
         <field name="total_minor" type="int64" />
         <field name="posted" type="boolean" />
+        <field name="source_posted_state" type="string" length="12" />
       </table>
       <table name="doc_lines">
         <field name="id" type="integer" key="YES" />
@@ -1150,6 +1155,38 @@
         <field name="config_name" type="string" length="64" />
         <field name="config_version" type="string" length="16" />
         <field name="imported_date" type="date" default="today" />
+      </table>
+      <table name="banks">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="160" />
+        <field name="bik" type="string" length="16" />
+        <field name="swift" type="string" length="16" />
+        <field name="corr_account" type="string" length="32" />
+        <field name="city" type="string" length="128" />
+      </table>
+      <table name="departments">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="160" />
+        <field name="code" type="string" length="32" />
+        <field name="organization_id" type="integer" relation="organizations.id" on-delete="deny" />
+      </table>
+      <table name="import_document_details">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
+        <field name="section_name" type="string" length="96" />
+        <field name="line_number" type="integer" />
+        <field name="field_name" type="string" length="96" />
+        <field name="value_type" type="string" length="24" />
+        <field name="value" type="string" length="512" />
+        <field name="reference_type" type="string" length="96" />
+        <field name="reference_guid" type="string" length="40" />
+        <field name="is_empty" type="boolean" />
+        <field name="is_dangling" type="boolean" />
+      </table>
+      <table name="ext_units">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="8" />
+        <field name="name" type="string" length="32" />
       </table>
     </database>
   </databases>
@@ -2196,8 +2233,103 @@
       </StackView>
     </form>
 
+    <form name="imported_document" title="Imported Document" width="1000" height="570" spacing="8" padding="8">
+      <StackView name="heading" orientation="horizontal" spacing="8">
+        <Label name="caption" font="title" />
+        <Badge name="source_state" icon="ledger-doc-posted" color="info" />
+      </StackView>
+      <GridView name="header" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_contract" text="Contract:" />
+        </Column>
+        <Column name="values">
+          <Label name="date" field="ib.documents.date" />
+          <Label name="counterparty" />
+          <Label name="contract" />
+        </Column>
+        <Column name="labels2" width="auto">
+          <Label name="lbl_warehouse" text="Warehouse:" />
+          <Label name="lbl_bank" text="Bank account:" />
+          <Label name="lbl_reference" text="Payment reference:" />
+        </Column>
+        <Column name="values2">
+          <Label name="warehouse" />
+          <Label name="bank_account" />
+          <Label name="payment_reference" field="ib.documents.payment_reference" />
+        </Column>
+      </GridView>
+      <TabView name="history" flags="flexspace">
+        <TableView name="postings" text="Entries" source="ib.entries" zeros="blank" flags="nofill,vscroll,WINDOW_HSCROLL,flexspace">
+          <Column field="date" title="Date" width="90" />
+          <Column field="debit.code" title="Dr" width="56" />
+          <Column field="debit_subconto.name" title="Dr Analytics 1" width="104" />
+          <Column field="debit_subconto2.name" title="Dr Analytics 2" width="104" />
+          <Column field="debit_subconto3.name" title="Dr Analytics 3" width="104" />
+          <Column field="credit.code" title="Cr" width="56" />
+          <Column field="credit_subconto.name" title="Cr Analytics 1" width="104" />
+          <Column field="credit_subconto2.name" title="Cr Analytics 2" width="104" />
+          <Column field="credit_subconto3.name" title="Cr Analytics 3" width="104" />
+          <Column field="amount" title="Amount" width="96" />
+          <Column field="debit_quantity" title="Dr Quantity" width="95" />
+          <Column field="credit_quantity" title="Cr Quantity" width="95" />
+          <Column field="debit_currency.code" title="Dr Currency" width="85" />
+          <Column field="debit_currency_amount" title="Dr Currency Amount" width="118" />
+          <Column field="credit_currency.code" title="Cr Currency" width="85" />
+          <Column field="credit_currency_amount" title="Cr Currency Amount" width="118" />
+          <Column field="source_line" title="Source Line" width="80" />
+          <Column field="content" title="Content" width="180" />
+          <RowIcon field="source_inactive" value="true" icon="ledger-doc-draft" color="warning" />
+        </TableView>
+        <TableView name="lines" text="Lines" source="ib.doc_lines" zeros="blank" flags="nofill,vscroll,flexspace">
+          <Column field="item.name" title="Item" width="0" min-width="120" />
+          <Column field="quantity" title="Qty" width="64" />
+          <Column field="price" title="Price" width="80" />
+          <Column field="amount" title="Amount" width="90" />
+          <Column field="vat" title="Tax Amount" width="84" />
+          <Column field="total" title="Total" width="90" />
+        </TableView>
+        <TableView name="details" text="Source Details" source="ib.import_document_details" flags="nofill,vscroll,WINDOW_HSCROLL,flexspace">
+          <Column field="section_name" title="Section" width="200" />
+          <Column field="line_number" title="Line" width="54" />
+          <Column field="field_name" title="Field" width="200" />
+          <Column field="value" title="Value" width="200" />
+          <Column field="value_type" title="Type" width="90" />
+          <Column field="reference_type" title="Reference Type" width="190" />
+          <Column field="reference_guid" title="Source ID" width="250" />
+        </TableView>
+      </TabView>
+      <StackView name="footer" orientation="horizontal" spacing="8">
+        <Label name="comment" field="ib.documents.comment" flags="flexspace" />
+        <Label name="lbl_total" text="Total:" />
+        <Label name="total" field="ib.documents.total" font="title" />
+      </StackView>
+    </form>
+
+    <form name="reference_catalogs" title="Banks and Departments" width="660" height="400" spacing="8" padding="8">
+      <TabView name="catalogs" flags="flexspace">
+        <TableView name="banks" text="Banks" source="ib.banks" flags="nofill,vscroll,flexspace">
+          <Column field="name" title="Name" width="0" min-width="160" />
+          <Column field="bik" title="BIK" width="85" />
+          <Column field="swift" title="SWIFT" width="80" />
+          <Column field="corr_account" title="Correspondent Account" width="160" />
+          <Column field="city" title="City" width="0" min-width="80" />
+        </TableView>
+        <TableView name="departments" text="Departments" source="ib.departments" flags="nofill,vscroll,flexspace">
+          <Column field="code" title="Code" width="100" />
+          <Column field="name" title="Name" width="0" min-width="120" />
+          <Column field="organization.name" title="Organization" width="0" min-width="160" />
+        </TableView>
+      </TabView>
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space />
+        <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
+      </StackView>
+    </form>
+
     <!-- Manual operation: the accountant types the entries themselves. -->
-    <form name="operation" title="Manual Operation" width="680" height="520" spacing="6" padding="8">
+    <form name="operation" title="Manual Operation" width="900" height="520" spacing="6" padding="8">
       <GridView name="header" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_type" text="Operation:" />
@@ -2220,11 +2352,15 @@
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="entries" zeros="blank" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="entries" zeros="blank" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,WINDOW_HSCROLL,flexspace">
         <Column field="debit.code" title="Dr" width="56" />
-        <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
+        <Column field="debit_subconto.name" title="Dr Analytics 1" width="96" />
+        <Column field="debit_subconto2.name" title="Dr Analytics 2" width="96" />
+        <Column field="debit_subconto3.name" title="Dr Analytics 3" width="96" />
         <Column field="credit.code" title="Cr" width="56" />
-        <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
+        <Column field="credit_subconto.name" title="Cr Analytics 1" width="96" />
+        <Column field="credit_subconto2.name" title="Cr Analytics 2" width="96" />
+        <Column field="credit_subconto3.name" title="Cr Analytics 3" width="96" />
         <Column field="quantity" title="Qty" width="64" />
         <Column field="amount" title="Amount" width="90" />
         <Column field="content" title="Content" width="0" />
@@ -2253,9 +2389,13 @@
       <GridView name="fields" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_debit" text="Debit:" />
-          <Label name="lbl_debit_subconto" text="Debit analytics:" />
+          <Label name="lbl_debit_subconto" text="Debit analytics 1:" />
+          <Label name="lbl_debit_subconto2" text="Debit analytics 2:" />
+          <Label name="lbl_debit_subconto3" text="Debit analytics 3:" />
           <Label name="lbl_credit" text="Credit:" />
-          <Label name="lbl_credit_subconto" text="Credit analytics:" />
+          <Label name="lbl_credit_subconto" text="Credit analytics 1:" />
+          <Label name="lbl_credit_subconto2" text="Credit analytics 2:" />
+          <Label name="lbl_credit_subconto3" text="Credit analytics 3:" />
           <Label name="lbl_quantity" text="Quantity:" />
           <Label name="lbl_currency" text="Currency:" />
           <Label name="lbl_currency_amount" text="Currency amount:" />
@@ -2265,8 +2405,12 @@
         <Column name="inputs">
           <ComboBox name="debit" field="ib.entries.debit_id" source="cfg.accounts" display="code" value="id" />
           <ComboBox name="debit_subconto" field="ib.entries.debit_subconto_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="debit_subconto2" field="ib.entries.debit_subconto2_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="debit_subconto3" field="ib.entries.debit_subconto3_id" source="ib.counterparties" display="name" value="id" />
           <ComboBox name="credit" field="ib.entries.credit_id" source="cfg.accounts" display="code" value="id" />
           <ComboBox name="credit_subconto" field="ib.entries.credit_subconto_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="credit_subconto2" field="ib.entries.credit_subconto2_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="credit_subconto3" field="ib.entries.credit_subconto3_id" source="ib.counterparties" display="name" value="id" />
           <TextBox name="quantity" field="ib.entries.quantity" />
           <ComboBox name="currency" field="ib.entries.currency_id" source="ib.currencies" display="code" value="id" />
           <TextBox name="currency_amount" field="ib.entries.currency_amount" />

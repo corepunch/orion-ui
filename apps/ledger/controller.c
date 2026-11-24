@@ -376,6 +376,30 @@ static size_t document_form(const db_doc_type_t *type) {
   return 0;
 }
 
+static result_t imported_document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg != evCreate) return false;
+  const db_document_t *doc = db_dialog_record(win);
+  if (!doc) return false;
+  char caption[256];
+  if (document_caption(doc, caption, sizeof(caption)))
+    set_window_title(get_window_item(win, ID_IMPORTED_DOCUMENT_CAPTION), caption);
+  const char *state = !strcmp(doc->source_posted_state, "posted") ? ui_tr("Posted in 1C") :
+    !strcmp(doc->source_posted_state, "unposted") ? ui_tr("Unposted in 1C") : ui_tr("Imported from 1C");
+  set_window_title(get_window_item(win, ID_IMPORTED_DOCUMENT_SOURCE_STATE), state);
+  static const struct { uint32_t id; const char *field; } values[] = {
+    { ID_IMPORTED_DOCUMENT_COUNTERPARTY, "counterparty.name" },
+    { ID_IMPORTED_DOCUMENT_CONTRACT, "contract.name" },
+    { ID_IMPORTED_DOCUMENT_WAREHOUSE, "warehouse.name" },
+    { ID_IMPORTED_DOCUMENT_BANK_ACCOUNT, "bank_account.number" },
+  };
+  for (size_t i = 0; i < ARRAY_LEN(values); i++) {
+    char value[256] = "";
+    db_get_field_text(db_dialog_database(win), TABLE_DOCUMENTS, doc, values[i].field, value, sizeof(value));
+    set_window_title(get_window_item(win, values[i].id), value);
+  }
+  return true;
+}
+
 // OK in a document dialog saves and posts it.
 static void after_save(int doc_id) {
   if (doc_id && !ledger_post(g_ledger->ib, g_ledger->cfg, doc_id))
@@ -403,8 +427,10 @@ static void edit_document(int doc_id) {
   size_t f = document_form(document_type(doc));
   char title[256];
   if (!doc || !document_caption(doc, title, sizeof(title))) snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
-  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
-  db_form_open(kDocumentForms[f].def, title, view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), doc_id, &opts, document_saved, NULL);
+  bool imported = ledger_document_imported(doc);
+  db_dialog_opts_t opts = { .hook = imported ? imported_document_hook : kDocumentForms[f].hook };
+  db_form_open(imported ? &ledger_imported_document_form : kDocumentForms[f].def, title,
+              view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), doc_id, &opts, imported ? NULL : document_saved, NULL);
 }
 
 // A named record, for trusted Lua add-ons. Opening never creates a record.
@@ -827,10 +853,27 @@ static bool ledger_ui_confirm(lua_State *L, const char *text, const char *title)
 static void ledger_ui_message(lua_State *L, const char *text, const char *title) { message_box(g_ledger->main_win, text, title, MB_OK); }
 static void ledger_ui_save(lua_State *L) {
   window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
-  if (document) db_form_save(document, false);
+  if (document) {
+    if (!ledger_document_imported(db_dialog_record(document))) db_form_save(document, false);
+  }
   else { send_db_message(g_ledger->ib, dbSave, 0, NULL); ledger_update_status(); }
 }
+static result_t reference_catalogs_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate: case evPaint: case evDestroy: return false;
+    case evCommand:
+      if (LOWORD(wparam) != ID_REFERENCE_CATALOGS_CLOSE || HIWORD(wparam) != btnClicked) return false;
+      end_dialog(win, 0);
+      return true;
+    case evClose: end_dialog(win, 0); return true;
+    default: return false;
+  }
+}
 static void ledger_ui_form(lua_State *L, const char *name) {
+  if (!strcmp(name, "reference_catalogs")) {
+    show_dialog_from_form(&ledger_reference_catalogs_form, NULL, g_ledger->main_win, reference_catalogs_proc, NULL);
+    return;
+  }
   const form_def_t *form = !strcmp(name, "organization") ? &ledger_organization_form
                          : !strcmp(name, "report_settings") ? &ledger_report_settings_form : NULL;
   if (!form) { luaL_error(L, "unknown form '%s'", name); return; }

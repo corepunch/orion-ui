@@ -39,6 +39,7 @@ static const stage_table_t kKindTables[] = {
   { "Справочник.Склады",              "warehouses" },
   { "Справочник.БанковскиеСчета",     "bank_accounts" },
   { "Справочник.Организации",         "organizations" },
+  { "Справочник.ПодразделенияОрганизаций", "departments" },
 };
 
 typedef struct {
@@ -168,7 +169,19 @@ static void import_kind(stage_t *st, xmlNodePtr rec) {
   attr(rec, "type", metadata, sizeof(metadata)); attr(rec, "id", guid, sizeof(guid));
   attr(rec, "code", code, sizeof(code)); attr(rec, "description", name, sizeof(name));
   db_import_source_t *seen = source_find(st, guid);
-  if (seen) { st->out->updated++; map_kind(st, rec, seen->record_id); return; }
+  if (seen) {
+    if (!strcmp(seen->table_name, "ext_subconto_kinds")) {
+      db_ext_subconto_kind_t *old = (void *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_EXT_SUBCONTO_KINDS, 0), (void *)(intptr_t)seen->record_id);
+      if (!old) { snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics kind.")); return; }
+      db_ext_subconto_kind_t k = *old;
+      ledger_copy_text(k.code, sizeof(k.code), code);
+      ledger_copy_text(k.name, sizeof(k.name), name);
+      const char *table = kind_table_for(rec);
+      if (strcmp(k.table, table ? table : "analytic_items")) note(st, "%s: analytics type changed; existing type retained", name, "");
+      if (!send_db_message(st->ib, dbUpdate, TABLE_EXT_SUBCONTO_KINDS, &k)) { snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics kind.")); return; }
+    }
+    st->out->updated++; map_kind(st, rec, seen->record_id); return;
+  }
   const char *table = kind_table_for(rec);
   db_subconto_kind_t *known = table ? (db_subconto_kind_t *)find_by_text(st->cfg, TABLE_SUBCONTO_KINDS, "table", table) : NULL;
   if (known) {
@@ -224,20 +237,37 @@ static void extend_matched_account(stage_t *st, xmlNodePtr rec, const db_account
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported account."));
 }
 
+static bool account_slot_has_entries(database_t *ib, int account_id, int slot) {
+  for (int side = 0; side < 2; side++) {
+    int field = ledger_field(ib, TABLE_ENTRIES, side ? "credit_id" : "debit_id");
+    result_node_t *entries = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, field), (void *)(intptr_t)account_id);
+    bool used = false;
+    EACH_RECORD(db_entry_t, e, entries) {
+      const int debit[] = {e->debit_subconto_id, e->debit_subconto2_id, e->debit_subconto3_id};
+      const int credit[] = {e->credit_subconto_id, e->credit_subconto2_id, e->credit_subconto3_id};
+      if ((side ? credit : debit)[slot]) { used = true; break; }
+    }
+    free_result_list(entries);
+    if (used) return true;
+  }
+  return false;
+}
+
 static void import_account(stage_t *st, xmlNodePtr rec) {
   char metadata[256], guid[40], code[64], name[512], kind[32], currency[8];
   attr(rec, "type", metadata, sizeof(metadata)); attr(rec, "id", guid, sizeof(guid));
   attr(rec, "code", code, sizeof(code)); attr(rec, "description", name, sizeof(name));
   attr(rec, "kind", kind, sizeof(kind)); attr(rec, "currency", currency, sizeof(currency));
-  if (source_find(st, guid)) { st->out->updated++; return; }
-  db_account_t *known = (db_account_t *)find_by_text(st->cfg, TABLE_ACCOUNTS, "code", code);
+  db_import_source_t *seen = source_find(st, guid);
+  if (seen && strcmp(seen->table_name, "ext_accounts")) { st->out->updated++; return; }
+  db_account_t *known = seen ? NULL : (db_account_t *)find_by_text(st->cfg, TABLE_ACCOUNTS, "code", code);
   if (known) {
     st->out->accounts_matched++;
     if (!source_remember(st, metadata, guid, "accounts", known->id)) snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot record the source of an imported record."));
     else extend_matched_account(st, rec, known, code);
     return;
   }
-  db_ext_account_t a = { .id = next_ext_id(st->ib, TABLE_EXT_ACCOUNTS), .currency = !strcmp(currency, "true") };
+  db_ext_account_t a = { .id = seen ? seen->record_id : next_ext_id(st->ib, TABLE_EXT_ACCOUNTS), .currency = !strcmp(currency, "true") };
   ledger_copy_text(a.code, sizeof(a.code), code);
   ledger_copy_text(a.name, sizeof(a.name), name);
   ledger_copy_text(a.kind, sizeof(a.kind), ledger_account_kind(kind));
@@ -250,11 +280,24 @@ static void import_account(stage_t *st, xmlNodePtr rec) {
     if (slot < 0 || slot > 2 || !id) { note(st, "account %s: analytics slot %s has no usable kind", code, n); continue; }
     *slots[slot] = id;
   }
-  if (!send_db_message(st->ib, dbInsert, TABLE_EXT_ACCOUNTS, &a) || !source_remember(st, metadata, guid, "ext_accounts", a.id)) {
+  if (seen) {
+    const db_ext_account_t *old = (const db_ext_account_t *)send_db_message(st->ib, dbFind,
+      MAKEDWORD(TABLE_EXT_ACCOUNTS, 0), (void *)(intptr_t)a.id);
+    if (old) {
+      const int previous[] = {old->subconto_kind_id, old->subconto2_kind_id, old->subconto3_kind_id};
+      for (int slot = 0; slot < 3; slot++) {
+        if (previous[slot] == *slots[slot] || !account_slot_has_entries(st->ib, old->id, slot)) continue;
+        const char *numbers[] = {"1", "2", "3"};
+        note(st, "account %s: analytics slot %s is used by existing entries and was retained", code, numbers[slot]);
+        *slots[slot] = previous[slot];
+      }
+    }
+  }
+  if (!send_db_message(st->ib, seen ? dbUpdate : dbInsert, TABLE_EXT_ACCOUNTS, &a) || !source_remember(st, metadata, guid, "ext_accounts", a.id)) {
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported account."));
     return;
   }
-  st->out->accounts_added++;
+  if (seen) st->out->updated++; else st->out->accounts_added++;
 }
 
 
@@ -297,6 +340,37 @@ static xmlNodePtr record_by_guid(stage_t *st, const char *guid) {
     if (!strcmp(id, guid)) return r;
   }
   return NULL;
+}
+
+static void import_unit(stage_t *st, xmlNodePtr rec) {
+  const char *type = "Справочник.КлассификаторЕдиницИзмерения";
+  char guid[40], code[512], name[512], folder[8];
+  attr(rec, "id", guid, sizeof(guid)); attr(rec, "code", code, sizeof(code));
+  attr(rec, "description", name, sizeof(name)); attr(rec, "folder", folder, sizeof(folder));
+  if (!strcmp(folder, "true") || (!code[0] && !name[0])) { tally(st, type, 0, 0, 1); return; }
+  db_import_source_t *seen = source_find(st, guid);
+  if (seen && strcmp(seen->table_name, "units") && strcmp(seen->table_name, "ext_units")) {
+    note(st, "%s: existing source belongs to another catalog; retained", type, "");
+    tally(st, type, 0, 0, 1); return;
+  }
+  if (seen && !strcmp(seen->table_name, "units")) { tally(st, type, 0, 1, 0); return; }
+  db_unit_t *known = !seen && code[0] ? find_by_text(st->cfg, TABLE_UNITS, "code", code) : NULL;
+  db_ext_unit_t *existing = !seen && !known && code[0] ? find_by_text(st->ib, TABLE_EXT_UNITS, "code", code) : NULL;
+  if (!seen && !known && !existing && name[0]) known = find_by_text(st->cfg, TABLE_UNITS, "name", name);
+  if (known) {
+    if (!source_remember(st, type, guid, known->id >= LEDGER_EXT_ID_BASE ? "ext_units" : "units", known->id)) goto failed;
+    tally(st, type, 0, 1, 0); return;
+  }
+  if (seen) existing = (void *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_EXT_UNITS, 0), (void *)(intptr_t)seen->record_id);
+  if (!seen && !existing && name[0]) existing = find_by_text(st->ib, TABLE_EXT_UNITS, "name", name);
+  if (seen && !existing) goto failed;
+  db_ext_unit_t unit = { .id = existing ? existing->id : next_ext_id(st->ib, TABLE_EXT_UNITS) };
+  ledger_copy_text(unit.code, sizeof(unit.code), code); ledger_copy_text(unit.name, sizeof(unit.name), name);
+  if (!send_db_message(st->ib, existing ? dbUpdate : dbInsert, TABLE_EXT_UNITS, &unit) ||
+      !source_remember(st, type, guid, "ext_units", unit.id)) goto failed;
+  tally(st, type, existing ? 0 : 1, existing ? 1 : 0, 0); return;
+failed:
+  snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an imported record of %s."), type);
 }
 
 typedef struct stage_catalog {
@@ -343,13 +417,8 @@ static bool fill_item(stage_t *st, xmlNodePtr rec, void *out, const char **why) 
   if (!kind[0]) v_text(rec, "ВидНоменклатуры", kind, sizeof(kind));
   ledger_copy_text(it->kind, sizeof(it->kind), !strcmp(kind, "Товар") ? "goods" : !strcmp(kind, "Услуга") || !strcmp(kind, "Работа") ? "service" : "");
   v_ref(rec, "ЕдиницаИзмерения", guid, sizeof(guid));
-  xmlNodePtr unit = record_by_guid(st, guid);
-  if (unit) {
-    attr(unit, "code", name, sizeof(name));
-    db_unit_t *u = name[0] ? (db_unit_t *)find_by_text(st->cfg, TABLE_UNITS, "code", name) : NULL;
-    if (!u) { attr(unit, "description", name, sizeof(name)); u = (db_unit_t *)find_by_text(st->cfg, TABLE_UNITS, "name", name); }
-    if (u) it->unit_id = u->id;
-  }
+  db_import_source_t *unit = source_find(st, guid);
+  if (unit && (!strcmp(unit->table_name, "units") || !strcmp(unit->table_name, "ext_units"))) it->unit_id = unit->record_id;
   char rate[64];
   v_enum(rec, "СтавкаНДС", rate, sizeof(rate));
   it->vat_rate_id = vat_rate_for(st, rate, "");
@@ -403,6 +472,29 @@ static bool fill_contract(stage_t *st, xmlNodePtr rec, void *out, const char **w
   return true;
 }
 
+static bool fill_department(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
+  db_department_t *d = out;
+  char text[512], owner[40];
+  attr(rec, "owner", owner, sizeof(owner));
+  db_import_source_t *src = source_find(st, owner);
+  if (!src || strcmp(src->table_name, "organizations")) { *why = ui_tr("its organization was not imported"); return false; }
+  d->organization_id = src->record_id;
+  attr(rec, "code", text, sizeof(text)); ledger_copy_text(d->code, sizeof(d->code), text);
+  attr(rec, "description", text, sizeof(text)); ledger_copy_text(d->name, sizeof(d->name), text);
+  return true;
+}
+
+static bool fill_bank(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
+  db_bank_t *b = out;
+  char text[512];
+  attr(rec, "description", text, sizeof(text)); ledger_copy_text(b->name, sizeof(b->name), text);
+  attr(rec, "code", text, sizeof(text)); ledger_copy_text(b->bik, sizeof(b->bik), text);
+  text_field(b->corr_account, sizeof(b->corr_account), rec, "КоррСчет");
+  text_field(b->city, sizeof(b->city), rec, "Город");
+  text_field(b->swift, sizeof(b->swift), rec, "СВИФТБИК");
+  return true;
+}
+
 static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
   db_bank_account_t *b = out;
   char owner[40], owner_type[64], name[512], guid[40];
@@ -415,6 +507,8 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
   ledger_copy_text(b->name, sizeof(b->name), name);
   text_field(b->number, sizeof(b->number), rec, "НомерСчета");
   v_ref(rec, "Банк", guid, sizeof(guid));
+  db_import_source_t *bank_source = source_find(st, guid);
+  if (bank_source && !strcmp(bank_source->table_name, "banks")) b->bank_id = bank_source->record_id;
   xmlNodePtr bank = record_by_guid(st, guid);
   if (bank) {
     attr(bank, "description", name, sizeof(name)); ledger_copy_text(b->bank, sizeof(b->bank), name);
@@ -508,6 +602,8 @@ static const stage_catalog_t kStageCatalogs[] = {
   { "Справочник.ОсновныеСредства",      TABLE_ASSETS,        "assets",        sizeof(db_asset_t),        fill_asset,        "inventory" },
   { "Справочник.Склады",                TABLE_WAREHOUSES,    "warehouses",    sizeof(db_warehouse_t),    fill_warehouse,    "name" },
   { "Справочник.Номенклатура",          TABLE_ITEMS,         "items",         sizeof(db_item_t),         fill_item,         "sku" },
+  { "Справочник.ПодразделенияОрганизаций", TABLE_DEPARTMENTS, "departments", sizeof(db_department_t), fill_department, NULL },
+  { "Справочник.Банки",                TABLE_BANKS,          "banks",          sizeof(db_bank_t),         fill_bank,         "bik" },
   { "Справочник.БанковскиеСчета",       TABLE_BANK_ACCOUNTS, "bank_accounts", sizeof(db_bank_account_t), fill_bank_account, "number" },
   { "Справочник.ДоговорыКонтрагентов",  TABLE_CONTRACTS,     "contracts",     sizeof(db_contract_t),     fill_contract,     "number" },
 };
@@ -528,6 +624,7 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
   char guid[40], folder[8], deleted[8];
   attr(rec, "id", guid, sizeof(guid)); attr(rec, "folder", folder, sizeof(folder)); attr(rec, "deleted", deleted, sizeof(deleted));
   if (!strcmp(folder, "true")) { tally(st, cat->type, 0, 0, 1); return; }  // groups have no Ledger counterpart
+  if (!strcmp(deleted, "true")) note(st, "%s: record marked for deletion in source retained for historical references", cat->type, "");
   alignas(max_align_t) char buf[2048] = {0};
   _Static_assert(sizeof(db_contract_t) <= 2048 && sizeof(db_counterparty_t) <= 2048 && sizeof(db_item_t) <= 2048 &&
                  sizeof(db_bank_account_t) <= 2048 && sizeof(db_employee_t) <= 2048 && sizeof(db_asset_t) <= 2048, "catalog records fit the buffer");
@@ -538,6 +635,11 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
     return;
   }
   db_import_source_t *seen = source_find(st, guid);
+  if (seen && strcmp(seen->table_name, cat->table)) {
+    note(st, "%s: existing source belongs to another catalog; retained", cat->type, "");
+    tally(st, cat->type, 0, 0, 1);
+    return;
+  }
   const db_table_schema_t *t = db_schema_table(st->ib->schema, cat->table_id);
   int key = seen ? seen->record_id : match_existing(st, cat, buf);
   if (st->unf_catalogs) {
@@ -840,8 +942,51 @@ static int vat_rate_for(stage_t *st, const char *enum_name, const char *date) {
   return found;
 }
 
-// A tabular section whose rows name an item becomes lines of the document;
-// other sections (settlements, payment breakdowns) are listed, not imported.
+static bool supported_detail_section(const char *name) {
+  const char *sections[] = { "РасчетыСКонтрагентами", "РасшифровкаПлатежа", "БухСправка", "РасчетыПоНалогамИСборам" };
+  for (size_t i = 0; i < ARRAY_LEN(sections); i++) if (!strcmp(sections[i], name)) return true;
+  return false;
+}
+
+static bool import_section_details(stage_t *st, int doc_id, xmlNodePtr table, const char *section, const char *type) {
+  for (xmlNodePtr row = table->children; row; row = row->next) {
+    if (!is_el(row, "row")) continue;
+    char number[16];
+    attr(row, "line", number, sizeof(number));
+    for (xmlNodePtr value = row->children; value; value = value->next) {
+      if (!is_el(value, "v")) continue;
+      db_import_document_detail_t d = { .document_id = doc_id, .line_number = atoi(number) };
+      ledger_copy_text(d.section_name, sizeof(d.section_name), section);
+      attr(value, "n", d.field_name, sizeof(d.field_name));
+      attr(value, "t", d.value_type, sizeof(d.value_type));
+      attr(value, "type", d.reference_type, sizeof(d.reference_type));
+      attr(value, "id", d.reference_guid, sizeof(d.reference_guid));
+      char flag[8];
+      attr(value, "empty", flag, sizeof(flag)); d.is_empty = !strcmp(flag, "true");
+      attr(value, "dangling", flag, sizeof(flag)); d.is_dangling = !strcmp(flag, "true");
+      xmlChar *text = xmlChildElementCount(value) ? NULL : xmlNodeGetContent(value);
+      if (!text || xmlStrlen(text) >= (int)sizeof(d.value)) {
+        note(st, "%s: a field in %s exceeds the source detail format", type, section);
+        xmlFree(text);
+        continue;
+      }
+      ledger_copy_text(d.value, sizeof(d.value), (const char *)text);
+      xmlFree(text);
+      if (!strcmp(d.value_type, "enum"))
+        attr(value, "name", d.value, sizeof(d.value));
+      else if (!strcmp(d.value_type, "ref")) {
+        xmlNodePtr record = record_by_guid(st, d.reference_guid);
+        if (record) attr(record, "description", d.value, sizeof(d.value));
+      } else if (!strcmp(d.value_type, "undecoded"))
+        attr(value, "hex", d.value, sizeof(d.value));
+      if (!send_db_message(st->ib, dbInsert, TABLE_IMPORT_DOCUMENT_DETAILS, &d)) return false;
+      st->out->detail_fields++;
+    }
+  }
+  return true;
+}
+
+// Item sections become document lines. Known non-item sections keep their original field values.
 static bool import_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *type, const char *date, bool vat_included) {
   for (xmlNodePtr t = doc->children; t; t = t->next) {
     if (!is_el(t, "table")) continue;
@@ -849,7 +994,12 @@ static bool import_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *ty
     attr(t, "n", tname, sizeof(tname));
     bool items = false;
     for (xmlNodePtr row = t->children; row && !items; row = row->next) items = is_el(row, "row") && v_node(row, "Номенклатура");
-    if (!items) { if (child(t, "row")) note(st, "%s: table %s is not imported as lines", type, tname); continue; }
+    if (!items) {
+      if (supported_detail_section(tname)) {
+        if (!import_section_details(st, doc_id, t, tname, type)) return false;
+      } else if (child(t, "row")) note(st, "%s: table %s is not imported as lines", type, tname);
+      continue;
+    }
     for (xmlNodePtr row = t->children; row; row = row->next) {
       if (!is_el(row, "row")) continue;
       db_doc_line_t l = {0};
@@ -951,6 +1101,12 @@ static bool delete_document_body(database_t *ib, int doc_id) {
   EACH_RECORD(db_payroll_line_t, pl, plines) if (!send_db_message(ib, dbDelete, TABLE_PAYROLL_LINES, (void *)(intptr_t)pl->id)) { ok = false; break; }
   free_result_list(plines);
   if (!ok) return false;
+  field = ledger_field(ib, TABLE_IMPORT_DOCUMENT_DETAILS, "document_id");
+  result_node_t *details = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_IMPORT_DOCUMENT_DETAILS, field), (void *)(intptr_t)doc_id);
+  EACH_RECORD(db_import_document_detail_t, d, details)
+    if (!send_db_message(ib, dbDelete, TABLE_IMPORT_DOCUMENT_DETAILS, (void *)(intptr_t)d->id)) { ok = false; break; }
+  free_result_list(details);
+  if (!ok) return false;
   field = ledger_field(ib, TABLE_ENTRIES, "document_id");
   result_node_t *entries = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, field), (void *)(intptr_t)doc_id);
   EACH_RECORD(db_entry_t, e, entries) if (!send_db_message(ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)e->id)) { ok = false; break; }
@@ -1037,6 +1193,8 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   if (old) d = *old;  // the document keeps its identity; the file overwrites what it describes
   else send_db_message(st->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
   d.doc_type_id = type_id;
+  ledger_copy_text(d.source_posted_state, sizeof(d.source_posted_state), is_posted ? "posted" :
+                   !strcmp(posted, "false") ? "unposted" : "");
   ledger_copy_text(d.number, sizeof(d.number), number);
   if (strlen(date) >= 19) ledger_copy_text(d.time, sizeof(d.time), date + 11);
   else d.time[0] = '\0';
@@ -1208,6 +1366,11 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
   // Kinds first: accounts name them.
   xmlNodePtr kinds = child(root, "subkonto-kinds"), chart = child(root, "chart-of-accounts");
   st.records = child(root, "records");
+  for (xmlNodePtr r = st.records ? st.records->children : NULL; r && !out->error[0]; r = r->next) {
+    char type[96];
+    attr(r, "type", type, sizeof(type));
+    if (is_el(r, "record") && !strcmp(type, "Справочник.КлассификаторЕдиницИзмерения")) import_unit(&st, r);
+  }
   for (xmlNodePtr r = kinds ? kinds->children : NULL; r && !out->error[0]; r = r->next) if (is_el(r, "record")) import_kind(&st, r);
   for (xmlNodePtr r = chart ? chart->children : NULL; r && !out->error[0]; r = r->next) if (is_el(r, "account")) import_account(&st, r);
   for (xmlNodePtr r = st.records ? st.records->children : NULL; r && !out->error[0]; r = r->next) {
@@ -1314,6 +1477,7 @@ size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz,
   ADD(ui_tr("Analytics kinds added: %d, mapped onto Ledger catalogs: %d\n"), r->kinds_added, r->kinds_mapped);
   ADD(ui_tr("Entries written: %d\n"), r->entries);
   ADD(ui_tr("Document lines written: %d\n"), r->lines);
+  ADD(ui_tr("Source detail fields written: %d\n"), r->detail_fields);
   if (summary) { ADD(ui_tr("Held back or not imported: %d"), held); return n; }
   ADD("\n");
   for (int i = 0; i < r->count_types; i++)

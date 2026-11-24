@@ -46,30 +46,30 @@
   <string source="Print forms (Ctrl+P)" where="journal_page">Печатные формы (Ctrl+P)</string>
   <string source="Delete" where="counterparties_page,items_page,employees_page,assets_page,document">Удалить</string>
   <string source="Delete document" where="journal_page">Удалить документ</string>
-  <string source="Date" where="home_page,journal_page,counterparties_page,currencies_page,entries_page,reports_page">Дата</string>
+  <string source="Date" where="home_page,journal_page,counterparties_page,currencies_page,entries_page,reports_page,imported_document">Дата</string>
   <string source="Number" where="home_page,journal_page,counterparties_page">Номер</string>
   <string source="Document" where="home_page,journal_page,entries_page,reports_page,config_page,document">Документ</string>
   <string source="Counterparty" where="home_page,journal_page,counterparties_page,reports_page,counterparty">Контрагент</string>
-  <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,operation,payroll,closing">Сумма</string>
+  <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,imported_document,operation,payroll,closing">Сумма</string>
   <string source="Comment" where="journal_page">Комментарий</string>
-  <string source="Lines" where="journal_page,document">Товары</string>
-  <string source="Item" where="journal_page,document,item">Номенклатура</string>
+  <string source="Lines" where="journal_page,document,imported_document">Товары</string>
+  <string source="Item" where="journal_page,document,item,imported_document">Номенклатура</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Ед.</string>
-  <string source="Qty" where="journal_page,entries_page,reports_page,document,operation">Кол-во</string>
-  <string source="Price" where="journal_page,items_page,document">Цена</string>
+  <string source="Qty" where="journal_page,entries_page,reports_page,document,imported_document,operation">Кол-во</string>
+  <string source="Price" where="journal_page,items_page,document,imported_document">Цена</string>
   <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Налог</string>
-  <string source="Tax Amount" where="journal_page,document">Сумма налога</string>
-  <string source="Total" where="journal_page,reports_page,document">Всего</string>
-  <string source="Entries" where="journal_page,entries_page,reports_page,document">Проводки</string>
-  <string source="Dr" where="journal_page,entries_page,reports_page,config_page,document,operation,closing">Дт</string>
-  <string source="Cr" where="journal_page,entries_page,reports_page,config_page,document,operation,closing">Кт</string>
-  <string source="Content" where="journal_page,entries_page,reports_page,document,operation,closing">Содержание</string>
+  <string source="Tax Amount" where="journal_page,document,imported_document">Сумма налога</string>
+  <string source="Total" where="journal_page,reports_page,document,imported_document">Всего</string>
+  <string source="Entries" where="journal_page,entries_page,reports_page,document,imported_document">Проводки</string>
+  <string source="Dr" where="journal_page,entries_page,reports_page,config_page,document,imported_document,operation,closing">Дт</string>
+  <string source="Cr" where="journal_page,entries_page,reports_page,config_page,document,imported_document,operation,closing">Кт</string>
+  <string source="Content" where="journal_page,entries_page,reports_page,document,imported_document,operation,closing">Содержание</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Контрагенты (Ctrl+2)</string>
   <string source="New counterparty" where="counterparties_page">Новый контрагент</string>
   <string source="Edit" where="journal_page,counterparties_page,items_page,employees_page,assets_page,currencies_page,document">Изменить</string>
   <string source="Edit counterparty" where="counterparties_page">Изменить контрагента</string>
   <string source="Delete counterparty" where="counterparties_page">Удалить контрагента</string>
-  <string source="Name" where="counterparties_page,items_page,employees_page,assets_page,reports_page">Наименование</string>
+  <string source="Name" where="counterparties_page,items_page,employees_page,assets_page,reports_page,reference_catalogs">Наименование</string>
   <string source="Tax ID" where="counterparties_page,employees_page,reports_page">Налоговый номер</string>
   <string source="KPP" where="counterparties_page">КПП</string>
   <string source="Phone" where="counterparties_page">Телефон</string>
@@ -78,11 +78,11 @@
   <string source="New item" where="items_page">Новая номенклатура</string>
   <string source="Edit item" where="items_page">Изменить номенклатуру</string>
   <string source="Delete item" where="items_page">Удалить номенклатуру</string>
-  <string source="Code" where="home_page,items_page,accounts_page,currencies_page,config_page">Код</string>
+  <string source="Code" where="home_page,items_page,accounts_page,currencies_page,config_page,reference_catalogs">Код</string>
   <string source="Chart of accounts (Ctrl+4)" where="accounts_page">План счетов (Ctrl+4)</string>
   <string source="Account" where="home_page,counterparties_page,accounts_page,assets_page,reports_page,config_page">Счет</string>
   <string source="Kind" where="counterparties_page,items_page,accounts_page,config_page">Вид</string>
-  <string source="Section" where="accounts_page">Раздел</string>
+  <string source="Section" where="accounts_page,imported_document">Раздел</string>
   <string source="Recalculate" where="reports_page">Пересчитать</string>
   <string source="Turnover Dr" where="reports_page">Оборот Дт</string>
   <string source="Turnover Cr" where="reports_page">Оборот Кт</string>
@@ -102,10 +102,10 @@
   <string source="Units" where="config_page">Единицы измерения</string>
   <string source="Document:" where="document,payroll,asset_document,closing">Документ:</string>
   <string source="Number:" where="document,operation,payroll,asset_document,closing,contract">Номер:</string>
-  <string source="Date:" where="operation,payroll,asset_document,rate,contract">Дата:</string>
-  <string source="Contract:" where="document,operation">Договор:</string>
-  <string source="Warehouse:" where="document,operation">Склад:</string>
-  <string source="Counterparty:" where="document,operation,contract,bank_account">Контрагент:</string>
+  <string source="Date:" where="imported_document,operation,payroll,asset_document,rate,contract">Дата:</string>
+  <string source="Contract:" where="document,imported_document,operation">Договор:</string>
+  <string source="Warehouse:" where="document,imported_document,operation">Склад:</string>
+  <string source="Counterparty:" where="document,imported_document,operation,contract,bank_account">Контрагент:</string>
   <string source="Comment:" where="document,operation,payroll,asset_document,closing,contract">Комментарий:</string>
   <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">Присваивается при записи</string>
   <string source="Add Line..." where="payroll">Добавить строку...</string>
@@ -113,7 +113,7 @@
   <string source="Delete Line" where="payroll">Удалить строку</string>
   <string source="Amount:" where="entry,payroll_line">Сумма:</string>
   <string source="Tax:" obsolete="true">Налог:</string>
-  <string source="Total:" where="operation,payroll">Всего:</string>
+  <string source="Total:" where="imported_document,operation,payroll">Всего:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">ОК и провести</string>
   <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,read_1cd,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,contract,bank_account,warehouse,report_settings">Отмена</string>
   <string source="Document Line" where="doc_line">Строка документа</string>
@@ -186,7 +186,7 @@
   <string source="End" where="report_settings">по текущую дату</string>
   <string source="Report period: %s – %s" where="code">Период отчетов: %s – %s</string>
   <string source="New Manual Operation" where="code">Новая операция</string>
-  <string source="Bank account:" where="document,counterparty,organization,operation">Расчетный счет:</string>
+  <string source="Bank account:" where="document,counterparty,organization,imported_document,operation">Расчетный счет:</string>
   <string source="New Payroll Document..." where="menu">Начисление зарплаты...</string>
   <string source="Put Assets into Service..." where="menu">Ввод ОС в эксплуатацию...</string>
   <string source="Close Month..." where="menu">Закрытие месяца...</string>
@@ -208,8 +208,8 @@
   <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Начисление или выплата зарплаты (Ctrl+W)</string>
   <string source="Close Month" where="closing">Закрытие месяца</string>
   <string source="Month-end closing (Ctrl+E)" where="journal_page">Закрытие месяца (Ctrl+E)</string>
-  <string source="Dr Analytics" where="journal_page,entries_page,reports_page,document,operation,closing">Субконто Дт</string>
-  <string source="Cr Analytics" where="journal_page,entries_page,reports_page,document,operation,closing">Субконто Кт</string>
+  <string source="Dr Analytics" where="journal_page,entries_page,reports_page,document,closing">Субконто Дт</string>
+  <string source="Cr Analytics" where="journal_page,entries_page,reports_page,document,closing">Субконто Кт</string>
   <string source="Employees (Ctrl+5)" where="employees_page">Сотрудники (Ctrl+5)</string>
   <string source="New employee" where="employees_page">Новый сотрудник</string>
   <string source="Edit employee" where="employees_page">Изменить сотрудника</string>
@@ -267,8 +267,8 @@
   <string source="Exchange rate:" where="document">Курс:</string>
   <string source="Rate on the document date" where="document">Курс на дату документа</string>
   <string source="Cashier:" where="organization">Кассир:</string>
-  <string source="Debit analytics:" where="entry">Субконто Дт:</string>
-  <string source="Credit analytics:" where="entry">Субконто Кт:</string>
+  <string source="Debit analytics:" obsolete="true">Субконто Дт:</string>
+  <string source="Credit analytics:" obsolete="true">Субконто Кт:</string>
   <string source="Currency amount:" where="entry">Сумма в валюте:</string>
   <string source="Contributions" where="payroll">Взносы</string>
   <string source="Net Pay" where="payroll">К выплате</string>
@@ -348,7 +348,12 @@
   <string source="%s: added %d, updated %d, removed %d, held back %d&#10;" where="code">%s: добавлено %d, обновлено %d, удалено %d, отложено %d
 </string>
   <string source="Held back or not imported:" where="code">Отложено или не импортировано:</string>
+  <string source="%s: analytics type changed; existing type retained" where="code">%s: тип аналитики изменился; сохранён прежний тип</string>
+  <string source="%s: existing source belongs to another catalog; retained" where="code">%s: источник уже относится к другому справочнику; запись сохранена</string>
+  <string source="its organization was not imported" where="code">его организация не импортирована</string>
+  <string source="%s: record marked for deletion in source retained for historical references" where="code">%s: помеченная на удаление в источнике запись сохранена для исторических ссылок</string>
   <string source="account %s: analytics slot %s has no usable kind" where="code">счёт %s: слот аналитики %s не имеет пригодного вида</string>
+  <string source="account %s: analytics slot %s is used by existing entries and was retained" where="code">счёт %s: субконто %s используется в сохранённых проводках и оставлено без изменения</string>
   <string source="%s: held back (%s)" where="code">%s: отложено (%s)</string>
   <string source="%s: the infobase already has an organization; not replaced" where="code">%s: в информационной базе уже есть организация; не заменена</string>
   <string source="%s: also a catalog of its own; as analytics it is held back" where="code">%s: это также отдельный справочник; как аналитика отложено</string>
@@ -519,14 +524,14 @@
   <string source="Tax scheme:" where="document">Налоговый режим:</string>
   <string source="References" where="document">Основания</string>
   <string source="Shipment reference:" where="document">Документ об отгрузке:</string>
-  <string source="Payment reference:" where="document">Платёжный документ:</string>
+  <string source="Payment reference:" where="document,imported_document">Платёжный документ:</string>
   <string source="Advance invoice references:" where="document">Авансовые счета-фактуры:</string>
   <string source="Contract reference:" where="document">Договор:</string>
   <string source="Shipper name and address:" where="document">Грузоотправитель и адрес:</string>
   <string source="Consignee name and address:" where="document">Грузополучатель и адрес:</string>
   <string source="Discount terms:" where="document">Условия скидки:</string>
   <string source="Legal note:" where="document">Правовое основание:</string>
-  <string source="Line" where="doc_line">Строка</string>
+  <string source="Line" where="doc_line,imported_document">Строка</string>
   <string source="Origin" where="doc_line">Происхождение</string>
   <string source="Commodity code:" where="doc_line">Код вида товара:</string>
   <string source="Origin country code:" where="doc_line">Код страны происхождения:</string>
@@ -617,8 +622,8 @@
   <string source="Valid Until" where="counterparties_page">Действует до</string>
   <string source="Bank Accounts" where="counterparties_page">Банковские счета</string>
   <string source="Bank" where="counterparties_page">Банк</string>
-  <string source="BIK" where="counterparties_page">БИК</string>
-  <string source="Organization" where="counterparties_page">Организация</string>
+  <string source="BIK" where="counterparties_page,reference_catalogs">БИК</string>
+  <string source="Organization" where="counterparties_page,reference_catalogs">Организация</string>
   <string source="Warehouse" where="items_page,warehouse">Склад</string>
   <string source="New warehouse" where="items_page">Новый склад</string>
   <string source="Warehouses" where="items_page">Склады</string>
@@ -653,7 +658,7 @@
   <string source="Go To">Перейти</string>
   <string source="Next">Следующий</string>
   <string source="Previous">Предыдущий</string>
-  <string source="Close">Закрыть</string>
+  <string source="Close" where="reference_catalogs">Закрыть</string>
   <string source="Arrange">Упорядочить</string>
   <string source="Cascade">Каскадом</string>
   <string source="Tile">Рядом</string>
@@ -716,12 +721,6 @@
   <string source="Reading the 1C copy and preparing an import preview." where="read_1cd">Читаем копию 1С и готовим предпросмотр импорта.</string>
   <string source="Subject:" where="contract">Предмет:</string>
   <string source="Analytics slot (1–3):" where="report_settings">Номер субконто (1–3):</string>
-  <context name="currencies_page">
-    <string source="Rate">Курс</string>
-  </context>
-  <context name="reports_page">
-    <string source="Expense">Расход</string>
-  </context>
   <string source="Unable to read the 1C import preview." where="code">Не удалось прочитать предпросмотр импорта из 1С.</string>
   <string source="Configuration: %s %s&#10;Source: %s&#10;&#10;Extracted from 1C: %s accounts, %s catalog records, %s documents and %s movements.&#10;Tables outside the export: %s.&#10;&#10;Import into the infobase?" where="code">Конфигурация: %s %s
 Источник: %s
@@ -738,4 +737,49 @@
   <string source="1C infobases (*.1CD)" where="code">Информационные базы 1С (*.1CD)</string>
   <string source="1C XML files (*.xml)" where="code">Файлы XML 1С (*.xml)</string>
   <string source="All Files" where="code">Все файлы</string>
+  <string source="Banks and Departments..." where="menu">Банки и подразделения...</string>
+  <string source="Banks and Departments" where="reference_catalogs">Банки и подразделения</string>
+  <string source="Imported Document" where="imported_document">Импортированный документ</string>
+  <string source="Dr Analytics 1" where="imported_document,operation">Субконто Дт 1</string>
+  <string source="Dr Analytics 2" where="imported_document,operation">Субконто Дт 2</string>
+  <string source="Dr Analytics 3" where="imported_document,operation">Субконто Дт 3</string>
+  <string source="Cr Analytics 1" where="imported_document,operation">Субконто Кт 1</string>
+  <string source="Cr Analytics 2" where="imported_document,operation">Субконто Кт 2</string>
+  <string source="Cr Analytics 3" where="imported_document,operation">Субконто Кт 3</string>
+  <string source="Dr Quantity" where="imported_document">Кол-во Дт</string>
+  <string source="Cr Quantity" where="imported_document">Кол-во Кт</string>
+  <string source="Dr Currency" where="imported_document">Валюта Дт</string>
+  <string source="Dr Currency Amount" where="imported_document">Валютная сумма Дт</string>
+  <string source="Cr Currency" where="imported_document">Валюта Кт</string>
+  <string source="Cr Currency Amount" where="imported_document">Валютная сумма Кт</string>
+  <string source="Source Line" where="imported_document">Строка 1С</string>
+  <string source="Source Details" where="imported_document">Данные 1С</string>
+  <string source="Field" where="imported_document">Поле</string>
+  <string source="Value" where="imported_document">Значение</string>
+  <string source="Type" where="imported_document">Тип</string>
+  <string source="Reference Type" where="imported_document">Тип ссылки</string>
+  <string source="Source ID" where="imported_document">ИД в 1С</string>
+  <string source="Banks" where="reference_catalogs">Банки</string>
+  <string source="SWIFT" where="reference_catalogs">SWIFT</string>
+  <string source="Correspondent Account" where="reference_catalogs">Корреспондентский счёт</string>
+  <string source="City" where="reference_catalogs">Город</string>
+  <string source="Departments" where="reference_catalogs">Подразделения</string>
+  <string source="Debit analytics 1:" where="entry">Субконто Дт 1:</string>
+  <string source="Debit analytics 2:" where="entry">Субконто Дт 2:</string>
+  <string source="Debit analytics 3:" where="entry">Субконто Дт 3:</string>
+  <string source="Credit analytics 1:" where="entry">Субконто Кт 1:</string>
+  <string source="Credit analytics 2:" where="entry">Субконто Кт 2:</string>
+  <string source="Credit analytics 3:" where="entry">Субконто Кт 3:</string>
+  <string source="Posted in 1C" where="code">Проведён в 1С</string>
+  <string source="Unposted in 1C" where="code">Не проведён в 1С</string>
+  <string source="Imported from 1C" where="code">Импортирован из 1С</string>
+  <string source="%s: a field in %s exceeds the source detail format" where="code">%s: поле в разделе %s не помещается в формат данных 1С</string>
+  <string source="Source detail fields written: %d&#10;" where="code">Записано полей данных 1С: %d
+</string>
+  <context name="currencies_page">
+    <string source="Rate">Курс</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Расход</string>
+  </context>
 </strings>

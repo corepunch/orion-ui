@@ -38,6 +38,7 @@ local commands = {
   ["file.import_1c"] = ui.import, ["file.addon"] = ui.addon, ["file.recipes"] = ui.recipes, ["file.marketplace"] = ui.marketplace,
   ["catalog.labels"] = ui.labels,
   ["file.organization"] = function() ui.form("organization") end,
+  ["catalog.reference"] = function() ui.form("reference_catalogs") end,
   ["file.quit"] = function() ui.window("quit") end,
   ["help.assistant"] = ui.assistant, ["help.find_command"] = ui.assistant,
   ["help.topics"] = ui.help,

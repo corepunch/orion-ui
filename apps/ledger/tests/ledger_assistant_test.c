@@ -754,6 +754,51 @@ static void test_quarter_budget(void) {
   PASS();
 }
 
+static void test_imported_document_review(void) {
+  TEST("Ledger imported document opens source details and all entries without an editor");
+  open_configuration("ru-2026");
+  db_document_t doc = { .doc_type_id = 4, .posted = true };
+  ledger_copy_text(doc.number, sizeof(doc.number), "QA-1CD");
+  ledger_copy_text(doc.date, sizeof(doc.date), "2026-03-20");
+  ledger_copy_text(doc.import_source, sizeof(doc.import_source), "1cd:fixture");
+  ledger_copy_text(doc.source_posted_state, sizeof(doc.source_posted_state), "unposted");
+  const db_document_t *stored = (const db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &doc);
+  ASSERT_NOT_NULL(stored);
+  int id = stored->id;
+  db_entry_t history = { .document_id = id, .debit_quantity_set = true, .debit_quantity_milli = 1500 };
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_ENTRIES, &history));
+  db_import_document_detail_t detail = { .document_id = id, .line_number = 1 };
+  ledger_copy_text(detail.section_name, sizeof(detail.section_name), "РасшифровкаПлатежа");
+  ledger_copy_text(detail.value, sizeof(detail.value), "1.00");
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_IMPORT_DOCUMENT_DETAILS, &detail));
+  window_t *frame = create_window_from_form(&ledger_main_window_form, 10, 30, NULL, ledger_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(frame);
+  window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
+  ASSERT_TRUE(ledger_open_record("documents", id));
+  window_t *view = mdi_active_document(client);
+  ASSERT_NOT_NULL(view);
+  ASSERT_STR_EQUAL(get_window_item(view, ID_IMPORTED_DOCUMENT_SOURCE_STATE)->title, ui_tr("Unposted in 1C"));
+  ASSERT(!get_window_item(view, ID_DOCUMENT_POST), "the imported snapshot has no native posting command");
+  window_t *details = get_window_item(view, ID_IMPORTED_DOCUMENT_DETAILS);
+  ASSERT_NOT_NULL(details);
+  const db_import_document_detail_t *shown = (const db_import_document_detail_t *)send_message(details, tvGetRecord, 0, NULL);
+  ASSERT(shown && shown->document_id == id && !strcmp(shown->value, "1.00"), "the detail table follows the document");
+  window_t *postings = get_window_item(view, ID_IMPORTED_DOCUMENT_POSTINGS);
+  const db_entry_t *entry = (const db_entry_t *)send_message(postings, tvGetRecord, 0, NULL);
+  ASSERT(entry && entry->document_id == id, "the entries table follows the document");
+  char rendered[32], expected[32];
+  ASSERT_TRUE(db_get_field_text(db_dialog_database(view), TABLE_ENTRIES, entry, "debit_quantity", rendered, sizeof(rendered)));
+  ASSERT_STR_EQUAL(rendered, ui_format_number(1.5, 3, expected, sizeof(expected)));
+  ASSERT_TRUE(db_get_field_text(db_dialog_database(view), TABLE_ENTRIES, entry, "credit_quantity", rendered, sizeof(rendered)));
+  ASSERT_STR_EQUAL(rendered, "");
+  ledger_command(ID_FILE_SAVE);
+  ASSERT_EQUAL(document_entries(g_ledger->ib, id), 1);
+  send_message(view, evClose, 0, NULL);
+  ASSERT_FALSE(is_window(view));
+  destroy_window(frame);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger assistant"); test_env_init();
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
@@ -767,6 +812,7 @@ int main(void) {
   test_modeless_documents();
   test_untouched_document_close();
   test_document_postings_preview();
+  test_imported_document_review();
   ledger_close_assistant(); ledger_script_close();
   unregister_database("ib"); unregister_database("cfg");
   destroy_database(state.ib); destroy_database(state.cfg);
