@@ -2630,12 +2630,16 @@ static void test_import_external_stage(void) {
   if (!path || !*path) return;
   TEST("1CD staging import: an exported base's chart of accounts");
   ledger_stage_import_t r;
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  double native_drafts = home_amount(1, "draft", 0);
   ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r), r.error);
   printf("\n    accounts +%d =%d, kinds +%d mapped %d\n", r.accounts_added, r.accounts_matched, r.kinds_added, r.kinds_mapped);
   for (int i = 0; i < r.count_types; i++) printf("    %-48s +%d ~%d held %d\n", r.counts[i].type, r.counts[i].added, r.counts[i].updated, r.counts[i].held);
   printf("%s", r.notes);
   printf("    entries %d\n", r.entries);
   ASSERT(turnovers_reconcile(path), "turnovers per account equal those of the staging file");
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ASSERT(approx(home_amount(1, "draft", 0), native_drafts), "historical 1C drafts do not ask the user to post them");
   const char *save_to = getenv("LEDGER_TEST_1CD_SAVE_TO");  // an infobase to open in the app: Ledger --config ru-2003 --data DIR
   if (save_to && *save_to) {
     char target[1024], cmd[2200];

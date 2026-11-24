@@ -379,6 +379,8 @@ documents using the 1C movements. Configured types open in their corresponding
 Ledger classifications. Open a migrated document to review its original posting
 status, entries, lines, and source details. Payment breakdowns, counterparty and
 tax settlements, and accounting notes appear under **Source Details**.
+Imported drafts stay in the journal. The Home posting reminder counts Ledger
+drafts that can still be posted.
 
 **Catalogs > Imported Catalogs** shows imported banks, departments and catalog
 folders with their source hierarchy.
