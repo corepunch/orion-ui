@@ -1036,6 +1036,31 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `vat_minor` | `int64` |  |
 | `total_minor` | `int64` |  |
 
+## `ib.import_attachments`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `guid` | `string` |  |
+| `metadata` | `string` |  |
+| `owner_guid` | `string` |  |
+| `owner_type` | `string` |  |
+| `name` | `string` |  |
+| `extension` | `string` |  |
+| `size` | `int64` |  |
+| `sha256` | `string` |  |
+| `unavailable` | `string` |  |
+| `volume_guid` | `string` |  |
+
+## `ib.import_attachment_chunks`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `attachment_id` | `integer` | import_attachments.id |
+| `ordinal` | `integer` |  |
+| `data` | `string` |  |
+
 ## `ib.import_snapshots`
 
 | Field | XML type | Relation |

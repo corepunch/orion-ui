@@ -1,1 +1,1 @@
-<stage format="orion-1cd-stage-v1"><records><record type="Справочник.ОсновныеСредства" id="c1000000-0000-0000-0000-000000000001" description="Asset one"><v n="ИнвентарныйНомер" t="string">TEST-ASSET-1</v></record></records></stage>
+<stage format="orion-1cd-stage-v1"><records><record type="Справочник.ОсновныеСредства" id="a55e700c-0000-0000-0000-000000000001" description="Asset one"><v n="ИнвентарныйНомер" t="string">TEST-ASSET-1</v></record></records></stage>

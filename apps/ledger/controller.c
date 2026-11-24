@@ -869,9 +869,57 @@ static result_t reference_catalogs_proc(window_t *win, uint32_t msg, uint32_t wp
     default: return false;
   }
 }
+
+static void save_imported_attachment(window_t *win, const db_import_attachment_t *file) {
+  char path[LEDGER_PATH_MAX], filters[256];
+  const char *name = file->name[0] && strcmp(file->name, ".") && strcmp(file->name, "..") ? file->name : "attachment";
+  const char *extension = strrchr(name, '.');
+  bool append_extension = file->extension[0] && (!extension || strcmp(extension + 1, file->extension));
+  snprintf(path, sizeof(path), "%s%s%s", name, append_extension ? "." : "", append_extension ? file->extension : "");
+  for (char *p = path; *p; p++)
+    if ((unsigned char)*p < 32 || strchr("/\\:\"<>|?*", *p)) *p = '_';
+  snprintf(filters, sizeof(filters), "%s%c*.*%c", ui_tr("All Files"), 0, 0);
+  openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = win, .lpstrFile = path,
+    .nMaxFile = sizeof(path), .lpstrFilter = filters, .Flags = OFN_PATHMUSTEXIST };
+  if (get_save_filename(&ofn) && !ledger_attachment_export(g_ledger->ib, file->id, path))
+    message_box(win, ui_tr("The attachment could not be saved. Check that the selected file does not already exist."),
+      ui_tr("Save Attachment"), MB_OK);
+}
+
+static result_t imported_attachments_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate:
+    case evCommand: {
+      uint32_t id = LOWORD(wparam), code = HIWORD(wparam);
+      if (msg == evCommand && id == ID_IMPORTED_ATTACHMENTS_CLOSE && code == btnClicked) {
+        end_dialog(win, 0);
+        return true;
+      }
+      window_t *files = get_window_item(win, ID_IMPORTED_ATTACHMENTS_FILES);
+      if (msg == evCommand && !(lparam == files && code == RVN_SELCHANGE) &&
+          !(id == ID_IMPORTED_ATTACHMENTS_SAVE_AS && code == btnClicked)) return false;
+      window_t *save = get_window_item(win, ID_IMPORTED_ATTACHMENTS_SAVE_AS);
+      const db_import_attachment_t *file = files ? (const db_import_attachment_t *)
+        send_message(files, tvGetSelectedRecord, 0, NULL) : NULL;
+      bool available = file && !file->unavailable[0];
+      if (save) enable_window(save, available);
+      if (msg == evCommand && id == ID_IMPORTED_ATTACHMENTS_SAVE_AS && available)
+        save_imported_attachment(win, file);
+      return msg == evCommand;
+    }
+    case evClose: end_dialog(win, 0); return true;
+    case evPaint: case evDestroy: return false;
+    default: return false;
+  }
+}
+
 static void ledger_ui_form(lua_State *L, const char *name) {
   if (!strcmp(name, "reference_catalogs")) {
     show_dialog_from_form(&ledger_reference_catalogs_form, NULL, g_ledger->main_win, reference_catalogs_proc, NULL);
+    return;
+  }
+  if (!strcmp(name, "imported_attachments")) {
+    show_dialog_from_form(&ledger_imported_attachments_form, NULL, g_ledger->main_win, imported_attachments_proc, NULL);
     return;
   }
   const form_def_t *form = !strcmp(name, "organization") ? &ledger_organization_form

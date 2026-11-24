@@ -1022,6 +1022,99 @@ class Exporter(Stage):
             self.exported_rows[table.name] += 1
         return register
 
+    def export_attachments(self):
+        """Join file catalogs to binary registers by typed 1C reference, never by name."""
+        payloads = {}
+        for (kind, _), info in sorted(self.meta.objects.items()):
+            if kind != 'InfoRg' or 'ДвоичныеДанныеФайлов' not in info.short_name or not self.nonempty(info):
+                continue
+            table = self.meta.object_table(info)
+            named = {}
+            for name, field in table.fields.items():
+                match = re.match(r'^_FLD(\d+)', name)
+                if match:
+                    named.setdefault(self.field_name(info, int(match[1])), {})[name] = field
+            refs, blobs = named.get('Файл', {}), named.get('ДвоичныеДанныеФайла', {})
+            rr = next((f for n, f in refs.items() if n.endswith('_RRREF')), None)
+            rt = next((f for n, f in refs.items() if n.endswith('_RTREF')), None)
+            typ = next((f for n, f in refs.items() if n.endswith('_TYPE')), None)
+            blob = next((f for f in blobs.values() if f.type == 'I'), None)
+            if not all((rr, rt, typ, blob)):
+                self.note(info.name, 'attachment register layout unsupported')
+                continue
+            for row in M.live_rows(self.db, table):
+                _, t = self.cell(row, typ); _, number = self.cell(row, rt); _, ref = self.cell(row, rr)
+                if t != b'\x08' or not any(ref):
+                    self.note(info.name, 'attachment file reference unsupported'); continue
+                key = (int.from_bytes(number, 'big'), ref)
+                if key in payloads:
+                    payloads[key] = (None, 'duplicate binary data'); continue
+                try:
+                    _, data = self.cell(row, blob)
+                    offset, size = struct.unpack('<II', data)
+                    if not size or not self.blob(table):
+                        raise ValueError('binary data unavailable')
+                    _, segments = decode_value_storage(self.blob(table).read_chain(offset, size))
+                    if len(segments) != 1:
+                        raise ValueError('expected one binary segment')
+                    payloads[key] = (segments[0], '')
+                except (ValueError, UnicodeError, struct.error, zlib.error) as exc:
+                    payloads[key] = (None, str(exc))
+        result = El('attachments')
+        total_bytes = 0
+        for (kind, _), info in sorted(self.meta.objects.items()):
+            if kind != 'Reference' or 'ПрисоединенныеФайлы' not in info.short_name or not self.nonempty(info):
+                continue
+            table = self.meta.object_table(info)
+            named = {}
+            for name, field in table.fields.items():
+                match = re.match(r'^_FLD(\d+)', name)
+                if match:
+                    named.setdefault(self.field_name(info, int(match[1])), []).append((name, field, int(match[1])))
+            for ref, row in self.index(info).items():
+                attrs = {'id': ref_uuid(ref), 'type': info.name}
+                for label, key in (('Размер', 'size'), ('Расширение', 'extension')):
+                    fields = named.get(label, [])
+                    if len(fields) == 1:
+                        _, value = self.primitive(table, row, fields[0][1], info.name)
+                        if value is not None: attrs[key] = value
+                _, name = self.primitive(table, row, table.fields['_DESCRIPTION'], info.name)
+                attrs['name'] = name or ''
+                owners = named.get('ВладелецФайла', [])
+                if len(owners) == 1 and owners[0][0].endswith('RREF'):
+                    _, owner = self.cell(row, owners[0][1])
+                    target = self.single_ref_target(info, owners[0][2], '', info.name)
+                    if any(owner): attrs['owner-id'] = ref_uuid(owner)
+                    if target: attrs['owner-type'] = target.name
+                elif owners:
+                    parts = {name.rsplit('_', 1)[-1]: field for name, field, _ in owners}
+                    if all(k in parts for k in ('TYPE', 'RTREF', 'RRREF')):
+                        _, typ = self.cell(row, parts['TYPE'])
+                        _, num = self.cell(row, parts['RTREF'])
+                        _, owner = self.cell(row, parts['RRREF'])
+                        target = self.meta.type_by_number.get(int.from_bytes(num, 'big'))
+                        if typ == b'\x08' and any(owner):
+                            attrs['owner-id'] = ref_uuid(owner)
+                            if target: attrs['owner-type'] = target.name
+                volume = named.get('Том', [])
+                if len(volume) == 1:
+                    _, raw = self.cell(row, volume[0][1])
+                    if any(raw): attrs['volume-id'] = ref_uuid(raw)
+                data, reason = payloads.get((info.number, ref), (None, 'external volume or missing binary data'))
+                if data is not None and attrs.get('size') and int(attrs['size']) != len(data):
+                    data, reason = None, 'binary size does not match metadata'
+                if data is not None and total_bytes + len(data) > VALUE_STORAGE_STAGE_MAX:
+                    data, reason = None, 'attachment stage size limit exceeded'
+                if data is None:
+                    attrs['unavailable'] = reason
+                    self.note(info.name, reason)
+                    result.add(El('attachment', attrs))
+                else:
+                    total_bytes += len(data)
+                    attrs['sha256'] = hashlib.sha256(data).hexdigest()
+                    result.add(El('attachment', attrs, base64.b64encode(data).decode('ascii')))
+        return result
+
     def build(self):
         meta, root = self.meta, El('stage', {'format': FORMAT})
         header = root.add(El('header'))
@@ -1106,6 +1199,9 @@ class Exporter(Stage):
             for raw, (name, order) in sorted(self.enum_values(info).items(), key=lambda kv: (kv[1][1], kv[0])):
                 enums.add(El('enum', {'type': info.name, 'name': name, 'id': ref_uuid(raw), 'order': str(order)}))
                 self.exported_rows[meta.object_table(info).name] += 1
+        attachments = self.export_attachments()
+        if attachments.kids:
+            root.add(attachments)
         skipped, partial = self.skipped()
         root.add(skipped)
         root.add(partial)

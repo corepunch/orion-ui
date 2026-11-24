@@ -660,7 +660,7 @@
   <string source="Go To">Перейти</string>
   <string source="Next">Следующий</string>
   <string source="Previous">Предыдущий</string>
-  <string source="Close" where="reference_catalogs">Закрыть</string>
+  <string source="Close" where="imported_attachments,reference_catalogs">Закрыть</string>
   <string source="Arrange">Упорядочить</string>
   <string source="Cascade">Каскадом</string>
   <string source="Tile">Рядом</string>
@@ -783,10 +783,21 @@
   <string source="Catalog Folders" where="reference_catalogs">Группы справочников</string>
   <string source="Folder" where="reference_catalogs">Группа</string>
   <string source="Parent Folder" where="reference_catalogs">Родительская группа</string>
+  <string source="Imported Attachments..." where="menu">Импортированные вложения...</string>
+  <string source="Imported Attachments" where="imported_attachments">Импортированные вложения</string>
+  <string source="File Name" where="imported_attachments">Имя файла</string>
+  <string source="Extension" where="imported_attachments">Расширение</string>
+  <string source="Owner Type" where="imported_attachments">Тип владельца</string>
+  <string source="Size (bytes)" where="imported_attachments">Размер (байт)</string>
+  <string source="Unavailable" where="imported_attachments">Недоступно</string>
+  <string source="Save As..." where="imported_attachments">Сохранить как...</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
+  <string source="Save Attachment">Сохранить вложение</string>
+  <string source="The attachment could not be saved. Check that the selected file does not already exist.">Не удалось сохранить вложение. Проверьте, что выбранного файла ещё нет.</string>
+  <string source="Cannot import an invalid attachment.">Не удалось импортировать вложение с неверными данными.</string>
 </strings>

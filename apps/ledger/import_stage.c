@@ -22,6 +22,18 @@
 #include <stdalign.h>
 #include <stddef.h>
 #include <time.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#ifdef _WIN32
+#include <io.h>
+#ifndef O_BINARY
+#define O_BINARY _O_BINARY
+#endif
+#else
+#define O_BINARY 0
+#endif
 
 #define STAGE_FORMAT "orion-1cd-stage-v1"
 
@@ -1556,6 +1568,158 @@ static void import_rates(stage_t *st, xmlNodePtr root) {
   }
 }
 
+static int b64_digit(unsigned char c) {
+  if (c >= 'A' && c <= 'Z') return c - 'A';
+  if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+  if (c >= '0' && c <= '9') return c - '0' + 52;
+  if (c == '+') return 62;
+  if (c == '/') return 63;
+  return -1;
+}
+
+// The XML serializer writes at most 2047 characters per field. Base64 needs groups of four.
+enum { ATTACHMENT_CHUNK_CHARS = 2044, ATTACHMENT_CHUNK_BYTES = 1533, ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024 };
+
+static bool attachment_decode(const char *s, size_t n, unsigned char *data, size_t capacity, size_t *bytes) {
+  if (n % 4) return false;
+  *bytes = 0;
+  for (size_t i = 0; i < n; i += 4) {
+    int a = b64_digit(s[i]), b = b64_digit(s[i + 1]);
+    int c = s[i + 2] == '=' ? -2 : b64_digit(s[i + 2]);
+    int d = s[i + 3] == '=' ? -2 : b64_digit(s[i + 3]);
+    if (a < 0 || b < 0 || c == -1 || d == -1 || (c == -2 && d != -2) ||
+        ((c == -2 || d == -2) && i + 4 != n) ||
+        (c == -2 && (b & 15)) || (d == -2 && c >= 0 && (c & 3))) return false;
+    size_t count = 1 + (c >= 0) + (d >= 0);
+    if (count > capacity - *bytes) return false;
+    data[(*bytes)++] = (unsigned char)((a << 2) | (b >> 4));
+    if (c >= 0) data[(*bytes)++] = (unsigned char)((b << 4) | (c >> 2));
+    if (d >= 0) data[(*bytes)++] = (unsigned char)((c << 6) | d);
+  }
+  return true;
+}
+
+static bool attachment_hash_matches(const unsigned char *data, size_t size, const char *sha256) {
+  char hash[65];
+  ledger_sha256(data, size, hash);
+  return !strcmp(hash, sha256);
+}
+
+static bool attachment_attr(xmlNodePtr n, const char *key, char *out, size_t size) {
+  xmlChar *v = xmlGetProp(n, (const xmlChar *)key);
+  if (v && strlen((const char *)v) >= size) { xmlFree(v); return false; }
+  ledger_copy_text(out, size, v ? (const char *)v : "");
+  if (v) xmlFree(v);
+  return true;
+}
+
+static bool attachment_guid(const char *s) {
+  if (strlen(s) != 36) return false;
+  for (int i = 0; i < 36; i++)
+    if ((i == 8 || i == 13 || i == 18 || i == 23) ? s[i] != '-' : !isxdigit((unsigned char)s[i])) return false;
+  return true;
+}
+
+static bool import_attachment(stage_t *st, xmlNodePtr n) {
+  db_import_attachment_t a = {0};
+  char size_text[32], *end = NULL;
+  if (!attachment_attr(n, "id", a.guid, sizeof(a.guid)) ||
+      !attachment_attr(n, "type", a.metadata, sizeof(a.metadata)) ||
+      !attachment_attr(n, "owner-id", a.owner_guid, sizeof(a.owner_guid)) ||
+      !attachment_attr(n, "owner-type", a.owner_type, sizeof(a.owner_type)) ||
+      !attachment_attr(n, "name", a.name, sizeof(a.name)) ||
+      !attachment_attr(n, "extension", a.extension, sizeof(a.extension)) ||
+      !attachment_attr(n, "size", size_text, sizeof(size_text)) ||
+      !attachment_attr(n, "sha256", a.sha256, sizeof(a.sha256)) ||
+      !attachment_attr(n, "unavailable", a.unavailable, sizeof(a.unavailable)) ||
+      !attachment_attr(n, "volume-id", a.volume_guid, sizeof(a.volume_guid)) ||
+      !attachment_guid(a.guid) || !a.metadata[0] || !size_text[0] ||
+      (a.owner_guid[0] && !attachment_guid(a.owner_guid)) || (a.volume_guid[0] && !attachment_guid(a.volume_guid))) return false;
+  for (const char *p = size_text; *p; p++) if (!isdigit((unsigned char)*p)) return false;
+  for (const char *p = a.sha256; *p; p++) if (!isxdigit((unsigned char)*p)) return false;
+  for (xmlNodePtr c = n->children; c; c = c->next) if (c->type != XML_TEXT_NODE) return false;
+  errno = 0;
+  long long size = strtoll(size_text, &end, 10);
+  if (errno == ERANGE || *end || size < 0 || (!a.unavailable[0] && size > ATTACHMENT_MAX_BYTES)) return false;
+  a.size = size;
+  xmlChar *content = xmlNodeGetContent(n);
+  size_t encoded = content ? strlen((const char *)content) : 0, decoded = 0;
+  bool valid = a.unavailable[0] && encoded == 0;
+  if (!a.unavailable[0] && strlen(a.sha256) == 64 && encoded == ((size_t)size + 2) / 3 * 4) {
+    unsigned char *bytes = malloc(size ? (size_t)size : 1);
+    valid = bytes && attachment_decode((const char *)content, encoded, bytes, (size_t)size, &decoded) &&
+      decoded == (size_t)size && attachment_hash_matches(bytes, decoded, a.sha256);
+    free(bytes);
+  }
+  if (!valid) { if (content) xmlFree(content); return false; }
+  db_import_attachment_t *old = find_by_text(st->ib, TABLE_IMPORT_ATTACHMENTS, "guid", a.guid);
+  if (old && strcmp(old->metadata, a.metadata)) { if (content) xmlFree(content); return false; }
+  if (old && a.unavailable[0] && !old->unavailable[0]) {
+    tally(st, a.metadata, 0, 0, 1); if (content) xmlFree(content); return true;
+  }
+  if (old) {
+    a.id = old->id;
+    int field = ledger_field(st->ib, TABLE_IMPORT_ATTACHMENT_CHUNKS, "attachment_id");
+    result_node_t *chunks = (result_node_t *)send_db_message(st->ib, dbFetch, MAKEDWORD(TABLE_IMPORT_ATTACHMENT_CHUNKS, field), (void *)(intptr_t)a.id);
+    bool ok = true;
+    EACH_RECORD(db_import_attachment_chunk_t, c, chunks)
+      if (!send_db_message(st->ib, dbDelete, TABLE_IMPORT_ATTACHMENT_CHUNKS, (void *)(intptr_t)c->id)) { ok = false; break; }
+    free_result_list(chunks);
+    if (!ok || !send_db_message(st->ib, dbUpdate, TABLE_IMPORT_ATTACHMENTS, &a)) { if (content) xmlFree(content); return false; }
+  } else {
+    const int *id = (const int *)send_db_message(st->ib, dbInsert, TABLE_IMPORT_ATTACHMENTS, &a);
+    if (!id) { if (content) xmlFree(content); return false; }
+    a.id = *id;
+  }
+  for (size_t i = 0; i < encoded; i += ATTACHMENT_CHUNK_CHARS) {
+    db_import_attachment_chunk_t chunk = { .attachment_id = a.id, .ordinal = (int)(i / ATTACHMENT_CHUNK_CHARS) };
+    size_t count = encoded - i < ATTACHMENT_CHUNK_CHARS ? encoded - i : ATTACHMENT_CHUNK_CHARS;
+    memcpy(chunk.data, content + i, count); chunk.data[count] = 0;
+    if (!send_db_message(st->ib, dbInsert, TABLE_IMPORT_ATTACHMENT_CHUNKS, &chunk)) { xmlFree(content); return false; }
+  }
+  tally(st, a.metadata, old ? 0 : 1, old ? 1 : 0, 0);
+  if (content) xmlFree(content);
+  return true;
+}
+
+bool ledger_attachment_export(database_t *ib, int attachment_id, const char *path) {
+  if (!ib || !path || !path[0] || attachment_id <= 0) return false;
+  db_import_attachment_t *a = (db_import_attachment_t *)send_db_message(ib, dbFind, MAKEDWORD(TABLE_IMPORT_ATTACHMENTS, 0), (void *)(intptr_t)attachment_id);
+  if (!a || a->unavailable[0] || a->size < 0 || a->size > ATTACHMENT_MAX_BYTES) return false;
+  size_t size = (size_t)a->size, count = (size + ATTACHMENT_CHUNK_BYTES - 1) / ATTACHMENT_CHUNK_BYTES;
+  unsigned char *all = malloc(size ? size : 1);
+  const db_import_attachment_chunk_t **ordered = calloc(count ? count : 1, sizeof(*ordered));
+  if (!all || !ordered) { free(all); free(ordered); return false; }
+  int field = ledger_field(ib, TABLE_IMPORT_ATTACHMENT_CHUNKS, "attachment_id");
+  result_node_t *chunks = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_IMPORT_ATTACHMENT_CHUNKS, field), (void *)(intptr_t)attachment_id);
+  bool ok = true;
+  EACH_RECORD(db_import_attachment_chunk_t, part, chunks) {
+    if (part->ordinal < 0 || (size_t)part->ordinal >= count || ordered[part->ordinal]) { ok = false; break; }
+    ordered[part->ordinal] = part;
+  }
+  for (size_t i = 0; i < count && ok; i++) {
+    size_t offset = i * ATTACHMENT_CHUNK_BYTES;
+    size_t capacity = size - offset, decoded = 0;
+    if (capacity > ATTACHMENT_CHUNK_BYTES) capacity = ATTACHMENT_CHUNK_BYTES;
+    ok = ordered[i] && attachment_decode(ordered[i]->data, strlen(ordered[i]->data), all + offset, capacity, &decoded) &&
+      decoded == capacity;
+  }
+  free(ordered);
+  free_result_list(chunks);
+  if (ok && attachment_hash_matches(all, size, a->sha256)) {
+    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_BINARY, 0600);
+    FILE *out = fd >= 0 ? fdopen(fd, "wb") : NULL;
+    ok = out && fwrite(all, 1, size, out) == size;
+    if (out) ok = fclose(out) == 0 && ok;
+    else if (fd >= 0) close(fd);
+    if (!ok && fd >= 0) unlink(path);
+  } else {
+    ok = false;
+  }
+  free(all);
+  return ok;
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledger_stage_import_t *out) {
   memset(out, 0, sizeof(*out));
@@ -1618,6 +1782,19 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
   st.documents = child(root, "documents");
   if (!out->error[0] && !index_movements(&st, root)) snprintf(out->error, sizeof(out->error), "%s", ui_tr("Out of memory."));
   for (xmlNodePtr d = st.documents ? st.documents->children : NULL; d && !out->error[0]; d = d->next) if (is_el(d, "document")) import_document(&st, d);
+  xmlNodePtr attachments = child(root, "attachments");
+  for (xmlNodePtr a = attachments ? attachments->children : NULL; a && !out->error[0]; a = a->next) {
+    if (!is_el(a, "attachment")) continue;
+    char guid[64]; attr(a, "id", guid, sizeof(guid));
+    bool duplicate = false;
+    for (xmlNodePtr prev = attachments->children; prev != a; prev = prev->next) {
+      char previous[64]; if (!is_el(prev, "attachment")) continue;
+      attr(prev, "id", previous, sizeof(previous));
+      if (!strcmp(guid, previous)) { duplicate = true; break; }
+    }
+    if (duplicate || !import_attachment(&st, a))
+      snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot import an invalid attachment."));
+  }
   if (!out->error[0]) {
     xmlNodePtr hdr = child(root, "header");
     db_import_snapshot_t snap = {0};

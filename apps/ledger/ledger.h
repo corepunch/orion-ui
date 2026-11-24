@@ -39,6 +39,9 @@ typedef struct {
 
 extern ledger_t *g_ledger;
 
+void ledger_sha256(const unsigned char *data, size_t len, char hex[65]);
+bool ledger_attachment_export(database_t *ib, int attachment_id, const char *path);
+
 // posting.c — accounting rules over the cfg and ib databases.
 // A posting in progress: the document, its type and its currency rate. Scripts
 // and plugins (ledger_script.c) add entries through the same functions.

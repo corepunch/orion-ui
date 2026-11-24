@@ -25,6 +25,7 @@
       <item name="language" label="Language..." />
       <Separator />
       <item name="import_1c" label="Import from 1C..." />
+      <item name="imported_attachments" label="Imported Attachments..." />
       <item name="recipes" label="Automation Recipes..." />
       <item name="marketplace" label="Marketplaces..." />
       <item name="addon" label="Open Add-on..." />
@@ -1146,6 +1147,25 @@
         <field name="amount_minor" type="int64" />
         <field name="vat_minor" type="int64" />
         <field name="total_minor" type="int64" />
+      </table>
+      <table name="import_attachments">
+        <field name="id" type="integer" key="YES" />
+        <field name="guid" type="string" length="64" />
+        <field name="metadata" type="string" length="128" />
+        <field name="owner_guid" type="string" length="64" />
+        <field name="owner_type" type="string" length="128" />
+        <field name="name" type="string" length="512" />
+        <field name="extension" type="string" length="64" />
+        <field name="size" type="int64" />
+        <field name="sha256" type="string" length="65" />
+        <field name="unavailable" type="string" length="256" />
+        <field name="volume_guid" type="string" length="64" />
+      </table>
+      <table name="import_attachment_chunks">
+        <field name="id" type="integer" key="YES" />
+        <field name="attachment_id" type="integer" relation="import_attachments.id" on-delete="cascade" />
+        <field name="ordinal" type="integer" />
+        <field name="data" type="string" length="2045" />
       </table>
       <table name="import_snapshots">
         <field name="id" type="integer" key="YES" />
@@ -2313,6 +2333,21 @@
         <Label name="comment" field="ib.documents.comment" flags="flexspace" />
         <Label name="lbl_total" text="Total:" />
         <Label name="total" field="ib.documents.total" font="title" />
+      </StackView>
+    </form>
+
+    <form name="imported_attachments" title="Imported Attachments" width="680" height="360" spacing="8" padding="8">
+      <TableView name="files" source="ib.import_attachments" frame="true" flags="nofill,vscroll,flexspace">
+        <Column field="name" title="File Name" width="0" min-width="180" />
+        <Column field="extension" title="Extension" width="74" />
+        <Column field="owner_type" title="Owner Type" width="230" />
+        <Column field="size" title="Size (bytes)" width="95" />
+        <Column field="unavailable" title="Unavailable" width="88" />
+      </TableView>
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space />
+        <Button name="save_as" text="Save As..." flags="BUTTON_DEFAULT" />
+        <Button name="close" text="Close" />
       </StackView>
     </form>
 

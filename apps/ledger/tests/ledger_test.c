@@ -19,7 +19,6 @@
     for (type *var = *(type **)var##_node->data; var; var = NULL)
 
 static ledger_t g_test_ledger;
-static void ed_digest(const unsigned char *data, size_t len, char hex[65]);
 
 static void report_through(const char *date) {
   db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
@@ -2431,6 +2430,7 @@ static void test_import_stage_payroll(void) {
     }
     free_result_list(rows);
   }
+  PASS();
 }
 
 static void test_import_stage_documents(void) {
@@ -2876,14 +2876,14 @@ static void test_import_integrity(void) {
 static void test_import_digest(void) {
   TEST("1C exchange SHA-256: standard vectors including padding and multiple blocks");
   char digest[65], text[1001];
-  ed_digest((const unsigned char *)"", 0, digest);
+  ledger_sha256((const unsigned char *)"", 0, digest);
   ASSERT_STR_EQUAL(digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-  ed_digest((const unsigned char *)"abc", 3, digest);
+  ledger_sha256((const unsigned char *)"abc", 3, digest);
   ASSERT_STR_EQUAL(digest, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   memset(text, 'a', 1000);
-  ed_digest((const unsigned char *)text, 1000, digest);
+  ledger_sha256((const unsigned char *)text, 1000, digest);
   ASSERT_STR_EQUAL(digest, "41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3");
-  ed_digest((const unsigned char *)text, 56, digest);
+  ledger_sha256((const unsigned char *)text, 56, digest);
   ASSERT_STR_EQUAL(digest, "b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a");
   PASS();
 }
@@ -2978,6 +2978,41 @@ static void test_subconto2_3_posting(void) {
   PASS();
 }
 
+static void test_import_stage_attachments(void) {
+  TEST("1CD attachments: import, retry, reopen, export and rollback on invalid data");
+  ledger_stage_import_t r;
+  const char *stage = "apps/ledger/tests/fixtures/onecd/stage_attachments.xml";
+  char dir[128], path[192];
+  ASSERT_TRUE(ledger_test_directory(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/attachment.bin", dir);
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  db_import_attachment_t *a = find_by(g_ledger->ib, TABLE_IMPORT_ATTACHMENTS, "guid", "a0000000-0000-0000-0000-000000000001");
+  ASSERT(a && a->size == 2048 && !strcmp(a->owner_type, "Справочник.Организации"), "source identity and size are retained");
+  int id = a->id;
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  a = find_by(g_ledger->ib, TABLE_IMPORT_ATTACHMENTS, "guid", "a0000000-0000-0000-0000-000000000001");
+  ASSERT(a && a->id == id, "retry keeps the attachment identity");
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  database_t *reopened = create_database_with_schema_readonly("attachment_copy", "db_schema_xml", &ledger_ib_schema, g_ledger->ib->source_path);
+  ASSERT_NOT_NULL(reopened);
+  ASSERT_TRUE(ledger_attachment_export(reopened, id, path));
+  ASSERT(!ledger_attachment_export(reopened, id, path), "export refuses to overwrite");
+  destroy_database(reopened);
+  FILE *f = fopen(path, "rb");
+  unsigned char data[2048];
+  ASSERT(f && fread(data, 1, sizeof(data), f) == sizeof(data) && fgetc(f) == EOF, "stored file size is intact");
+  fclose(f);
+  for (size_t i = 0; i < sizeof(data); i++) {
+    ASSERT(data[i] == (unsigned char)i, "export restores exact bytes across chunks after reloading");
+  }
+  remove(path);
+  ASSERT(!ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_attachments_invalid.xml", &r), "invalid base64 is rejected");
+  ASSERT(!ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_attachments_bad_hash.xml", &r), "incorrect digest is rejected");
+  ASSERT_TRUE(ledger_attachment_export(g_ledger->ib, id, path));
+  remove(path);
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger");
@@ -3013,8 +3048,6 @@ int main(int argc, char **argv) {
   test_infobase_extensions();
   test_import_stage_chart();
   test_import_stage_catalogs();
-  test_import_stage_payroll();
-  test_import_stage_assets();
   test_import_stage_documents();
   test_import_stage_reports();
   test_import_stage_snapshot();
@@ -3045,6 +3078,9 @@ int main(int argc, char **argv) {
   test_english_configurations();
   test_invoice_requirements();
   test_configuration_integrity();
+  test_import_stage_payroll();
+  test_import_stage_assets();
+  test_import_stage_attachments();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);
   ledger_script_close();
