@@ -29,7 +29,7 @@ function ledger.field(db, table, id, path) end
 ---@return table|nil
 function ledger.account(code) end
 
----Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Fields: debit, credit (code or ID), amount, quantity, content, counterparty, item, employee, asset, currency, currency_amount.
+---Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Subject fields (auto-derive analytics from the account's kind): counterparty, item, employee, asset, warehouse, contract. Per-side slot-2/3 explicit overrides (bypass auto-derive when non-zero): debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3. Other fields: debit, credit (code or ID), amount, quantity, content, currency, currency_amount.
 ---@param entry table Entry fields.
 function ledger.entry(entry) end
 

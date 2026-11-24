@@ -50,7 +50,10 @@ typedef struct {
   bool *entry_failed;  // transaction-local failure latch, when posting
 } ledger_post_t;
 // What a posting is about; each side of an entry takes the object its account is analysed by.
-typedef struct { int counterparty, item, employee, asset; } ledger_subjects_t;
+typedef struct {
+  int counterparty, item, employee, asset, warehouse, contract;
+  int debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3;
+} ledger_subjects_t;
 typedef struct { double dr, cr, dr_qty, cr_qty, dr_cur, cr_cur; } ledger_turnover_t;
 typedef struct { const db_payroll_tax_t *tax; double amount; } ledger_tax_amount_t;
 void ledger_add_entry(const ledger_post_t *p, int debit, int credit, double amount, const ledger_subjects_t *s,
@@ -181,6 +184,17 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
 bool ledger_file_is_stage(const char *path);  // the file's first line names the staging format
 // The report as text: the totals alone when summary, else a line per 1C type and every note.
 size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz, bool summary);
+// Source metadata from the staging file header; does not import anything.
+typedef struct {
+  char source_file[256];
+  char source_size[20];
+  char source_sha256[65];
+  char format_version[16];
+  char locale[8];
+  char config_name[64];
+  char config_version[16];
+} ledger_stage_header_t;
+bool ledger_stage_header(const char *path, ledger_stage_header_t *out);
 
 // ledger_addons.c — external processings: an add-on's .orion form driven by
 // its Lua script, with the "ledger" module for accounts, turnovers and posting.

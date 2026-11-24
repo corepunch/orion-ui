@@ -64,7 +64,7 @@ Find an account in the active configuration by its code.
 
 ## `ledger.entry(entry)`
 
-Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Fields: debit, credit (code or ID), amount, quantity, content, counterparty, item, employee, asset, currency, currency_amount.
+Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Subject fields (auto-derive analytics from the account's kind): counterparty, item, employee, asset, warehouse, contract. Per-side slot-2/3 explicit overrides (bypass auto-derive when non-zero): debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3. Other fields: debit, credit (code or ID), amount, quantity, content, currency, currency_amount.
 
 | Argument | Type | Description |
 |---|---|---|
@@ -496,7 +496,9 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `name` | `string` |  |
 | `position` | `string` |  |
 | `tax_id` | `string` |  |
+| `birth_date` | `date` |  |
 | `hired` | `date` |  |
+| `department` | `string` |  |
 | `salary` | `double` |  |
 | `allowance` | `double` |  |
 
@@ -513,6 +515,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `cost` | `double` |  |
 | `life` | `integer` |  |
 | `commissioned` | `date` |  |
+| `depreciation_method` | `string` |  |
 
 ## `ib.currencies`
 
@@ -537,12 +540,14 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `counterparty_id` | `integer` | counterparties.id |
+| `organization_id` | `integer` | organizations.id |
 | `currency_id` | `integer` | currencies.id |
 | `number` | `string` |  |
 | `date` | `date` |  |
 | `name` | `string` |  |
 | `kind` | `string` |  |
 | `valid_until` | `date` |  |
+| `subject` | `string` |  |
 | `comment` | `string` |  |
 
 ## `ib.bank_accounts`
@@ -638,6 +643,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `bank_account_id` | `integer` | bank_accounts.id |
 | `number` | `string` |  |
 | `date` | `date` |  |
+| `time` | `string` |  |
 | `comment` | `string` |  |
 | `import_source` | `string` |  |
 | `correction_of` | `integer` | documents.id |
@@ -731,6 +737,12 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `credit_tax_minor` | `int64` |  |
 | `credit_permanent_minor` | `int64` |  |
 | `credit_temporary_minor` | `int64` |  |
+| `source_line` | `integer` |  |
+| `active` | `boolean` |  |
+| `debit_currency_id` | `integer` | currencies.id |
+| `credit_currency_id` | `integer` | currencies.id |
+| `debit_currency_amount` | `double` |  |
+| `credit_currency_amount` | `double` |  |
 
 ## `ib.period_locks`
 
@@ -1009,3 +1021,17 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `amount_minor` | `int64` |  |
 | `vat_minor` | `int64` |  |
 | `total_minor` | `int64` |  |
+
+## `ib.import_snapshots`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `source_file` | `string` |  |
+| `source_size` | `string` |  |
+| `source_sha256` | `string` |  |
+| `format_version` | `string` |  |
+| `locale` | `string` |  |
+| `config_name` | `string` |  |
+| `config_version` | `string` |  |
+| `imported_date` | `date` |  |

@@ -67,23 +67,32 @@ const char *ledger_subconto_table(database_t *cfg, int account_id) { return ledg
 // account is analysed by.
 typedef ledger_subjects_t subjects_t;
 
-static int subconto_for(database_t *cfg, int account_id, const subjects_t *s) {
-  const char *table = ledger_subconto_table(cfg, account_id);
+static int subconto_slot_for(database_t *cfg, int account_id, int slot, bool is_debit, const subjects_t *s) {
   if (!s) return 0;
+  if (slot == 2 &&  is_debit && s->debit_subconto2)  return s->debit_subconto2;
+  if (slot == 3 &&  is_debit && s->debit_subconto3)  return s->debit_subconto3;
+  if (slot == 2 && !is_debit && s->credit_subconto2) return s->credit_subconto2;
+  if (slot == 3 && !is_debit && s->credit_subconto3) return s->credit_subconto3;
+  const char *table = ledger_subconto_slot_table(cfg, account_id, slot);
+  if (!table || !table[0]) return 0;
   if (!strcmp(table, "counterparties")) return s->counterparty;
   if (!strcmp(table, "items"))          return s->item;
   if (!strcmp(table, "employees"))      return s->employee;
   if (!strcmp(table, "assets"))         return s->asset;
+  if (!strcmp(table, "warehouses"))     return s->warehouse;
+  if (!strcmp(table, "contracts"))      return s->contract;
   return 0;
 }
 
 static subjects_t subjects_of(database_t *cfg, int account_id, int subconto_id) {
   subjects_t s = {0};
-  const char *table = ledger_subconto_table(cfg, account_id);
+  const char *table = ledger_subconto_slot_table(cfg, account_id, 1);
   if (!strcmp(table, "counterparties")) s.counterparty = subconto_id;
   if (!strcmp(table, "items"))          s.item = subconto_id;
   if (!strcmp(table, "employees"))      s.employee = subconto_id;
   if (!strcmp(table, "assets"))         s.asset = subconto_id;
+  if (!strcmp(table, "warehouses"))     s.warehouse = subconto_id;
+  if (!strcmp(table, "contracts"))      s.contract = subconto_id;
   return s;
 }
 
@@ -124,10 +133,12 @@ turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int
   EACH_RECORD(db_entry_t, e, entries) {
     if (currency_id >= 0 && e->currency_id != currency_id) continue;
     // Resolve documents only for matching sides; stock/payroll queries are selective.
-    bool debit = (subconto_id < 0 || e->debit_subconto_id == subconto_id) &&
+    bool debit = (subconto_id < 0 || e->debit_subconto_id == subconto_id ||
+                  (subconto_id > 0 && (e->debit_subconto2_id == subconto_id || e->debit_subconto3_id == subconto_id))) &&
                  ledger_account_within(p->cfg, e->debit_id, account_id);
-    bool credit = (subconto_id < 0 || e->credit_subconto_id == subconto_id) &&
-                  ledger_account_within(p->cfg, e->credit_id, account_id);
+    bool credit = (subconto_id < 0 || e->credit_subconto_id == subconto_id ||
+                   (subconto_id > 0 && (e->credit_subconto2_id == subconto_id || e->credit_subconto3_id == subconto_id))) &&
+                   ledger_account_within(p->cfg, e->credit_id, account_id);
     if (!debit && !credit) continue;
     if (e->document_id != p->doc->id) {
       const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
@@ -157,7 +168,12 @@ void ledger_add_entry(const post_t *p, int debit, int credit, double amount, con
   if (!debit || !credit || amount == 0) return;
   bool by_item = !strcmp(ledger_subconto_table(p->cfg, debit), "items") || !strcmp(ledger_subconto_table(p->cfg, credit), "items");
   db_entry_t e = { .document_id = p->doc->id, .debit_id = debit, .credit_id = credit, .amount = amount,
-                   .debit_subconto_id = subconto_for(p->cfg, debit, s), .credit_subconto_id = subconto_for(p->cfg, credit, s),
+                   .debit_subconto_id   = subconto_slot_for(p->cfg, debit,  1, true,  s),
+                   .credit_subconto_id  = subconto_slot_for(p->cfg, credit, 1, false, s),
+                   .debit_subconto2_id  = subconto_slot_for(p->cfg, debit,  2, true,  s),
+                   .debit_subconto3_id  = subconto_slot_for(p->cfg, debit,  3, true,  s),
+                   .credit_subconto2_id = subconto_slot_for(p->cfg, credit, 2, false, s),
+                   .credit_subconto3_id = subconto_slot_for(p->cfg, credit, 3, false, s),
                    .quantity = by_item ? quantity : 0, .currency_id = currency_id, .currency_amount = currency_amount };
   if (p->doc->exact_money) {
     char amount_text[64], quantity_text[64];
@@ -460,7 +476,8 @@ static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
       fprintf(stderr, "[ledger] exact cost rejected: document=%d item=%d stock is insufficient or not exact\n", p->doc->id, line->item_id);
       fflush(stderr); if (p->entry_failed) *p->entry_failed = true; return;
     }
-    subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id };
+    subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id,
+                     .warehouse = p->doc->warehouse_id, .contract = p->doc->contract_id };
     ledger_add_entry(p, p->type->cost_debit_id, p->type->cost_credit_id, (double)cost / 100.0, &s, line->quantity, 0, 0, NULL);
     return;
   }
@@ -471,7 +488,8 @@ static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
     return;
   }
   double cost = line->quantity >= qty ? value : value * line->quantity / qty;
-  subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id };
+  subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id,
+                   .warehouse = p->doc->warehouse_id, .contract = p->doc->contract_id };
   ledger_add_entry(p, p->type->cost_debit_id, p->type->cost_credit_id, cost, &s, line->quantity, 0, 0, NULL);
 }
 
@@ -489,7 +507,8 @@ static void post_goods(const post_t *p) {
   bool net = !strcmp(type->base, "net");
   result_node_t *lines = fetch(p->ib, TABLE_DOC_LINES, "document_id", p->doc->id);
   EACH_RECORD(db_doc_line_t, line, lines) {  // one set of entries per line, as goods move per item
-    subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id };
+    subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id,
+                     .warehouse = p->doc->warehouse_id, .contract = p->doc->contract_id };
     const db_vat_rate_t *rate = type->auto_accounts ? find(p->cfg, TABLE_VAT_RATES, line->vat_rate_id) : NULL;
     int book = type->vat_book;
     add_doc_entry(p, book == 2 ? rate_account(rate, book, false, type->debit_id) : type->debit_id,
@@ -501,7 +520,8 @@ static void post_goods(const post_t *p) {
     if (type->cost_debit_id && type->cost_credit_id) post_cost_of_sales(p, line);
   }
   if (!lines) {
-    subjects_t s = { .counterparty = p->doc->counterparty_id };
+    subjects_t s = { .counterparty = p->doc->counterparty_id,
+                     .warehouse = p->doc->warehouse_id, .contract = p->doc->contract_id };
     add_doc_entry(p, type->debit_id, type->credit_id, net ? p->doc->amount : p->doc->total, &s, 0);
     add_doc_entry(p, type->vat_debit_id, type->vat_credit_id, p->doc->vat, &s, 0);
   }

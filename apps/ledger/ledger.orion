@@ -658,7 +658,9 @@
         <field name="name" type="string" length="128" />
         <field name="position" type="string" length="96" />
         <field name="tax_id" type="string" length="16" />
+        <field name="birth_date" type="date" />
         <field name="hired" type="date" default="today" />
+        <field name="department" type="string" length="128" />
         <field name="salary" type="double" />
         <field name="allowance" type="double" />
       </table>
@@ -674,6 +676,7 @@
         <field name="cost" type="double" />
         <field name="life" type="integer" default="36" />
         <field name="commissioned" type="date" />
+        <field name="depreciation_method" type="string" length="24" />
       </table>
       <table name="currencies">
         <field name="id" type="integer" key="YES" />
@@ -691,12 +694,14 @@
       <table name="contracts">
         <field name="id" type="integer" key="YES" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
+        <field name="organization_id" type="integer" relation="organizations.id" on-delete="deny" />
         <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
         <field name="number" type="string" length="32" />
         <field name="date" type="date" default="today" />
         <field name="name" type="string" length="160" />
         <field name="kind" type="string" length="16" />
         <field name="valid_until" type="date" />
+        <field name="subject" type="string" length="256" />
         <field name="comment" type="string" length="256" />
       </table>
       <!-- Bank accounts of the organization or of a counterparty (1C Банковские счета). -->
@@ -787,6 +792,7 @@
         <field name="bank_account_id" type="integer" relation="bank_accounts.id" on-delete="deny" />
         <field name="number" type="string" length="24" />
         <field name="date" type="date" default="today" />
+        <field name="time" type="string" length="9" />
         <field name="comment" type="string" length="256" />
         <field name="import_source" type="string" length="65" />
         <field name="correction_of" type="integer" relation="documents.id" on-delete="deny" />
@@ -872,6 +878,12 @@
         <field name="credit_tax_minor" type="int64" />
         <field name="credit_permanent_minor" type="int64" />
         <field name="credit_temporary_minor" type="int64" />
+        <field name="source_line" type="integer" />
+        <field name="active" type="boolean" default="true" />
+        <field name="debit_currency_id" type="integer" relation="currencies.id" />
+        <field name="credit_currency_id" type="integer" relation="currencies.id" />
+        <field name="debit_currency_amount" type="double" />
+        <field name="credit_currency_amount" type="double" />
       </table>
       <!-- A monotonic accounting close boundary, inclusive. -->
       <table name="period_locks">
@@ -1118,6 +1130,17 @@
         <field name="amount_minor" type="int64" />
         <field name="vat_minor" type="int64" />
         <field name="total_minor" type="int64" />
+      </table>
+      <table name="import_snapshots">
+        <field name="id" type="integer" key="YES" />
+        <field name="source_file" type="string" length="256" />
+        <field name="source_size" type="string" length="20" />
+        <field name="source_sha256" type="string" length="65" />
+        <field name="format_version" type="string" length="16" />
+        <field name="locale" type="string" length="8" />
+        <field name="config_name" type="string" length="64" />
+        <field name="config_version" type="string" length="16" />
+        <field name="imported_date" type="date" default="today" />
       </table>
     </database>
   </databases>
@@ -2491,22 +2514,26 @@
       <GridView name="fields" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_organization" text="Organization:" />
           <Label name="lbl_number" text="Number:" />
           <Label name="lbl_date" text="Date:" />
           <Label name="lbl_name" text="Name:" />
           <Label name="lbl_kind" text="Kind:" />
           <Label name="lbl_currency" text="Currency:" />
           <Label name="lbl_valid_until" text="Valid until:" />
+          <Label name="lbl_subject" text="Subject:" />
           <Label name="lbl_comment" text="Comment:" />
         </Column>
         <Column name="inputs">
           <ComboBox name="counterparty" field="ib.contracts.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="organization" field="ib.contracts.organization_id" source="ib.organizations" display="name" value="id" />
           <TextBox name="number" field="ib.contracts.number" />
           <TextBox name="date" field="ib.contracts.date" />
           <TextBox name="name" field="ib.contracts.name" />
           <TextBox name="kind" field="ib.contracts.kind" placeholder="supplier, customer, other" />
           <ComboBox name="currency" field="ib.contracts.currency_id" source="ib.currencies" display="code" value="id" />
           <TextBox name="valid_until" field="ib.contracts.valid_until" />
+          <TextBox name="subject" field="ib.contracts.subject" />
           <TextBox name="comment" field="ib.contracts.comment" />
         </Column>
       </GridView>

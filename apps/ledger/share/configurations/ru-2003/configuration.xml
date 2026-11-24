@@ -151,6 +151,18 @@
     <import_document id="5" source_type="Документ.ПлатежноеПоручениеИсходящее"   doc_type_id="5"/>
     <import_document id="6" source_type="Документ.ПоступлениеНаРасчетныйСчет"    doc_type_id="6"/>
     <import_document id="7" source_type="Документ.СписаниеСРасчетногоСчета"      doc_type_id="5"/>
+    <import_document id="8"  source_type="Документ.ВводНачальныхОстатков"                   doc_type_id="9"/>
+    <import_document id="9"  source_type="Документ.СчетНаОплатуПокупателю"                  doc_type_id="8"/>
+    <import_document id="10" source_type="Документ.ТребованиеНакладная"                     doc_type_id="8"/>
+    <import_document id="11" source_type="Документ.ИнвентаризацияТоваров"                   doc_type_id="8"/>
+    <import_document id="12" source_type="Документ.ПеремещениеТоваров"                      doc_type_id="8"/>
+    <import_document id="13" source_type="Документ.СчетФактураВыданный"                     doc_type_id="8"/>
+    <import_document id="14" source_type="Документ.СчетФактураПолученный"                   doc_type_id="8"/>
+    <import_document id="15" source_type="Документ.КорректировочныйСчетФактураВыданный"     doc_type_id="8"/>
+    <import_document id="16" source_type="Документ.КорректировочныйСчетФактураПолученный"   doc_type_id="8"/>
+    <import_document id="17" source_type="Документ.РегламентнаяОперация"                    doc_type_id="8"/>
+    <import_document id="18" source_type="Документ.ПринятиеКУчетуОС"                       doc_type_id="13"/>
+    <import_document id="19" source_type="Документ.НачислениеЗарплаты"                      doc_type_id="10"/>
   </import_documents>
   <print_forms>
     <print_form id="1" report="" doc_type_id="2" name="Товарная накладная ТОРГ-12" template="goods-delivery-note.html" basis="Постановление Госкомстата России от 25.12.1998 № 132" />

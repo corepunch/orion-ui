@@ -21,6 +21,7 @@
 #include <orion/user/money.h>
 #include <stdalign.h>
 #include <stddef.h>
+#include <time.h>
 
 #define STAGE_FORMAT "orion-1cd-stage-v1"
 
@@ -357,11 +358,15 @@ static bool fill_item(stage_t *st, xmlNodePtr rec, void *out, const char **why) 
 
 static bool fill_employee(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
   db_employee_t *e = out;
-  char name[512];
+  char name[512], date[32];
   text_field(e->name, sizeof(e->name), rec, "ФИО");
   if (!e->name[0]) { attr(rec, "description", name, sizeof(name)); ledger_copy_text(e->name, sizeof(e->name), name); }
   text_field(e->tax_id, sizeof(e->tax_id), rec, "ИНН");
   text_field(e->position, sizeof(e->position), rec, "Должность");
+  v_text(rec, "ДатаРождения", date, sizeof(date));
+  if (strlen(date) >= 10) { date[10] = '\0'; ledger_copy_text(e->birth_date, sizeof(e->birth_date), date); }
+  v_text(rec, "ДатаПриема", date, sizeof(date));
+  if (strlen(date) >= 10) { date[10] = '\0'; ledger_copy_text(e->hired, sizeof(e->hired), date); }
   return true;
 }
 
@@ -383,6 +388,7 @@ static bool fill_contract(stage_t *st, xmlNodePtr rec, void *out, const char **w
   db_import_source_t *cp = source_find(st, owner);
   if (!cp) { *why = ui_tr("its counterparty was not imported"); return false; }
   c->counterparty_id = cp->record_id;
+  c->organization_id = ref_id(st, rec, "Организация");
   c->currency_id = ref_id(st, rec, "ВалютаВзаиморасчетов");
   attr(rec, "description", name, sizeof(name));
   ledger_copy_text(c->name, sizeof(c->name), name);
@@ -393,6 +399,7 @@ static bool fill_contract(stage_t *st, xmlNodePtr rec, void *out, const char **w
   if (strlen(date) >= 10) { date[10] = '\0'; ledger_copy_text(c->valid_until, sizeof(c->valid_until), date); }
   v_enum(rec, "ВидДоговора", kind, sizeof(kind));
   ledger_copy_text(c->kind, sizeof(c->kind), !strcmp(kind, "СПоставщиком") ? "supplier" : !strcmp(kind, "СПокупателем") ? "customer" : "other");
+  text_field(c->subject, sizeof(c->subject), rec, "Предмет");
   return true;
 }
 
@@ -418,12 +425,28 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
   return true;
 }
 
+static const char *asset_depreciation_method(const char *enum_name) {
+  if (!strcmp(enum_name, "ЛинейныйСпособ"))                              return "linear";
+  if (!strcmp(enum_name, "СпособУменьшаемогоОстатка"))                   return "declining";
+  if (!strcmp(enum_name, "СпособСуммыЧиселЛет"))                         return "sum_of_years";
+  if (!strcmp(enum_name, "СпособСписанияПропорциональноОбъемуПродукции")) return "output";
+  return "";
+}
+
 static bool fill_asset(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
   db_asset_t *a = out;
-  char name[512];
+  char name[512], date[32], buf[64], method[128];
   attr(rec, "description", name, sizeof(name));
   ledger_copy_text(a->name, sizeof(a->name), name);
   text_field(a->inventory, sizeof(a->inventory), rec, "ИнвентарныйНомер");
+  v_text(rec, "ДатаВводаВЭксплуатацию", date, sizeof(date));
+  if (strlen(date) >= 10) { date[10] = '\0'; ledger_copy_text(a->commissioned, sizeof(a->commissioned), date); }
+  v_text(rec, "СрокПолезногоИспользования", buf, sizeof(buf));
+  if (buf[0]) a->life = atoi(buf);
+  v_text(rec, "ПервоначальнаяСтоимость", buf, sizeof(buf));
+  if (buf[0]) a->cost = strtod(buf, NULL);
+  v_enum(rec, "СпособНачисленияАмортизации", method, sizeof(method));
+  ledger_copy_text(a->depreciation_method, sizeof(a->depreciation_method), asset_depreciation_method(method));
   return true;
 }
 
@@ -631,18 +654,25 @@ static bool index_movements(stage_t *st, xmlNodePtr root) {
     for (xmlNodePtr m = reg->children; m; m = m->next) count += is_el(m, "movement");
   st->movements = calloc((size_t)count + 1, sizeof(*st->movements));
   if (!st->movements) return false;
-  for (xmlNodePtr reg = registers ? registers->children : NULL; reg; reg = reg->next)
+  for (xmlNodePtr reg = registers ? registers->children : NULL; reg; reg = reg->next) {
+    char reg_type[96];
+    if (!is_el(reg, "register")) continue;
+    attr(reg, "type", reg_type, sizeof(reg_type));
+    bool accounting = !strncmp(reg_type, "РегистрБухгалтерии", strlen("РегистрБухгалтерии"));
     for (xmlNodePtr m = reg->children; m; m = m->next) {
-      char recorder[40], active[8];
+      char recorder[40];
       if (!is_el(m, "movement")) continue;
-      attr(m, "active", active, sizeof(active));
-      if (!strcmp(active, "false")) continue;  // 1C ignores inactive records
       attr(m, "recorder", recorder, sizeof(recorder));
+      if (!accounting) {
+        tally(st, reg_type, 0, 0, 1);
+        continue;
+      }
       unsigned b = guid_bucket(recorder);
       st->movements[st->movement_count].node = m;
       st->movements[st->movement_count].next = st->buckets[b];
       st->buckets[b] = ++st->movement_count;
     }
+  }
   return true;
 }
 
@@ -772,12 +802,23 @@ static bool import_movement(stage_t *st, int doc_id, xmlNodePtr mv) {
   if (cur->has_currency_amount) e.currency_amount = cur->currency_amount;
   e.debit_tax_set = d.tax_set; e.debit_tax_minor = d.tax; e.debit_permanent_minor = d.permanent; e.debit_temporary_minor = d.temporary;
   e.credit_tax_set = c.tax_set; e.credit_tax_minor = c.tax; e.credit_permanent_minor = c.permanent; e.credit_temporary_minor = c.temporary;
+  char line_attr[8], active_attr[8];
+  attr(mv, "line", line_attr, sizeof(line_attr)); attr(mv, "active", active_attr, sizeof(active_attr));
+  e.source_line = line_attr[0] ? atoi(line_attr) : 0;
+  e.active = strcmp(active_attr, "false") != 0;
+  e.debit_currency_id  = d.currency; e.credit_currency_id  = c.currency;
+  e.debit_currency_amount  = d.has_currency_amount ? d.currency_amount : 0;
+  e.credit_currency_amount = c.has_currency_amount ? c.currency_amount : 0;
   return send_db_message(st->ib, dbInsert, TABLE_ENTRIES, &e) != 0;
 }
 
 static int document_type_for(stage_t *st, const char *source_type) {
   db_import_document_t *map = (db_import_document_t *)find_by_text(st->cfg, TABLE_IMPORT_DOCUMENTS, "source_type", source_type);
   db_doc_type_t *type = map ? (db_doc_type_t *)send_db_message(st->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)map->doc_type_id) : NULL;
+  if (type && strcmp(type->form, "operation") && strcmp(type->form, "assets") && strcmp(type->form, "payroll")) {
+    note(st, "%s: mapped to a type that is not an operation; the general operation is used", source_type, "");
+    type = NULL;
+  }
   if (!type) type = (db_doc_type_t *)find_by_text(st->cfg, TABLE_DOC_TYPES, "code", "operation");
   return type ? type->id : 0;
 }
@@ -842,6 +883,58 @@ static bool import_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *ty
   return true;
 }
 
+static bool import_asset_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *type) {
+  for (xmlNodePtr t = doc->children; t; t = t->next) {
+    if (!is_el(t, "table")) continue;
+    bool assets = false;
+    for (xmlNodePtr row = t->children; row && !assets; row = row->next)
+      assets = is_el(row, "row") && v_node(row, "ОсновноеСредство");
+    if (!assets) continue;
+    for (xmlNodePtr row = t->children; row; row = row->next) {
+      if (!is_el(row, "row")) continue;
+      int asset_id = ref_id(st, row, "ОсновноеСредство");
+      if (!asset_id) { note(st, "%s: an asset line names an asset that was not imported", type, ""); continue; }
+      db_asset_line_t l = {0};
+      send_db_message(st->ib, dbInitRecord, TABLE_ASSET_LINES, &l);
+      l.document_id = doc_id;
+      l.asset_id = asset_id;
+      char buf[64];
+      v_text(row, "ПервоначальнаяСтоимость", buf, sizeof(buf));
+      if (!buf[0]) v_text(row, "Сумма", buf, sizeof(buf));
+      if (buf[0]) l.amount = strtod(buf, NULL);
+      if (!send_db_message(st->ib, dbInsert, TABLE_ASSET_LINES, &l)) return false;
+    }
+  }
+  return true;
+}
+
+static bool import_payroll_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *type) {
+  for (xmlNodePtr t = doc->children; t; t = t->next) {
+    if (!is_el(t, "table")) continue;
+    bool employees = false;
+    for (xmlNodePtr row = t->children; row && !employees; row = row->next)
+      employees = is_el(row, "row") && v_node(row, "ФизическоеЛицо");
+    if (!employees) continue;
+    for (xmlNodePtr row = t->children; row; row = row->next) {
+      if (!is_el(row, "row")) continue;
+      int emp_id = ref_id(st, row, "ФизическоеЛицо");
+      if (!emp_id) { note(st, "%s: a payroll line names an employee that was not imported", type, ""); continue; }
+      db_payroll_line_t l = {0};
+      send_db_message(st->ib, dbInitRecord, TABLE_PAYROLL_LINES, &l);
+      l.document_id = doc_id;
+      l.employee_id = emp_id;
+      char buf[64];
+      v_text(row, "Начислено", buf, sizeof(buf));     if (buf[0]) l.amount = strtod(buf, NULL);
+      v_text(row, "НДФЛ", buf, sizeof(buf));          if (buf[0]) l.withheld = strtod(buf, NULL);
+      v_text(row, "Взносы", buf, sizeof(buf));        if (buf[0]) l.contributions = strtod(buf, NULL);
+      v_text(row, "КВыплате", buf, sizeof(buf));      if (buf[0]) l.net = strtod(buf, NULL);
+      if (!l.net && l.amount > 0) l.net = l.amount - l.withheld;
+      if (!send_db_message(st->ib, dbInsert, TABLE_PAYROLL_LINES, &l)) return false;
+    }
+  }
+  return true;
+}
+
 // The lines and entries a re-import replaces: deleting the document cascades
 // them away, but a rewrite keeps the document itself and its identity.
 static bool delete_document_body(database_t *ib, int doc_id) {
@@ -850,6 +943,16 @@ static bool delete_document_body(database_t *ib, int doc_id) {
   result_node_t *lines = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOC_LINES, field), (void *)(intptr_t)doc_id);
   EACH_RECORD(db_doc_line_t, l, lines) if (!send_db_message(ib, dbDelete, TABLE_DOC_LINES, (void *)(intptr_t)l->id)) { ok = false; break; }
   free_result_list(lines);
+  if (!ok) return false;
+  field = ledger_field(ib, TABLE_ASSET_LINES, "document_id");
+  result_node_t *alines = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_ASSET_LINES, field), (void *)(intptr_t)doc_id);
+  EACH_RECORD(db_asset_line_t, al, alines) if (!send_db_message(ib, dbDelete, TABLE_ASSET_LINES, (void *)(intptr_t)al->id)) { ok = false; break; }
+  free_result_list(alines);
+  if (!ok) return false;
+  field = ledger_field(ib, TABLE_PAYROLL_LINES, "document_id");
+  result_node_t *plines = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_PAYROLL_LINES, field), (void *)(intptr_t)doc_id);
+  EACH_RECORD(db_payroll_line_t, pl, plines) if (!send_db_message(ib, dbDelete, TABLE_PAYROLL_LINES, (void *)(intptr_t)pl->id)) { ok = false; break; }
+  free_result_list(plines);
   if (!ok) return false;
   field = ledger_field(ib, TABLE_ENTRIES, "document_id");
   result_node_t *entries = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, field), (void *)(intptr_t)doc_id);
@@ -900,12 +1003,7 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
     moves += !strcmp(recorder, guid);
   }
   bool is_posted = !strcmp(posted, "true");
-  if (!is_posted && !moves) {
-    note(st, "%s: documents not posted in 1C and without movements are not imported", type, "");
-    tally(st, type, 0, 0, 1);
-    return;
-  }
-  if (!is_posted) note(st, "%s: not posted in 1C but with register movements; imported posted", type, "");
+  if (!is_posted && moves) note(st, "%s: not posted in 1C but with register movements; imported posted", type, "");
   int type_id = document_type_for(st, type);
   if (!type_id) { snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("The configuration has no operation document type.")); return; }
   if (old && document_is_protected(st, old, type, number, date)) { tally(st, type, 0, 0, 1); return; }
@@ -914,6 +1012,8 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   else send_db_message(st->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
   d.doc_type_id = type_id;
   ledger_copy_text(d.number, sizeof(d.number), number);
+  if (strlen(date) >= 19) ledger_copy_text(d.time, sizeof(d.time), date + 11);
+  else d.time[0] = '\0';
   ledger_copy_text(d.date, sizeof(d.date), date[0] ? (date[10] = '\0', date) : "");
   d.counterparty_id = ref_id(st, doc, "Контрагент");
   d.contract_id = ref_id(st, doc, "ДоговорКонтрагента");
@@ -924,6 +1024,12 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   char text[512];
   v_text(doc, "Комментарий", text, sizeof(text));
   ledger_copy_text(d.comment, sizeof(d.comment), text);
+  v_text(doc, "НазначениеПлатежа", text, sizeof(text));
+  if (text[0]) ledger_copy_text(d.payment_reference, sizeof(d.payment_reference), text);
+  v_text(doc, "Основание", text, sizeof(text));
+  if (text[0] && !d.comment[0]) ledger_copy_text(d.comment, sizeof(d.comment), text);
+  v_text(doc, "Приложение", text, sizeof(text));
+  if (text[0] && !d.legal_note[0]) ledger_copy_text(d.legal_note, sizeof(d.legal_note), text);
   snprintf(key, sizeof(key), "1cd:%s", guid);
   ledger_copy_text(d.import_source, sizeof(d.import_source), key);
   int doc_id = 0;
@@ -955,13 +1061,21 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   v_text(doc, "СуммаВключаетНДС", included, sizeof(included));
   if (!import_lines(st, doc_id, doc, type, d.date, !strcmp(included, "true")))
     snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store a line of the imported document %s."), number);
+  const db_doc_type_t *doc_type = st->out->error[0] ? NULL :
+    (const db_doc_type_t *)send_db_message(st->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)type_id);
+  if (!st->out->error[0] && doc_type && !strcmp(doc_type->form, "assets") &&
+      !import_asset_lines(st, doc_id, doc, type))
+    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store a line of the imported document %s."), number);
+  if (!st->out->error[0] && doc_type && !strcmp(doc_type->form, "payroll") &&
+      !import_payroll_lines(st, doc_id, doc, type))
+    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store a line of the imported document %s."), number);
   for (int i = first; i && !st->out->error[0]; i = st->movements[i - 1].next) {
     char recorder[40];
     attr(st->movements[i - 1].node, "recorder", recorder, sizeof(recorder));
     if (!strcmp(recorder, guid) && !import_movement(st, doc_id, st->movements[i - 1].node))
       snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an entry of the imported document %s."), number);
   }
-  if (!st->out->error[0]) {
+  if (!st->out->error[0] && (is_posted || moves)) {
     db_document_t *posted_doc = (db_document_t *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)doc_id);
     if (posted_doc) { posted_doc->posted = true; send_db_message(st->ib, dbUpdate, TABLE_DOCUMENTS, posted_doc); }
   }
@@ -997,6 +1111,46 @@ static bool unf_catalog_stage(xmlNodePtr root) {
     }
   }
   return true;
+}
+
+// ── Exchange rates ───────────────────────────────────────────────────────────
+static void import_rates(stage_t *st, xmlNodePtr root) {
+  xmlNodePtr rates = child(root, "rates");
+  for (xmlNodePtr r = rates ? rates->children : NULL; r && !st->out->error[0]; r = r->next) {
+    if (!is_el(r, "rate")) continue;
+    char currency_guid[40], period[40], text[64];
+    attr(r, "currency", currency_guid, sizeof(currency_guid));
+    attr(r, "period", period, sizeof(period));
+    if (!currency_guid[0] || !period[0]) continue;
+    db_import_source_t *cs = source_find(st, currency_guid);
+    if (!cs || !cs->record_id) continue;
+    v_text(r, "Курс", text, sizeof(text));
+    double rate_val = strtod(text, NULL);
+    v_text(r, "Кратность", text, sizeof(text));
+    int mult = text[0] ? atoi(text) : 1;
+    if (!rate_val || mult <= 0) continue;
+    char date[12];
+    ledger_copy_text(date, sizeof(date), period);
+    if (strlen(date) > 10) date[10] = '\0';
+    int fld = ledger_field(st->ib, TABLE_RATES, "currency_id");
+    result_node_t *existing = (result_node_t *)send_db_message(st->ib, dbFetch, MAKEDWORD(TABLE_RATES, fld), (void *)(intptr_t)cs->record_id);
+    db_rate_t *found = NULL;
+    for (result_node_t *n = existing; n && !found; n = n->next) { db_rate_t *rv = *(db_rate_t **)n->data; if (!strcmp(rv->date, date)) found = rv; }
+    if (found) {
+      found->rate = rate_val / mult;
+      if (!send_db_message(st->ib, dbUpdate, TABLE_RATES, found))
+        snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported exchange rate."));
+      else tally(st, "РегистрСведений.КурсыВалют", 0, 1, 0);
+    } else {
+      db_rate_t rate = { .currency_id = cs->record_id, .rate = rate_val / mult };
+      ledger_copy_text(rate.date, sizeof(rate.date), date);
+      const int *added = (const int *)send_db_message(st->ib, dbInsert, TABLE_RATES, &rate);
+      if (!added)
+        snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported exchange rate."));
+      else tally(st, "РегистрСведений.КурсыВалют", 1, 0, 0);
+    }
+    free_result_list(existing);
+  }
 }
 
 // ── Entry point ──────────────────────────────────────────────────────────────
@@ -1045,9 +1199,25 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
     }
   if (!out->error[0]) import_analytic_records(&st);
   if (!out->error[0]) report_unimported(&st);
+  if (!out->error[0]) import_rates(&st, root);
   st.documents = child(root, "documents");
   if (!out->error[0] && !index_movements(&st, root)) snprintf(out->error, sizeof(out->error), "%s", ui_tr("Out of memory."));
   for (xmlNodePtr d = st.documents ? st.documents->children : NULL; d && !out->error[0]; d = d->next) if (is_el(d, "document")) import_document(&st, d);
+  if (!out->error[0]) {
+    xmlNodePtr hdr = child(root, "header");
+    db_import_snapshot_t snap = {0};
+    attr(child(hdr, "source"), "file", snap.source_file, sizeof(snap.source_file));
+    attr(child(hdr, "source"), "size", snap.source_size, sizeof(snap.source_size));
+    attr(child(hdr, "source"), "sha256", snap.source_sha256, sizeof(snap.source_sha256));
+    attr(child(hdr, "source"), "format-version", snap.format_version, sizeof(snap.format_version));
+    attr(child(hdr, "source"), "locale", snap.locale, sizeof(snap.locale));
+    attr(child(hdr, "configuration"), "name", snap.config_name, sizeof(snap.config_name));
+    attr(child(hdr, "configuration"), "version", snap.config_version, sizeof(snap.config_version));
+    time_t now = time(NULL); struct tm *today = localtime(&now);
+    if (today) strftime(snap.imported_date, sizeof(snap.imported_date), "%Y-%m-%d", today);
+    if (!send_db_message(ib, dbInsert, TABLE_IMPORT_SNAPSHOTS, &snap))
+      snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot store the import snapshot."));
+  }
   if (!out->error[0] && !send_db_message(ib, dbCommitChanges, 0, NULL))
     snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot commit the import transaction."));
   if (out->error[0]) {
@@ -1073,6 +1243,25 @@ bool ledger_file_is_stage(const char *path) {
   head[n] = '\0';
   const char *root = strstr(head, "<stage");
   return root && strstr(root, "format=\"" STAGE_FORMAT "\"");
+}
+
+bool ledger_stage_header(const char *path, ledger_stage_header_t *out) {
+  memset(out, 0, sizeof(*out));
+  xmlDocPtr xml = path ? xmlReadFile(path, NULL, XML_PARSE_NONET | XML_PARSE_NOBLANKS | XML_PARSE_HUGE) : NULL;
+  xmlNodePtr root = xml ? xmlDocGetRootElement(xml) : NULL;
+  char format[64];
+  attr(root, "format", format, sizeof(format));
+  if (!is_el(root, "stage") || strcmp(format, STAGE_FORMAT)) { if (xml) xmlFreeDoc(xml); return false; }
+  xmlNodePtr hdr = child(root, "header");
+  attr(child(hdr, "source"), "file",           out->source_file,    sizeof(out->source_file));
+  attr(child(hdr, "source"), "size",           out->source_size,    sizeof(out->source_size));
+  attr(child(hdr, "source"), "sha256",         out->source_sha256,  sizeof(out->source_sha256));
+  attr(child(hdr, "source"), "format-version", out->format_version, sizeof(out->format_version));
+  attr(child(hdr, "source"), "locale",         out->locale,         sizeof(out->locale));
+  attr(child(hdr, "configuration"), "name",    out->config_name,    sizeof(out->config_name));
+  attr(child(hdr, "configuration"), "version", out->config_version, sizeof(out->config_version));
+  xmlFreeDoc(xml);
+  return true;
 }
 
 // The totals, a line per 1C type, then every held-back or unmapped item.

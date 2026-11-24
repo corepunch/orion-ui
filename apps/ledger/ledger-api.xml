@@ -20,7 +20,7 @@
     <description>Find an account in the active configuration by its code.</description><param name="code" type="string">Country-specific account code.</param><returns type="table|nil">Account copy.</returns>
   </function>
   <function name="entry" impl="l_entry">
-    <description>Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Fields: debit, credit (code or ID), amount, quantity, content, counterparty, item, employee, asset, currency, currency_amount.</description><param name="entry" type="table">Entry fields.</param><returns type="nil">No values.</returns>
+    <description>Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Subject fields (auto-derive analytics from the account's kind): counterparty, item, employee, asset, warehouse, contract. Per-side slot-2/3 explicit overrides (bypass auto-derive when non-zero): debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3. Other fields: debit, credit (code or ID), amount, quantity, content, currency, currency_amount.</description><param name="entry" type="table">Entry fields.</param><returns type="nil">No values.</returns>
   </function>
   <function name="turnover" impl="l_turnover">
     <description>Read cumulative turnovers before the current document plus its entries so far. Only available inside posting context.</description><param name="account" type="string|integer"/><param name="subconto" type="integer" optional="true">Analytics ID; omitted means all.</param><param name="currency" type="integer" optional="true">Currency ID; omitted means all.</param><returns type="table">dr, cr, dr_qty, cr_qty, dr_cur, cr_cur.</returns>

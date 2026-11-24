@@ -170,8 +170,18 @@ static int l_entry(lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_getfield(L, 1, "debit");  int debit = account_id(L, -1);  lua_pop(L, 1);
   lua_getfield(L, 1, "credit"); int credit = account_id(L, -1); lua_pop(L, 1);
-  ledger_subjects_t s = { (int)opt_number(L, 1, "counterparty", g_post->doc->counterparty_id), (int)opt_number(L, 1, "item", 0),
-                          (int)opt_number(L, 1, "employee", 0), (int)opt_number(L, 1, "asset", 0) };
+  ledger_subjects_t s = {
+    .counterparty    = (int)opt_number(L, 1, "counterparty",    g_post->doc->counterparty_id),
+    .item            = (int)opt_number(L, 1, "item",            0),
+    .employee        = (int)opt_number(L, 1, "employee",        0),
+    .asset           = (int)opt_number(L, 1, "asset",           0),
+    .warehouse       = (int)opt_number(L, 1, "warehouse",       0),
+    .contract        = (int)opt_number(L, 1, "contract",        0),
+    .debit_subconto2 = (int)opt_number(L, 1, "debit_subconto2", 0),
+    .debit_subconto3 = (int)opt_number(L, 1, "debit_subconto3", 0),
+    .credit_subconto2= (int)opt_number(L, 1, "credit_subconto2",0),
+    .credit_subconto3= (int)opt_number(L, 1, "credit_subconto3",0),
+  };
   lua_getfield(L, 1, "content");
   const char *content = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
   ledger_add_entry(g_post, debit, credit, opt_number(L, 1, "amount", 0), &s, opt_number(L, 1, "quantity", 0),

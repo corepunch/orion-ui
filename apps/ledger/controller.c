@@ -596,8 +596,19 @@ static bool save_stage_report(const ledger_stage_import_t *r, char *path, size_t
   return ok;
 }
 
-// A 1CD staging file (inspect_1cd.py export-stage): accounts, catalogs, documents and postings.
+// A 1CD staging file (inspect_1cd.py export-stage): preview, then import.
 static void import_stage_file(const char *path) {
+  // Preview: show source metadata before writing to the infobase.
+  ledger_stage_header_t hdr;
+  if (ledger_stage_header(path, &hdr)) {
+    char preview[1024];
+    char sha_short[14] = "";
+    if (hdr.source_sha256[0]) snprintf(sha_short, sizeof(sha_short), "%.12s…", hdr.source_sha256);
+    snprintf(preview, sizeof(preview), ui_tr("Import staging file from 1C\n\nConfiguration: %s %s\nSource: %s\nSHA-256: %s\n\nImport into the infobase?"),
+      hdr.config_name[0] ? hdr.config_name : ui_tr("(unknown)"), hdr.config_version,
+      hdr.source_file[0] ? hdr.source_file : path, sha_short);
+    if (message_box(g_ledger->main_win, preview, ui_tr("Import from 1C"), MB_YESNO) != IDYES) return;
+  }
   ledger_stage_import_t *r = calloc(1, sizeof(*r));
   char text[1024], report[LEDGER_PATH_MAX + 16];
   if (!r) return;
@@ -614,13 +625,56 @@ static void import_stage_file(const char *path) {
   free(r);
 }
 
+// Convert a 1CD file to a staging XML using inspect_1cd.py export-stage.
+// Returns true and fills stage_path on success; shows an error on failure.
+static bool convert_1cd_to_stage(const char *path_1cd, char *stage_path, size_t stage_sz) {
+  char script[LEDGER_PATH_MAX * 2];
+  snprintf(script, sizeof(script), "%s/../tools/inspect_1cd.py", g_ledger->share_dir);
+  if (!axPathExists(script)) snprintf(script, sizeof(script), "%s/tools/inspect_1cd.py", g_ledger->share_dir);
+  if (!axPathExists(script)) {
+    message_box(g_ledger->main_win, ui_tr("The 1CD conversion tool (inspect_1cd.py) could not be found."), ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  snprintf(stage_path, stage_sz, "%s/import-1cd-stage.xml", g_ledger->data_dir);
+  char cmd[LEDGER_PATH_MAX * 4], error_text[2048] = "";
+  snprintf(cmd, sizeof(cmd), "python3 \"%s\" \"%s\" export-stage --output \"%s\" --overwrite 2>&1",
+    script, path_1cd, stage_path);
+  FILE *fp = popen(cmd, "r");
+  if (!fp) {
+    message_box(g_ledger->main_win, ui_tr("The 1CD conversion could not be started."), ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  size_t n = fread(error_text, 1, sizeof(error_text) - 1, fp);
+  error_text[n] = '\0';
+  int rc = pclose(fp);
+  if (rc != 0) {
+    char msg[2560];
+    snprintf(msg, sizeof(msg), "%s%s%s", ui_tr("The 1CD conversion failed."), error_text[0] ? "\n\n" : "", error_text);
+    message_box(g_ledger->main_win, msg, ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  return true;
+}
+
 // Catalogs and opening balances from a 1C:Enterprise 8 exchange file, with a
-// summary of what was added, found, and left out; or a 1CD staging file.
+// summary of what was added, found, and left out; a 1CD staging file; or a
+// raw 1CD database converted to staging by inspect_1cd.py export-stage.
 static void import_from_1c(void) {
   char path[LEDGER_PATH_MAX] = "", money_dr[32], money_cr[32], text[1024];
   openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win, .lpstrFile = path, .nMaxFile = sizeof(path),
-                         .lpstrFilter = "1C files (*.xml)\0*.xml\0All Files\0*.*\0", .Flags = OFN_FILEMUSTEXIST };
+                         .lpstrFilter = "1C files (*.xml, *.1CD)\0*.xml;*.1cd\0All Files\0*.*\0", .Flags = OFN_FILEMUSTEXIST };
   if (!get_open_filename(&ofn)) return;
+  // .1CD database: convert to staging XML first, then import the XML.
+  size_t plen = strlen(path);
+  bool is_1cd = plen > 4 && path[plen-4] == '.' &&
+    (path[plen-3] == '1') && (path[plen-2] == 'C' || path[plen-2] == 'c') &&
+    (path[plen-1] == 'D' || path[plen-1] == 'd');
+  if (is_1cd) {
+    char stage_path[LEDGER_PATH_MAX];
+    if (!convert_1cd_to_stage(path, stage_path, sizeof(stage_path))) return;
+    import_stage_file(stage_path);
+    return;
+  }
   if (ledger_file_is_stage(path)) { import_stage_file(path); return; }
   ledger_import_t r;
   if (!ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, path, &r)) {
