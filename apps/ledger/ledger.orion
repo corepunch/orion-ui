@@ -632,6 +632,7 @@
         <field name="vat_verified_on" type="date" />
         <field name="vat_verification_reference" type="string" length="256" />
         <field name="name" type="string" length="160" />
+        <field name="full_name" type="string" length="256" />
         <field name="tax_id" type="string" length="16" />
         <field name="kpp" type="string" length="16" />
         <field name="address" type="string" length="256" />
@@ -645,6 +646,7 @@
         <field name="unit_id" type="integer" relation="cfg.units.id" />
         <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
         <field name="sku" type="string" length="16" />
+        <field name="kind" type="string" length="16" />
         <field name="name" type="string" length="160" />
         <field name="price" type="double" />
       </table>
@@ -1355,7 +1357,7 @@
             <Column field="address" title="Address" width="0" />
           </TableView>
           <SplitView name="counterparty_detail_split" orientation="horizontal" split-ratio="0.5" flags="flexspace">
-            <TableView name="contracts" text="Contracts" source="ib.contracts" form="contract" flags="nofill,vscroll,flexspace">
+            <TableView name="contracts" text="Contracts" source="ib.contracts" form="contract" master="counterparties" master-field="counterparty_id" flags="nofill,vscroll,flexspace">
               <Column field="date" title="Date" width="84" />
               <Column field="number" title="Number" width="72" />
               <Column field="name" title="Name" width="0" min-width="100" />

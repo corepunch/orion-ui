@@ -460,6 +460,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `vat_verified_on` | `date` |  |
 | `vat_verification_reference` | `string` |  |
 | `name` | `string` |  |
+| `full_name` | `string` |  |
 | `tax_id` | `string` |  |
 | `kpp` | `string` |  |
 | `address` | `string` |  |
@@ -476,6 +477,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `unit_id` | `integer` | cfg.units.id |
 | `vat_rate_id` | `integer` | cfg.vat_rates.id |
 | `sku` | `string` |  |
+| `kind` | `string` |  |
 | `name` | `string` |  |
 | `price` | `double` |  |
 

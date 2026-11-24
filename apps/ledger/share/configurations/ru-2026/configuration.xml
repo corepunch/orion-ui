@@ -172,6 +172,16 @@
     <balance_rule id="9" account_id="22" currency_account_id="0" document="ОстаткиСобственныхТМЦ" credit="0"/>
     <balance_rule id="10" account_id="42" currency_account_id="0" document="ОстаткиРасчетовПоКредитамЗаймам" credit="1"/>
   </balance_rules>
+  <import_documents>
+    <import_document id="1" source_type="Документ.ПоступлениеТоваровУслуг"      doc_type_id="1"/>
+    <import_document id="2" source_type="Документ.РеализацияТоваровУслуг"       doc_type_id="2"/>
+    <import_document id="3" source_type="Документ.ПоступлениеУслуг"             doc_type_id="3"/>
+    <import_document id="4" source_type="Документ.ПриходныйКассовыйОрдер"       doc_type_id="4"/>
+    <import_document id="5" source_type="Документ.РасходныйКассовыйОрдер"       doc_type_id="5"/>
+    <import_document id="6" source_type="Документ.ПлатежноеПоручениеИсходящее"   doc_type_id="6"/>
+    <import_document id="7" source_type="Документ.ПоступлениеНаРасчетныйСчет"    doc_type_id="7"/>
+    <import_document id="8" source_type="Документ.СписаниеСРасчетногоСчета"      doc_type_id="6"/>
+  </import_documents>
   <print_forms>
     <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="vat-invoice.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 23.01.2026 № 26); ФНС от 26.12.2025 № СД-4-3/11730@"/>
     <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="universal-transfer-document.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>

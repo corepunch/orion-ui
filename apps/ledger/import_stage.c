@@ -323,6 +323,7 @@ static bool fill_counterparty(stage_t *st, xmlNodePtr rec, void *out, const char
   ledger_copy_text(c->name, sizeof(c->name), name);
   text_field(c->tax_id, sizeof(c->tax_id), rec, "ИНН");
   text_field(c->kpp, sizeof(c->kpp), rec, "КПП");
+  text_field(c->full_name, sizeof(c->full_name), rec, "НаименованиеПолное");
   text_field(c->address, sizeof(c->address), rec, "ЮридическийАдрес");
   if (!c->address[0]) text_field(c->address, sizeof(c->address), rec, "ФактическийАдрес");
   if (!c->address[0]) text_field(c->address, sizeof(c->address), rec, "Адрес");
@@ -336,6 +337,10 @@ static bool fill_item(stage_t *st, xmlNodePtr rec, void *out, const char **why) 
   attr(rec, "description", name, sizeof(name));
   ledger_copy_text(it->name, sizeof(it->name), name);
   text_field(it->sku, sizeof(it->sku), rec, "Артикул");
+  char kind[64];
+  v_enum(rec, "ВидНоменклатуры", kind, sizeof(kind));
+  if (!kind[0]) v_text(rec, "ВидНоменклатуры", kind, sizeof(kind));
+  ledger_copy_text(it->kind, sizeof(it->kind), !strcmp(kind, "Товар") ? "goods" : !strcmp(kind, "Услуга") || !strcmp(kind, "Работа") ? "service" : "");
   v_ref(rec, "ЕдиницаИзмерения", guid, sizeof(guid));
   xmlNodePtr unit = record_by_guid(st, guid);
   if (unit) {
@@ -356,6 +361,7 @@ static bool fill_employee(stage_t *st, xmlNodePtr rec, void *out, const char **w
   text_field(e->name, sizeof(e->name), rec, "ФИО");
   if (!e->name[0]) { attr(rec, "description", name, sizeof(name)); ledger_copy_text(e->name, sizeof(e->name), name); }
   text_field(e->tax_id, sizeof(e->tax_id), rec, "ИНН");
+  text_field(e->position, sizeof(e->position), rec, "Должность");
   return true;
 }
 
@@ -366,6 +372,7 @@ static bool fill_warehouse(stage_t *st, xmlNodePtr rec, void *out, const char **
   ledger_copy_text(w->name, sizeof(w->name), name);
   v_enum(rec, "ТипСклада", type, sizeof(type));
   ledger_copy_text(w->kind, sizeof(w->kind), !strcmp(type, "ОптовыйСклад") ? "wholesale" : !strcmp(type, "РозничныйМагазин") ? "retail" : "");
+  text_field(w->address, sizeof(w->address), rec, "Адрес");
   return true;
 }
 
@@ -534,6 +541,16 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
   }
   if (key) {
     *(int *)((char *)buf + t->meta[0].offset) = key;
+    const void *existing = (const void *)send_db_message(st->ib, dbFind, MAKEDWORD(cat->table_id, 0), (void *)(intptr_t)key);
+    if (existing) {
+      for (int i = 0; i < t->field_count; i++) {
+        if (t->meta[i].type != DB_TYPE_STRING && t->meta[i].type != DB_TYPE_DATE) continue;
+        const char *src = (const char *)buf + t->meta[i].offset;
+        const char *old = (const char *)existing + t->meta[i].offset;
+        int sz = t->meta[i].length ? t->meta[i].length : 11;
+        if (!src[0] && old[0]) memcpy((char *)buf + t->meta[i].offset, old, sz);
+      }
+    }
     if (!send_db_message(st->ib, dbUpdate, (uint32_t)cat->table_id, buf)) goto failed;
     if (!seen && !source_remember(st, cat->type, guid, cat->table, key)) goto failed;
     tally(st, cat->type, 0, 1, 0);
@@ -761,10 +778,6 @@ static bool import_movement(stage_t *st, int doc_id, xmlNodePtr mv) {
 static int document_type_for(stage_t *st, const char *source_type) {
   db_import_document_t *map = (db_import_document_t *)find_by_text(st->cfg, TABLE_IMPORT_DOCUMENTS, "source_type", source_type);
   db_doc_type_t *type = map ? (db_doc_type_t *)send_db_message(st->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)map->doc_type_id) : NULL;
-  if (type && strcmp(type->form, "operation")) {
-    note(st, "%s: mapped to a type that is not an operation; the general operation is used", source_type, "");
-    type = NULL;
-  }
   if (!type) type = (db_doc_type_t *)find_by_text(st->cfg, TABLE_DOC_TYPES, "code", "operation");
   return type ? type->id : 0;
 }
@@ -948,8 +961,10 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
     if (!strcmp(recorder, guid) && !import_movement(st, doc_id, st->movements[i - 1].node))
       snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an entry of the imported document %s."), number);
   }
-  if (!st->out->error[0] && !ledger_post(st->ib, st->cfg, doc_id))
-    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot post the imported document %s."), number);
+  if (!st->out->error[0]) {
+    db_document_t *posted_doc = (db_document_t *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)doc_id);
+    if (posted_doc) { posted_doc->posted = true; send_db_message(st->ib, dbUpdate, TABLE_DOCUMENTS, posted_doc); }
+  }
   if (!st->out->error[0] && !source_remember(st, type, guid, "documents", doc_id))
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot record the source of an imported record."));
   if (!st->out->error[0]) { tally(st, type, old ? 0 : 1, old ? 1 : 0, 0); st->out->entries += moves; }
