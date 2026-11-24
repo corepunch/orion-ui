@@ -2188,8 +2188,14 @@ static void test_import_stage_catalogs(void) {
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
   db_counterparty_t *cp = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7700000001");
   ASSERT(cp && !strcmp(cp->name, "Ромашка поставщик") && !strcmp(cp->kpp, "770001001"), "counterparty imported");
+  ASSERT(cp && strstr(cp->address, "Ленина") && strstr(cp->phone, "111-22-33"), "counterparty address and phone imported");
   ASSERT(!find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "name", "Группа поставщиков"), "a group is not a counterparty");
-  ASSERT(find_by(g_ledger->ib, TABLE_ITEMS, "sku", "BOLT-M8"), "item imported");
+  db_item_t *item = find_by(g_ledger->ib, TABLE_ITEMS, "sku", "BOLT-M8");
+  ASSERT(item, "item imported");
+  ASSERT(item && item->vat_rate_id > 0, "item has a VAT rate from the staging file");
+  ASSERT(item && item->unit_id > 0, "item unit matched by ОКЕИ code from the staging file");
+  db_asset_t *asset = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "ОС-00001");
+  ASSERT(asset && !strcmp(asset->name, "Компьютер офисный"), "asset imported with inventory number and name");
   db_bank_account_t *ba = find_by(g_ledger->ib, TABLE_BANK_ACCOUNTS, "number", "40702810000000000001");
   ASSERT(ba && cp && ba->counterparty_id == cp->id && !strcmp(ba->bik, "044525225") && !strcmp(ba->corr_account, "30101810400000000225"), "bank account carries its owner and the bank's details");
   db_contract_t *ct = find_by(g_ledger->ib, TABLE_CONTRACTS, "number", "21");
@@ -2198,9 +2204,10 @@ static void test_import_stage_catalogs(void) {
   ASSERT(strstr(r.notes, "Справочник.Контактные: no Ledger catalog"), "an unknown catalog type is listed");
   db_organization_t *org = find_by(g_ledger->ib, TABLE_ORGANIZATIONS, "tax_id", "7701234567");
   ASSERT(org && !strcmp(org->name, "Ромашка из 1С"), "an organization with the infobase's tax ID is joined, not held back");
+  ASSERT(org && strstr(org->address, "Тверская") && !strcmp(org->director, "Иванов И.И.") && !strcmp(org->accountant, "Петрова А.С."), "organization address, director and accountant imported");
   db_import_source_t *osrc = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000009");
   ASSERT(osrc && org && osrc->record_id == org->id, "the joined organization keeps its source identity");
-  ASSERT(strstr(r.notes, "Справочник.Организации: the infobase already has an organization"), "an organization with another tax ID is held back");
+  ASSERT(strstr(r.notes, "different tax ID"), "an organization with another tax ID is held back with a reason");
   db_bank_account_t *oba = find_by(g_ledger->ib, TABLE_BANK_ACCOUNTS, "number", "40702810401300099999");
   ASSERT(oba && org && oba->organization_id == org->id, "a bank account owned by the organization follows it");
   int id = cp->id;
@@ -2314,11 +2321,11 @@ static void test_import_stage_documents(void) {
   ledger_stage_import_t r;
   const char *stage = "apps/ledger/tests/fixtures/onecd/stage_documents.xml";
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
-  ASSERT(r.entries == 3 && r.lines == 2, "all three movements became entries and the item rows became lines");
+  ASSERT(r.entries == 3 && r.lines == 3, "all three movements became entries and the item rows became lines");
   ASSERT(strstr(r.notes, "table РасшифровкаПлатежа is not imported as lines"), "a section without items is listed");
   char report[2048];
   ledger_stage_report(&r, report, sizeof(report), false);
-  ASSERT(strstr(report, "Документ.ПриходныйКассовыйОрдер: added 1") && strstr(report, "Entries written: 3") && strstr(report, "0000-000003") == NULL, "the report lists the types and totals");
+  ASSERT(strstr(report, "Документ.ПриходныйКассовыйОрдер: added 1") && strstr(report, "Entries written: 3") && strstr(report, "Document lines written: 3") && strstr(report, "0000-000003") == NULL, "the report lists the types and totals");
   ledger_stage_report(&r, report, sizeof(report), true);
   ASSERT(strstr(report, "Held back or not imported: 2") && !strstr(report, "Документ."), "the summary has totals only");
   ASSERT(ledger_file_is_stage(stage) && !ledger_file_is_stage("apps/ledger/tests/enterprisedata_sample.xml") && !ledger_file_is_stage("no/such/file"), "a staging file is told from an exchange file by its first line");
@@ -2329,10 +2336,11 @@ static void test_import_stage_documents(void) {
   ASSERT(!find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000003") && !find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000004"), "an unposted document without movements and a deleted one are not imported");
   db_item_t *nut = find_by(g_ledger->ib, TABLE_ITEMS, "sku", "NUT-1");
   result_node_t *lines = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOC_LINES, ledger_field(g_ledger->ib, TABLE_DOC_LINES, "document_id")), (void *)(intptr_t)d1->id);
-  const db_doc_line_t *goods = NULL, *service = NULL;
-  for (result_node_t *n = lines; n; n = n->next) { const db_doc_line_t *l = *(db_doc_line_t **)n->data; if (l->quantity_milli == 2000) goods = l; else service = l; }
+  const db_doc_line_t *goods = NULL, *service = NULL, *vat18 = NULL;
+  for (result_node_t *n = lines; n; n = n->next) { const db_doc_line_t *l = *(db_doc_line_t **)n->data; if (l->quantity_milli == 2000) goods = l; else if (l->price_minor == 3500) service = l; else vat18 = l; }
   ASSERT(goods && nut && goods->item_id == nut->id && goods->price_minor == 5000 && goods->amount_minor == 10000 && goods->vat_minor == 2000 && goods->total_minor == 12000 && goods->vat_rate_id, "a goods line keeps its quantity, price, amounts and VAT rate");
   ASSERT(service && service->quantity_milli == 1000 && service->price_minor == 3500 && service->amount_minor == 3500 && service->vat_rate_id, "a service row without quantity becomes one unit");
+  ASSERT(vat18 && vat18->vat_rate_id > 0 && vat18->vat_minor == 1800, "a line with the historical 18%% VAT rate is matched");
   free_result_list(lines);
   db_account_t *a1 = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "99.1");
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)d1->id);
@@ -2356,7 +2364,7 @@ static void test_import_stage_documents(void) {
   ASSERT(!ledger_post(g_ledger->ib, g_ledger->cfg, d1->id), "nor posted again");
   ASSERT(ledger_repost_all(g_ledger->ib, g_ledger->cfg) && turnovers_reconcile(stage), "repost-all leaves imported entries as they were");
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
-  ASSERT(r.entries == 3 && r.lines == 2 && turnovers_reconcile(stage), "a second import rewrites the document's lines and entries");
+  ASSERT(r.entries == 3 && r.lines == 3 && turnovers_reconcile(stage), "a second import rewrites the document's lines and entries");
   int updated_pk = 0;
   for (int i = 0; i < r.count_types; i++)
     if (!strcmp(r.counts[i].type, "Документ.ПриходныйКассовыйОрдер")) updated_pk = r.counts[i].updated;
@@ -2381,7 +2389,7 @@ static void test_import_stage_documents(void) {
   db_document_t *restored = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001");
   ASSERT(restored && restored->id == d1_id && restored->posted && !strcmp(restored->comment, "Аренда за январь"),
          "a re-import restores the comment and keeps the document's identity");
-  ASSERT(r.entries == 3 && turnovers_reconcile(stage), "the rewritten entries are the file's again");
+  ASSERT(r.entries == 3 && r.lines == 3 && turnovers_reconcile(stage), "the rewritten entries are the file's again");
   // The file marks the document deleted: it leaves with its entries and identity.
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_documents_deleted.xml", &r));
   int removed_pk = 0;

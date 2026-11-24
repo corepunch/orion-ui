@@ -96,6 +96,7 @@
     <vat_rate id="2" name="10%" rate="10" />
     <vat_rate id="3" name="0%" rate="0" />
     <vat_rate id="4" name="Без НДС" rate="0" />
+    <vat_rate id="5" name="18%" rate="18" valid_from="2004-01-01" valid_to="2018-12-31" />
   </vat_rates>
   <doc_types>
     <doc_type id="1" code="receipt" name="Поступление товаров" prefix="ПТ-" base="net" debit_id="14" credit_id="24" vat_debit_id="9" vat_credit_id="24" form="document" vat_book="2" description="Товары от поставщика по накладной ТОРГ-12 и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС." />

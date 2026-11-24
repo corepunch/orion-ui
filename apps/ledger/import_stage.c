@@ -308,6 +308,8 @@ typedef struct stage_catalog {
   const char *match_field;  // adopt a Ledger record with the same value instead of adding one
 } stage_catalog_t;
 
+static int vat_rate_for(stage_t *st, const char *enum_name, const char *date);
+
 static void text_field(char *dst, size_t sz, xmlNodePtr rec, const char *name) {
   char buf[512];
   v_text(rec, name, buf, sizeof(buf));
@@ -321,6 +323,10 @@ static bool fill_counterparty(stage_t *st, xmlNodePtr rec, void *out, const char
   ledger_copy_text(c->name, sizeof(c->name), name);
   text_field(c->tax_id, sizeof(c->tax_id), rec, "ИНН");
   text_field(c->kpp, sizeof(c->kpp), rec, "КПП");
+  text_field(c->address, sizeof(c->address), rec, "ЮридическийАдрес");
+  if (!c->address[0]) text_field(c->address, sizeof(c->address), rec, "ФактическийАдрес");
+  if (!c->address[0]) text_field(c->address, sizeof(c->address), rec, "Адрес");
+  text_field(c->phone, sizeof(c->phone), rec, "Телефон");
   return true;
 }
 
@@ -333,10 +339,14 @@ static bool fill_item(stage_t *st, xmlNodePtr rec, void *out, const char **why) 
   v_ref(rec, "ЕдиницаИзмерения", guid, sizeof(guid));
   xmlNodePtr unit = record_by_guid(st, guid);
   if (unit) {
-    attr(unit, "description", name, sizeof(name));
-    db_unit_t *u = (db_unit_t *)find_by_text(st->cfg, TABLE_UNITS, "name", name);
+    attr(unit, "code", name, sizeof(name));
+    db_unit_t *u = name[0] ? (db_unit_t *)find_by_text(st->cfg, TABLE_UNITS, "code", name) : NULL;
+    if (!u) { attr(unit, "description", name, sizeof(name)); u = (db_unit_t *)find_by_text(st->cfg, TABLE_UNITS, "name", name); }
     if (u) it->unit_id = u->id;
   }
+  char rate[64];
+  v_enum(rec, "СтавкаНДС", rate, sizeof(rate));
+  it->vat_rate_id = vat_rate_for(st, rate, "");
   return true;
 }
 
@@ -401,6 +411,15 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
   return true;
 }
 
+static bool fill_asset(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
+  db_asset_t *a = out;
+  char name[512];
+  attr(rec, "description", name, sizeof(name));
+  ledger_copy_text(a->name, sizeof(a->name), name);
+  text_field(a->inventory, sizeof(a->inventory), rec, "ИнвентарныйНомер");
+  return true;
+}
+
 static bool fill_currency(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
   db_currency_t *c = out;
   char name[512];
@@ -418,9 +437,16 @@ static void import_organization(stage_t *st, xmlNodePtr rec) {
   db_organization_t *own = (db_organization_t *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_ORGANIZATIONS, 0), (void *)(intptr_t)1);
   db_import_source_t *seen = source_find(st, guid);
   text_field(inn, sizeof(inn), rec, "ИНН");
-  bool joined = own && (!own->tax_id[0] || (inn[0] && !strcmp(own->tax_id, inn)));
+  bool claimed = false;
+  if (own) {
+    int f = ledger_field(st->ib, TABLE_IMPORT_SOURCES, "table_name");
+    result_node_t *src = (result_node_t *)send_db_message(st->ib, dbFetch, MAKEDWORD(TABLE_IMPORT_SOURCES, f), (void *)"organizations");
+    EACH_RECORD(db_import_source_t, s, src) if (s->record_id == own->id) claimed = true;
+    free_result_list(src);
+  }
+  bool joined = own && (!claimed || !own->tax_id[0] || (inn[0] && !strcmp(own->tax_id, inn)));
   if (!own || (!seen && !joined)) {
-    note(st, "%s: the infobase already has an organization; not replaced", "Справочник.Организации", "");
+    note(st, "%s: the infobase organization has a different tax ID (%s); not replaced", inn, own ? own->tax_id : "");
     tally(st, "Справочник.Организации", 0, 0, 1);
     return;
   }
@@ -429,6 +455,10 @@ static void import_organization(stage_t *st, xmlNodePtr rec) {
   attr(rec, "description", text, sizeof(text)); ledger_copy_text(o.name, sizeof(o.name), text);
   text_field(o.tax_id, sizeof(o.tax_id), rec, "ИНН");
   text_field(o.kpp, sizeof(o.kpp), rec, "КПП");
+  text_field(o.address, sizeof(o.address), rec, "ЮридическийАдрес");
+  if (!o.address[0]) text_field(o.address, sizeof(o.address), rec, "ФактическийАдрес");
+  text_field(o.director, sizeof(o.director), rec, "Руководитель");
+  text_field(o.accountant, sizeof(o.accountant), rec, "ГлавныйБухгалтер");
   char bank_guid[40];
   v_ref(rec, "ОсновнойБанковскийСчет", bank_guid, sizeof(bank_guid));
   xmlNodePtr account = record_by_guid(st, bank_guid), bank = NULL;
@@ -452,10 +482,11 @@ static const stage_catalog_t kStageCatalogs[] = {
   { "Справочник.Валюты",                TABLE_CURRENCIES,    "currencies",    sizeof(db_currency_t),     fill_currency,     "code" },
   { "Справочник.Контрагенты",           TABLE_COUNTERPARTIES, "counterparties", sizeof(db_counterparty_t), fill_counterparty, "tax_id" },
   { "Справочник.ФизическиеЛица",        TABLE_EMPLOYEES,     "employees",     sizeof(db_employee_t),     fill_employee,     "tax_id" },
-  { "Справочник.Склады",                TABLE_WAREHOUSES,    "warehouses",    sizeof(db_warehouse_t),    fill_warehouse,    NULL },
+  { "Справочник.ОсновныеСредства",      TABLE_ASSETS,        "assets",        sizeof(db_asset_t),        fill_asset,        "inventory" },
+  { "Справочник.Склады",                TABLE_WAREHOUSES,    "warehouses",    sizeof(db_warehouse_t),    fill_warehouse,    "name" },
   { "Справочник.Номенклатура",          TABLE_ITEMS,         "items",         sizeof(db_item_t),         fill_item,         "sku" },
-  { "Справочник.БанковскиеСчета",       TABLE_BANK_ACCOUNTS, "bank_accounts", sizeof(db_bank_account_t), fill_bank_account, NULL },
-  { "Справочник.ДоговорыКонтрагентов",  TABLE_CONTRACTS,     "contracts",     sizeof(db_contract_t),     fill_contract,     NULL },
+  { "Справочник.БанковскиеСчета",       TABLE_BANK_ACCOUNTS, "bank_accounts", sizeof(db_bank_account_t), fill_bank_account, "number" },
+  { "Справочник.ДоговорыКонтрагентов",  TABLE_CONTRACTS,     "contracts",     sizeof(db_contract_t),     fill_contract,     "number" },
 };
 
 // The key of a Ledger record found by the catalog's match field, 0 when none or nothing to match on.
@@ -476,7 +507,7 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
   if (!strcmp(folder, "true")) { tally(st, cat->type, 0, 0, 1); return; }  // groups have no Ledger counterpart
   alignas(max_align_t) char buf[2048] = {0};
   _Static_assert(sizeof(db_contract_t) <= 2048 && sizeof(db_counterparty_t) <= 2048 && sizeof(db_item_t) <= 2048 &&
-                 sizeof(db_bank_account_t) <= 2048 && sizeof(db_employee_t) <= 2048, "catalog records fit the buffer");
+                 sizeof(db_bank_account_t) <= 2048 && sizeof(db_employee_t) <= 2048 && sizeof(db_asset_t) <= 2048, "catalog records fit the buffer");
   const char *why = "";
   if (!cat->fill(st, rec, buf, &why)) {
     note(st, "%s: held back (%s)", cat->type, why);
@@ -750,7 +781,7 @@ static int vat_rate_for(stage_t *st, const char *enum_name, const char *date) {
   int found = 0;
   result_node_t *rates = (result_node_t *)send_db_message(st->cfg, dbFetch, MAKEDWORD(TABLE_VAT_RATES, 0), NULL);
   EACH_RECORD(db_vat_rate_t, r, rates) {
-    bool valid = (!r->valid_from[0] || strcmp(date, r->valid_from) >= 0) && (!r->valid_to[0] || strcmp(date, r->valid_to) <= 0);
+    bool valid = !date[0] || ((!r->valid_from[0] || strcmp(date, r->valid_from) >= 0) && (!r->valid_to[0] || strcmp(date, r->valid_to) <= 0));
     if (!found && valid && percent >= 0 && (int)(r->rate + 0.5) == percent && strcmp(r->treatment, "exempt")) found = r->id;
   }
   free_result_list(rates);
