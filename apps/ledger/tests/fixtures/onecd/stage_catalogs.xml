@@ -5,13 +5,14 @@
     <configuration name="Synthetic" version="1"/>
   </header>
   <records>
-    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000001" code="1" description="Ромашка поставщик" deleted="false" folder="false">
+    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000001" code="1" description="Ромашка поставщик" deleted="false" folder="false" parent="c0000000-0000-0000-0000-000000000002">
       <v n="ИНН" t="string">7700000001</v>
       <v n="КПП" t="string">770001001</v>
       <v n="ЮридическийАдрес" t="string">125009, г. Москва, ул. Ленина, д. 1</v>
       <v n="Телефон" t="string">+7(495)111-22-33</v>
     </record>
-    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000002" code="2" description="Группа поставщиков" deleted="false" folder="true"/>
+    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000002" code="2" description="Группа поставщиков" deleted="false" folder="true" parent="c0000000-0000-0000-0000-000000000096"/>
+    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000096" code="0" description="Все контрагенты" deleted="false" folder="true"/>
     <record type="Справочник.Номенклатура" id="c0000000-0000-0000-0000-000000000003" code="3" description="Болт М8" deleted="false" folder="false">
       <v n="Артикул" t="string">BOLT-M8</v>
       <v n="ВидНоменклатуры" t="enum" type="Перечисление.ВидыНоменклатуры" name="Товар" id="e0000000-0000-0000-0000-000000000030"/>

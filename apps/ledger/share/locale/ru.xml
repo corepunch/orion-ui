@@ -262,7 +262,7 @@
   <string source="Gain" where="config_page">Доход</string>
   <string source="Loss" where="config_page">Расход</string>
   <string source="Analytics Kinds" where="config_page">Виды субконто</string>
-  <string source="Catalog" where="config_page">Справочник</string>
+  <string source="Catalog" where="config_page,reference_catalogs">Справочник</string>
   <string source="Currency:" where="document,entry,rate,contract,bank_account">Валюта:</string>
   <string source="Exchange rate:" where="document">Курс:</string>
   <string source="Rate on the document date" where="document">Курс на дату документа</string>
@@ -352,6 +352,8 @@
   <string source="%s: existing source belongs to another catalog; retained" where="code">%s: источник уже относится к другому справочнику; запись сохранена</string>
   <string source="its organization was not imported" where="code">его организация не импортирована</string>
   <string source="%s: record marked for deletion in source retained for historical references" where="code">%s: помеченная на удаление в источнике запись сохранена для исторических ссылок</string>
+  <string source="its parent folder was not imported" where="code">его родительская группа не импортирована</string>
+  <string source="its folder hierarchy is invalid" where="code">иерархия его групп недопустима</string>
   <string source="account %s: analytics slot %s has no usable kind" where="code">счёт %s: слот аналитики %s не имеет пригодного вида</string>
   <string source="account %s: analytics slot %s is used by existing entries and was retained" where="code">счёт %s: субконто %s используется в сохранённых проводках и оставлено без изменения</string>
   <string source="%s: held back (%s)" where="code">%s: отложено (%s)</string>
@@ -737,8 +739,8 @@
   <string source="1C infobases (*.1CD)" where="code">Информационные базы 1С (*.1CD)</string>
   <string source="1C XML files (*.xml)" where="code">Файлы XML 1С (*.xml)</string>
   <string source="All Files" where="code">Все файлы</string>
-  <string source="Banks and Departments..." where="menu">Банки и подразделения...</string>
-  <string source="Banks and Departments" where="reference_catalogs">Банки и подразделения</string>
+  <string source="Banks and Departments..." obsolete="true">Банки и подразделения...</string>
+  <string source="Banks and Departments" obsolete="true">Банки и подразделения</string>
   <string source="Imported Document" where="imported_document">Импортированный документ</string>
   <string source="Dr Analytics 1" where="imported_document,operation">Субконто Дт 1</string>
   <string source="Dr Analytics 2" where="imported_document,operation">Субконто Дт 2</string>
@@ -776,6 +778,11 @@
   <string source="%s: a field in %s exceeds the source detail format" where="code">%s: поле в разделе %s не помещается в формат данных 1С</string>
   <string source="Source detail fields written: %d&#10;" where="code">Записано полей данных 1С: %d
 </string>
+  <string source="Imported Catalogs..." where="menu">Импортированные справочники...</string>
+  <string source="Imported Catalogs" where="reference_catalogs">Импортированные справочники</string>
+  <string source="Catalog Folders" where="reference_catalogs">Группы справочников</string>
+  <string source="Folder" where="reference_catalogs">Группа</string>
+  <string source="Parent Folder" where="reference_catalogs">Родительская группа</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

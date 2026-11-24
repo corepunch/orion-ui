@@ -262,7 +262,7 @@
   <string source="Gain" where="config_page">Ertrag</string>
   <string source="Loss" where="config_page">Aufwand</string>
   <string source="Analytics Kinds" where="config_page">Objektarten</string>
-  <string source="Catalog" where="config_page">Stammdaten</string>
+  <string source="Catalog" where="config_page,reference_catalogs">Stammdaten</string>
   <string source="Currency:" where="document,entry,rate,contract,bank_account">Währung:</string>
   <string source="Exchange rate:" where="document">Wechselkurs:</string>
   <string source="Rate on the document date" where="document">Kurs am Belegdatum</string>
@@ -352,6 +352,8 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="%s: existing source belongs to another catalog; retained" where="code">%s: Die Quelle gehört bereits zu einem anderen Katalog; der Datensatz bleibt erhalten</string>
   <string source="its organization was not imported" where="code">die zugehörige Organisation wurde nicht importiert</string>
   <string source="%s: record marked for deletion in source retained for historical references" where="code">%s: Der im Ursprung zum Löschen markierte Eintrag bleibt für historische Bezüge erhalten</string>
+  <string source="its parent folder was not imported" where="code">der übergeordnete Ordner wurde nicht importiert</string>
+  <string source="its folder hierarchy is invalid" where="code">die Ordnerhierarchie ist ungültig</string>
   <string source="account %s: analytics slot %s has no usable kind" where="code">Konto %s: Analytik-Slot %s hat keine verwendbare Art</string>
   <string source="account %s: analytics slot %s is used by existing entries and was retained" where="code">Konto %s: Analyseposition %s wird in bestehenden Buchungen verwendet und wurde beibehalten</string>
   <string source="%s: held back (%s)" where="code">%s: zurückgestellt (%s)</string>
@@ -737,8 +739,8 @@ In die Datenbank importieren?</string>
   <string source="1C infobases (*.1CD)" where="code">1C-Datenbanken (*.1CD)</string>
   <string source="1C XML files (*.xml)" where="code">1C-XML-Dateien (*.xml)</string>
   <string source="All Files" where="code">Alle Dateien</string>
-  <string source="Banks and Departments..." where="menu">Banken und Abteilungen...</string>
-  <string source="Banks and Departments" where="reference_catalogs">Banken und Abteilungen</string>
+  <string source="Banks and Departments..." obsolete="true">Banken und Abteilungen...</string>
+  <string source="Banks and Departments" obsolete="true">Banken und Abteilungen</string>
   <string source="Imported Document" where="imported_document">Importierter Beleg</string>
   <string source="Dr Analytics 1" where="imported_document,operation">Soll-Analyse 1</string>
   <string source="Dr Analytics 2" where="imported_document,operation">Soll-Analyse 2</string>
@@ -776,6 +778,11 @@ In die Datenbank importieren?</string>
   <string source="%s: a field in %s exceeds the source detail format" where="code">%s: Ein Feld in %s überschreitet das Quelldetailformat</string>
   <string source="Source detail fields written: %d&#10;" where="code">Geschriebene Quelldetailfelder: %d
 </string>
+  <string source="Imported Catalogs..." where="menu">Importierte Stammdaten...</string>
+  <string source="Imported Catalogs" where="reference_catalogs">Importierte Stammdaten</string>
+  <string source="Catalog Folders" where="reference_catalogs">Stammdatengruppen</string>
+  <string source="Folder" where="reference_catalogs">Gruppe</string>
+  <string source="Parent Folder" where="reference_catalogs">Übergeordnete Gruppe</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

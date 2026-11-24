@@ -618,6 +618,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `guid` | `string` |  |
 | `table_name` | `string` |  |
 | `record_id` | `integer` |  |
+| `catalog_folder_id` | `integer` | import_catalog_folders.id |
+| `source_deleted` | `boolean` |  |
 
 ## `ib.documents`
 
@@ -1091,3 +1093,13 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `id` | `integer` |  |
 | `code` | `string` |  |
 | `name` | `string` |  |
+
+## `ib.import_catalog_folders`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `metadata` | `string` |  |
+| `name` | `string` |  |
+| `code` | `string` |  |
+| `parent_id` | `integer` | import_catalog_folders.id |

@@ -380,7 +380,8 @@ Ledger classifications. Open a migrated document to review its original posting
 status, entries, lines, and source details. Payment breakdowns, counterparty and
 tax settlements, and accounting notes appear under **Source Details**.
 
-**Catalogs > Banks and Departments** shows imported banks and departments.
+**Catalogs > Imported Catalogs** shows imported banks, departments and catalog
+folders with their source hierarchy.
 Bank accounts retain their local details and link to a bank when the importer can
 resolve it. Units match the configuration by code before name. New units and
 account extensions are stored in the destination infobase. An incoming

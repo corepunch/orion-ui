@@ -85,7 +85,7 @@
       <item name="edit_warehouse" label="Edit Warehouse..." />
       <item name="delete_warehouse" label="Delete Warehouse..." />
       <Separator />
-      <item name="reference" label="Banks and Departments..." />
+      <item name="reference" label="Imported Catalogs..." />
     </menu>
     <menu name="view" label="View">
       <item name="back" label="Back" shortcut="Alt+Left" />
@@ -184,7 +184,7 @@
         <Button command="catalog.new_bank_account" icon="ledger-payroll" text="New" size="large" tooltip="New bank account" />
         <Button command="catalog.edit_bank_account" icon="ledger-edit" text="Edit" tooltip="Edit bank account" />
         <Button command="catalog.delete_bank_account" icon="ledger-delete" text="Delete" tooltip="Delete bank account" />
-        <Button command="catalog.reference" text="Banks and Departments" />
+        <Button command="catalog.reference" text="Imported Catalogs" />
       </Group>
       <Group label="Items">
         <Button command="catalog.new_item" icon="ledger-nav-items" text="New" size="large" tooltip="New item" />
@@ -770,6 +770,8 @@
         <field name="guid" type="string" length="64" />
         <field name="table_name" type="string" length="32" />
         <field name="record_id" type="integer" />
+        <field name="catalog_folder_id" type="integer" relation="import_catalog_folders.id" on-delete="nullify" />
+        <field name="source_deleted" type="boolean" />
       </table>
       <!-- Amounts are in the document's currency; posting converts them at
            its rate (the rate on the document date when left empty). -->
@@ -1187,6 +1189,13 @@
         <field name="id" type="integer" key="YES" />
         <field name="code" type="string" length="8" />
         <field name="name" type="string" length="32" />
+      </table>
+      <table name="import_catalog_folders">
+        <field name="id" type="integer" key="YES" />
+        <field name="metadata" type="string" length="96" />
+        <field name="name" type="string" length="160" />
+        <field name="code" type="string" length="32" />
+        <field name="parent_id" type="integer" relation="import_catalog_folders.id" on-delete="nullify" />
       </table>
     </database>
   </databases>
@@ -2307,7 +2316,7 @@
       </StackView>
     </form>
 
-    <form name="reference_catalogs" title="Banks and Departments" width="660" height="400" spacing="8" padding="8">
+    <form name="reference_catalogs" title="Imported Catalogs" width="690" height="400" spacing="8" padding="8">
       <TabView name="catalogs" flags="flexspace">
         <TableView name="banks" text="Banks" source="ib.banks" flags="nofill,vscroll,flexspace">
           <Column field="name" title="Name" width="0" min-width="160" />
@@ -2320,6 +2329,12 @@
           <Column field="code" title="Code" width="100" />
           <Column field="name" title="Name" width="0" min-width="120" />
           <Column field="organization.name" title="Organization" width="0" min-width="160" />
+        </TableView>
+        <TableView name="folders" text="Catalog Folders" source="ib.import_catalog_folders" flags="nofill,vscroll,flexspace">
+          <Column field="metadata" title="Catalog" width="0" min-width="150" />
+          <Column field="code" title="Code" width="96" />
+          <Column field="name" title="Folder" width="0" min-width="130" />
+          <Column field="parent.name" title="Parent Folder" width="0" min-width="130" />
         </TableView>
       </TabView>
       <StackView name="actions" orientation="horizontal" spacing="6">

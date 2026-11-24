@@ -347,7 +347,8 @@ static void import_unit(stage_t *st, xmlNodePtr rec) {
   char guid[40], code[512], name[512], folder[8];
   attr(rec, "id", guid, sizeof(guid)); attr(rec, "code", code, sizeof(code));
   attr(rec, "description", name, sizeof(name)); attr(rec, "folder", folder, sizeof(folder));
-  if (!strcmp(folder, "true") || (!code[0] && !name[0])) { tally(st, type, 0, 0, 1); return; }
+  if (!strcmp(folder, "true")) return;
+  if (!code[0] && !name[0]) { tally(st, type, 0, 0, 1); return; }
   db_import_source_t *seen = source_find(st, guid);
   if (seen && strcmp(seen->table_name, "units") && strcmp(seen->table_name, "ext_units")) {
     note(st, "%s: existing source belongs to another catalog; retained", type, "");
@@ -623,7 +624,7 @@ static int match_existing(stage_t *st, const stage_catalog_t *cat, const void *r
 static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNodePtr rec) {
   char guid[40], folder[8], deleted[8];
   attr(rec, "id", guid, sizeof(guid)); attr(rec, "folder", folder, sizeof(folder)); attr(rec, "deleted", deleted, sizeof(deleted));
-  if (!strcmp(folder, "true")) { tally(st, cat->type, 0, 0, 1); return; }  // groups have no Ledger counterpart
+  if (!strcmp(folder, "true")) return;
   if (!strcmp(deleted, "true")) note(st, "%s: record marked for deletion in source retained for historical references", cat->type, "");
   alignas(max_align_t) char buf[2048] = {0};
   _Static_assert(sizeof(db_contract_t) <= 2048 && sizeof(db_counterparty_t) <= 2048 && sizeof(db_item_t) <= 2048 &&
@@ -695,7 +696,7 @@ static void import_analytic_records(stage_t *st) {
     for (int i = 0; i < st->kind_count && !kind; i++) if (!strcmp(st->kinds[i].ref_type, type)) kind = st->kinds[i].kind_id;
     db_ext_subconto_kind_t *ext = kind ? (db_ext_subconto_kind_t *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_EXT_SUBCONTO_KINDS, 0), (void *)(intptr_t)kind) : NULL;
     if (!ext || strcmp(ext->table, "analytic_items")) continue;
-    if (!strcmp(folder, "true")) { tally(st, type, 0, 0, 1); continue; }
+    if (!strcmp(folder, "true")) continue;
     char text[512];
     db_analytic_item_t a = { .kind_id = kind };
     attr(rec, "code", text, sizeof(text)); ledger_copy_text(a.code, sizeof(a.code), text);
@@ -715,6 +716,86 @@ static void import_analytic_records(stage_t *st) {
     const int *added = (const int *)send_db_message(st->ib, dbInsert, TABLE_ANALYTIC_ITEMS, &a);
     if (!added || !source_remember(st, type, guid, "analytic_items", *added)) snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics record."));
     else tally(st, type, 1, 0, 0);
+  }
+}
+
+static bool folder_would_cycle(stage_t *st, int id, int parent) {
+  for (int depth = 0; parent && depth < 10000; depth++) {
+    if (parent == id) return true;
+    db_import_catalog_folder_t *p = (void *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_IMPORT_CATALOG_FOLDERS, 0), (void *)(intptr_t)parent);
+    if (!p) return true;
+    parent = p->parent_id;
+  }
+  return parent != 0;
+}
+
+// Folder identities and source flags are kept separately from the Ledger records.
+static void import_catalog_folders(stage_t *st) {
+  for (xmlNodePtr rec = st->records ? st->records->children : NULL; rec && !st->out->error[0]; rec = rec->next) {
+    char type[96], guid[40], folder[8], text[512];
+    if (!is_el(rec, "record")) continue;
+    attr(rec, "type", type, sizeof(type)); attr(rec, "id", guid, sizeof(guid)); attr(rec, "folder", folder, sizeof(folder));
+    if (strncmp(type, "Справочник.", strlen("Справочник.")) || strcmp(folder, "true") || !guid[0]) continue;
+    db_import_source_t *src = source_find(st, guid);
+    if (src && strcmp(src->table_name, "import_catalog_folders")) {
+      note(st, "%s: existing source belongs to another catalog; retained", type, "");
+      tally(st, type, 0, 0, 1); continue;
+    }
+    db_import_catalog_folder_t f = {0};
+    if (src) {
+      db_import_catalog_folder_t *old = (void *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_IMPORT_CATALOG_FOLDERS, 0), (void *)(intptr_t)src->record_id);
+      if (!old) goto failed;
+      f = *old;
+    }
+    ledger_copy_text(f.metadata, sizeof(f.metadata), type);
+    attr(rec, "code", text, sizeof(text)); ledger_copy_text(f.code, sizeof(f.code), text);
+    attr(rec, "description", text, sizeof(text)); ledger_copy_text(f.name, sizeof(f.name), text);
+    if (src) {
+      if (!send_db_message(st->ib, dbUpdate, TABLE_IMPORT_CATALOG_FOLDERS, &f)) goto failed;
+    } else {
+      const db_import_catalog_folder_t *added = (const void *)send_db_message(st->ib, dbInsert, TABLE_IMPORT_CATALOG_FOLDERS, &f);
+      if (!added || !source_remember(st, type, guid, "import_catalog_folders", added->id)) goto failed;
+    }
+    tally(st, type, src ? 0 : 1, src ? 1 : 0, 0);
+    continue;
+failed:
+    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an imported record of %s."), type);
+  }
+  for (xmlNodePtr rec = st->records ? st->records->children : NULL; rec && !st->out->error[0]; rec = rec->next) {
+    char type[96], guid[40], parent[40], deleted[8];
+    if (!is_el(rec, "record")) continue;
+    attr(rec, "type", type, sizeof(type)); attr(rec, "id", guid, sizeof(guid));
+    if (strncmp(type, "Справочник.", strlen("Справочник."))) continue;
+    db_import_source_t *src = source_find(st, guid);
+    if (!src || strcmp(src->metadata, type)) continue;
+    db_import_source_t source = *src;
+    attr(rec, "parent", parent, sizeof(parent)); attr(rec, "deleted", deleted, sizeof(deleted));
+    int parent_id = 0;
+    if (parent[0]) {
+      db_import_source_t *p = source_find(st, parent);
+      if (!p || strcmp(p->table_name, "import_catalog_folders") || strcmp(p->metadata, type) || !strcmp(guid, parent)) {
+        note(st, "%s: held back (%s)", type, ui_tr("its parent folder was not imported"));
+        parent_id = source.catalog_folder_id;
+      } else parent_id = p->record_id;
+    }
+    if (!strcmp(source.table_name, "import_catalog_folders")) {
+      db_import_catalog_folder_t *old = (void *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_IMPORT_CATALOG_FOLDERS, 0), (void *)(intptr_t)source.record_id);
+      if (!old) goto link_failed;
+      db_import_catalog_folder_t f = *old;
+      if (folder_would_cycle(st, f.id, parent_id)) {
+        note(st, "%s: held back (%s)", type, ui_tr("its folder hierarchy is invalid"));
+        parent_id = f.parent_id;
+      }
+      f.parent_id = parent_id;
+      if (!send_db_message(st->ib, dbUpdate, TABLE_IMPORT_CATALOG_FOLDERS, &f)) goto link_failed;
+    }
+    source.catalog_folder_id = parent_id;
+    source.source_deleted = !strcmp(deleted, "true");
+    if (source.source_deleted) note(st, "%s: record marked for deletion in source retained for historical references", type, "");
+    if (!send_db_message(st->ib, dbUpdate, TABLE_IMPORT_SOURCES, &source)) goto link_failed;
+    continue;
+link_failed:
+    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an imported record of %s."), type);
   }
 }
 
@@ -1387,6 +1468,7 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
       if (is_el(r, "record") && !strcmp(type, kStageCatalogs[i].type)) import_catalog_record(&st, &kStageCatalogs[i], r);
     }
   if (!out->error[0]) import_analytic_records(&st);
+  if (!unf_catalogs && !out->error[0]) import_catalog_folders(&st);
   if (!out->error[0]) report_unimported(&st);
   if (!out->error[0]) import_rates(&st, root);
   xmlNodePtr constants = child(root, "constants");

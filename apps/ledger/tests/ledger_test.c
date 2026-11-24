@@ -2210,7 +2210,7 @@ static void test_import_stage_chart(void) {
 }
 
 static void test_import_stage_catalogs(void) {
-  TEST("1CD staging import: catalogs with owners, groups held back, bank data inlined, repeat updates");
+  TEST("1CD staging import: catalogs, folders, owners, bank data and repeat updates");
   ledger_stage_import_t r;
   const char *stage = "apps/ledger/tests/fixtures/onecd/stage_catalogs.xml";
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
@@ -2218,6 +2218,12 @@ static void test_import_stage_catalogs(void) {
   ASSERT(cp && !strcmp(cp->name, "Ромашка поставщик") && !strcmp(cp->kpp, "770001001"), "counterparty imported");
   ASSERT(cp && strstr(cp->address, "Ленина") && strstr(cp->phone, "111-22-33"), "counterparty address and phone imported");
   ASSERT(!find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "name", "Группа поставщиков"), "a group is not a counterparty");
+  db_import_source_t *folder_src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000002");
+  db_import_source_t *root_src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000096");
+  db_import_source_t *cp_src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000001");
+  db_import_catalog_folder_t *folder = folder_src ? (void *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_IMPORT_CATALOG_FOLDERS, 0), (void *)(intptr_t)folder_src->record_id) : NULL;
+  ASSERT(folder && root_src && cp_src && folder->parent_id == root_src->record_id && cp_src->catalog_folder_id == folder->id && !cp_src->source_deleted, "folder hierarchy and record membership are preserved");
+  int folder_id = folder ? folder->id : 0;
   db_item_t *item = find_by(g_ledger->ib, TABLE_ITEMS, "sku", "BOLT-M8");
   ASSERT(item, "item imported");
   ASSERT(item && item->vat_rate_id > 0, "item has a VAT rate from the staging file");
@@ -2270,6 +2276,13 @@ static void test_import_stage_catalogs(void) {
   ASSERT(new_unit && new_unit->id == unit_id, "re-import retains the unit identity");
   ASSERT(cp && strstr(cp->phone, "111-22-33"), "sparse import preserves the phone that was already there");
   for (int i = 0; i < r.count_types; i++) ASSERT(!r.counts[i].added, "nothing is added twice");
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_catalogs_updated.xml", &r));
+  folder_src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000002");
+  cp_src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000001");
+  folder = folder_src ? (void *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_IMPORT_CATALOG_FOLDERS, 0), (void *)(intptr_t)folder_src->record_id) : NULL;
+  cp = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7700000001");
+  ASSERT(folder && folder->id == folder_id && !strcmp(folder->name, "Группа обновлена") && folder_src->source_deleted && cp_src && cp_src->source_deleted && cp && cp->id == id, "re-import preserves deletion marks without removing records");
+  ASSERT(strstr(r.notes, "record marked for deletion"), "source deletion is reported");
   PASS();
 }
 
