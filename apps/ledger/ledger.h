@@ -198,7 +198,7 @@ typedef struct {
   char locale[8];
   char config_name[64];
   char config_version[16];
-  int accounts, records, documents, movements, skipped;
+  int accounts, records, documents, movements, skipped, external_attachments;
 } ledger_stage_header_t;
 bool ledger_stage_header(const char *path, ledger_stage_header_t *out);
 

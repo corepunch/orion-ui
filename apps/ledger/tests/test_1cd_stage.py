@@ -1,4 +1,7 @@
 import importlib.util
+import hashlib
+import json
+import os
 import struct
 import subprocess
 import sys
@@ -8,6 +11,7 @@ import uuid
 import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
+from types import SimpleNamespace
 
 HERE = Path(__file__).resolve().parent
 SCRIPT = HERE.parent / 'tools' / 'inspect_1cd.py'
@@ -16,7 +20,7 @@ fake = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = fake
 spec.loader.exec_module(fake)
 sys.path.insert(0, str(HERE.parent / 'tools'))
-from onecd_stage import decode_value_storage, ref_uuid
+from onecd_stage import AttachmentManifest, Exporter, decode_value_storage, ref_uuid
 from onecd_meta import LazyObject
 
 F = fake.FixtureField
@@ -466,6 +470,79 @@ class StageCliTest(StageFixture):
         self.assertNotIn('e+', text)
         self.assertEqual(ref_uuid(R(G(5))), G(5))
 
+
+
+
+class AttachmentManifestTest(unittest.TestCase):
+    def test_external_catalog_stages_manifest_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = b'abc'
+            (root / 'file.bin').write_bytes(data)
+            file_ref, volume_ref = b'\x11' * 16, b'\x22' * 16
+            info = SimpleNamespace(number=1, name='Справочник.ПрисоединенныеФайлы', short_name='ПрисоединенныеФайлы')
+            entry = {'type': info.name, 'id': ref_uuid(file_ref), 'volume_id': ref_uuid(volume_ref),
+                     'path': 'file.bin', 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+            path = root / 'manifest.json'
+            path.write_text(json.dumps({'format': 'orion-1cd-attachments-v1', 'source_sha256': 'source',
+                                        'attachments': [entry]}), encoding='utf-8')
+            table = SimpleNamespace(fields={'_FLD1': 'volume', '_DESCRIPTION': 'name'})
+            exporter = Exporter.__new__(Exporter)
+            exporter.meta = SimpleNamespace(objects={('Reference', 1): info}, object_table=lambda _: table)
+            exporter.nonempty = lambda _: True
+            exporter.field_name = lambda _info, _number: 'Том'
+            exporter.index = lambda _: {file_ref: b'row'}
+            exporter.primitive = lambda *_args: ({'t': 'string'}, 'file')
+            exporter.cell = lambda *_args: (False, volume_ref)
+            exporter.note = lambda *_args: None
+            exporter.attachment_manifest = None
+            missing, = exporter.export_attachments().kids
+            self.assertIn('unavailable', missing.attrs)
+            exporter.attachment_manifest = AttachmentManifest(path, 'source')
+            attached, = exporter.export_attachments().kids
+            self.assertEqual(attached.attrs['volume-id'], ref_uuid(volume_ref))
+            self.assertEqual(attached.attrs['sha256'], entry['sha256'])
+            self.assertEqual(attached.attrs['size'], '3')
+            self.assertEqual(attached.text, 'YWJj')
+
+    def test_verified_file_and_rejections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'data').mkdir()
+            (root / 'data' / 'file').write_bytes(b'abc')
+            entry = {'type': 'Справочник.ПрисоединенныеФайлы', 'id': G(1), 'volume_id': G(2),
+                     'path': 'data/file', 'size': 3, 'sha256': hashlib.sha256(b'abc').hexdigest()}
+            manifest = root / 'manifest.json'
+            def load():
+                manifest.write_text(json.dumps({'format': 'orion-1cd-attachments-v1',
+                    'source_sha256': 'source', 'attachments': [entry]}))
+                return AttachmentManifest(manifest, 'source')
+            attrs = {'type': entry['type'], 'id': G(1), 'volume-id': G(2), 'size': '3'}
+            mapping = load()
+            self.assertEqual(mapping.read(attrs), (b'abc', ''))
+            mapping.check_output(root / 'stage.xml')
+            with self.assertRaises(ValueError): mapping.check_output(manifest)
+            with self.assertRaises(ValueError): mapping.check_output(root / 'data' / 'file')
+            self.assertIsNone(mapping.read({**attrs, 'volume-id': G(3)})[0])
+            (root / 'data' / 'file').write_bytes(b'abd')
+            self.assertIsNone(mapping.read(attrs)[0])
+            (root / 'data' / 'file').unlink()
+            self.assertIsNone(mapping.read(attrs)[0])
+            (root / 'target').write_bytes(b'abc')
+            try:
+                (root / 'data' / 'file').symlink_to(root / 'target')
+            except OSError:
+                pass  # Some Windows runners lack symlink creation privileges.
+            else:
+                self.assertIsNone(mapping.read(attrs)[0])
+            entry['path'] = '../outside'
+            with self.assertRaises(ValueError): load()
+            entry['path'] = '/absolute'
+            with self.assertRaises(ValueError): load()
+            entry['path'] = 'C:/absolute'
+            with self.assertRaises(ValueError): load()
+            entry['path'] = 'data/file'
+            with self.assertRaises(ValueError): AttachmentManifest(manifest, 'other-source')
 
 if __name__ == '__main__':
     unittest.main()

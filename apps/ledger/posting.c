@@ -1378,6 +1378,14 @@ static void build_cash_book(const report_t *r) {
   if (day[0]) cash_day_total(r, day, receipt, expense, balance);
 }
 
+static bool entry_has_asset(database_t *cfg, const db_entry_t *e, bool credit, int asset_id) {
+  int account = credit ? e->credit_id : e->debit_id;
+  for (int slot = 1; slot <= 3; slot++)
+    if (!strcmp(ledger_subconto_slot_table(cfg, account, slot), "assets") && entry_subconto(e, credit, slot) == asset_id)
+      return true;
+  return false;
+}
+
 // Fixed assets at the end of the period: cost, depreciation charged, residual value.
 static void build_asset_rows(const report_t *r) {
   result_node_t *assets = fetch(r->ib, TABLE_ASSETS, NULL, 0);
@@ -1385,8 +1393,10 @@ static void build_asset_rows(const report_t *r) {
     double charged = 0;
     for (int i = 0; i < r->count; i++) {
       const db_entry_t *e = r->entries[i];
-      if (in_period(r->rs, e->date) != AFTER && e->credit_subconto_id == a->id && ledger_account_within(r->cfg, e->credit_id, a->depreciation_id))
+      if (in_period(r->rs, e->date) != AFTER && entry_has_asset(r->cfg, e, true, a->id) && ledger_account_within(r->cfg, e->credit_id, a->depreciation_id))
         charged += e->amount;
+      if (in_period(r->rs, e->date) != AFTER && entry_has_asset(r->cfg, e, false, a->id) && ledger_account_within(r->cfg, e->debit_id, a->depreciation_id))
+        charged -= e->amount;
     }
     db_asset_row_t row = { .asset_id = a->id, .cost = a->cost, .monthly = a->life > 0 ? round2(a->cost / a->life) : 0,
                            .depreciation = round2(charged), .residual = round2(a->cost - charged) };

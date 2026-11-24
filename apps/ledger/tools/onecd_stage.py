@@ -8,9 +8,12 @@ matched by name, and whatever cannot be decoded reliably becomes an explicit
 """
 import base64
 import hashlib
+import json
 import os
 import re
 import struct
+import stat
+import uuid
 import zlib
 from collections import Counter, defaultdict
 from decimal import Decimal
@@ -32,7 +35,8 @@ MIGRATION_REGISTERS = (
     'ТарифыСтраховыхВзносов', 'РазмерВычетовНДФЛ', 'РасчетНалогаУСН',
     'КнигаУчетаДоходовИРасходов', 'РеализацияУслуг',
     'ПервоначальныеСведенияОСБухгалтерскийУчет', 'ПараметрыАмортизацииОСБухгалтерскийУчет',
-    'НачислениеАмортизацииОСБухгалтерскийУчет', 'СпособыОтраженияРасходовПоАмортизацииОСБухгалтерскийУчет')
+    'НачислениеАмортизацииОСБухгалтерскийУчет', 'СпособыОтраженияРасходовПоАмортизацииОСБухгалтерскийУчет',
+    'РасчетАмортизации', 'СчетаБухгалтерскогоУчетаОС')
 ACCOUNT_KINDS = {0: 'active', 1: 'passive', 2: 'active-passive'}
 COMPOSITE_PARTS = ('_TYPE', '_L', '_N', '_T', '_S', '_RTREF', '_RRREF')
 # the common attribute that separates data areas: constant 0 in a non-separated database
@@ -45,6 +49,117 @@ VALUE_STORAGE = 'e199ca70-93cf-46ce-a54b-6edc88c3a296'
 UUID_TYPE = 'fc01b5df-97fe-449b-83d4-218a090e681e'
 VALUE_STORAGE_MAX = 8 * 1024 * 1024
 VALUE_STORAGE_STAGE_MAX = 16 * 1024 * 1024
+
+
+class AttachmentManifest:
+    """Explicit association supplied by the operator, never a path from the 1CD."""
+    def __init__(self, path, source_hash):
+        self.path = Path(path).resolve()
+        self.root = self.path.parent
+        with self.path.open(encoding='utf-8') as stream:
+            obj = json.load(stream)
+        if (not isinstance(obj, dict) or obj.get('format') != 'orion-1cd-attachments-v1' or
+                obj.get('source_sha256') != source_hash or not isinstance(obj.get('attachments'), list)):
+            raise ValueError('attachment manifest format or source hash mismatch')
+        self.entries = {}
+        for entry in obj['attachments']:
+            if not isinstance(entry, dict) or any(not isinstance(entry.get(k), str) for k in ('type', 'id', 'volume_id', 'path')):
+                raise ValueError('invalid attachment manifest entry')
+            key = (entry['type'], str(uuid.UUID(entry['id'])), str(uuid.UUID(entry['volume_id'])))
+            path = entry['path']
+            parts = path.split('/')
+            if (not path or any(c in path for c in '\\:\x00') or
+                    any(part in ('', '.', '..') for part in parts)):
+                raise ValueError('invalid attachment manifest path')
+            size, digest = entry.get('size'), entry.get('sha256')
+            if (not isinstance(size, int) or isinstance(size, bool) or size < 0 or size > VALUE_STORAGE_MAX or
+                    not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest) or key in self.entries):
+                raise ValueError('invalid or duplicate attachment manifest entry')
+            self.entries[key] = (parts, size, digest)
+
+    def check_output(self, output):
+        target = Path(output).resolve()
+        if target == self.path or any(target == self.root.joinpath(*parts) for parts, _, _ in self.entries.values()):
+            raise ValueError('stage output would replace the attachment manifest or one of its files')
+
+    def _open(self, parts):
+        if os.name == 'nt':
+            return self._open_windows(parts)
+        fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            for i, part in enumerate(parts):
+                flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                if i < len(parts) - 1:
+                    flags |= os.O_DIRECTORY
+                next_fd = os.open(part, flags, dir_fd=fd)
+                os.close(fd)
+                fd = next_fd
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
+
+    def _open_windows(self, parts):
+        import ctypes
+        from ctypes import wintypes
+        import msvcrt
+
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        drive_type = kernel.GetDriveTypeW
+        drive_type.argtypes, drive_type.restype = [wintypes.LPCWSTR], wintypes.UINT
+        if drive_type(self.root.anchor) == 4:
+            raise OSError('attachments require a local Windows volume')
+        path = self.root
+        for part in parts:
+            path = path / part
+            if path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise OSError('reparse point in attachment path')
+        if not path.is_file():
+            raise OSError('attachment file is not regular')
+        fd = os.open(path, os.O_RDONLY | os.O_BINARY)
+        try:
+            final_name = kernel.GetFinalPathNameByHandleW
+            final_name.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD]
+            final_name.restype = wintypes.DWORD
+            resolved = ctypes.create_unicode_buffer(32768)
+            length = final_name(msvcrt.get_osfhandle(fd), resolved, len(resolved), 0)
+            if not 0 < length < len(resolved) or Path(resolved.value.removeprefix('\\\\?\\')) != path:
+                raise OSError('attachment path changed while opening')
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
+
+    def read(self, attrs):
+        key = (attrs['type'], attrs['id'], attrs.get('volume-id', ''))
+        if key not in self.entries:
+            return None, 'attachment absent from manifest'
+        parts, size, digest = self.entries[key]
+        if attrs.get('size') and int(attrs['size']) != size:
+            return None, 'manifest size does not match metadata'
+        fd = None
+        try:
+            fd = self._open(parts)
+            before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode) or before.st_size != size:
+                return None, 'attachment file is not regular or size differs'
+            chunks, remaining = [], size + 1
+            while remaining:
+                chunk = os.read(fd, min(remaining, 65536))
+                if not chunk: break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            data = b''.join(chunks)
+            after = os.fstat(fd)
+            if (len(data) != size or before.st_mtime_ns != after.st_mtime_ns or
+                    before.st_ctime_ns != after.st_ctime_ns or before.st_size != after.st_size or
+                    hashlib.sha256(data).hexdigest() != digest):
+                return None, 'attachment changed or hash differs'
+            return data, ''
+        except OSError:
+            return None, 'attachment file unavailable or unsafe'
+        finally:
+            if fd is not None: os.close(fd)
 
 
 def decode_value_storage(raw):
@@ -145,7 +260,8 @@ class Layout:
 
 
 class Stage:
-    def __init__(self, db, source_sha256=None):
+    def __init__(self, db, source_sha256=None, attachment_manifest=None):
+        self.attachment_manifest = attachment_manifest
         self.db = db
         self.meta = M.Meta(db)
         self.sha256 = source_sha256
@@ -1101,16 +1217,20 @@ class Exporter(Stage):
                     _, raw = self.cell(row, volume[0][1])
                     if any(raw): attrs['volume-id'] = ref_uuid(raw)
                 data, reason = payloads.get((info.number, ref), (None, 'external volume or missing binary data'))
+                if data is None and self.attachment_manifest and attrs.get('volume-id'):
+                    data, reason = self.attachment_manifest.read(attrs)
                 if data is not None and attrs.get('size') and int(attrs['size']) != len(data):
                     data, reason = None, 'binary size does not match metadata'
                 if data is not None and total_bytes + len(data) > VALUE_STORAGE_STAGE_MAX:
                     data, reason = None, 'attachment stage size limit exceeded'
                 if data is None:
+                    attrs.setdefault('size', '0')
                     attrs['unavailable'] = reason
                     self.note(info.name, reason)
                     result.add(El('attachment', attrs))
                 else:
                     total_bytes += len(data)
+                    attrs.setdefault('size', str(len(data)))
                     attrs['sha256'] = hashlib.sha256(data).hexdigest()
                     result.add(El('attachment', attrs, base64.b64encode(data).decode('ascii')))
         return result
@@ -1301,9 +1421,13 @@ def source_sha256(path):
     return digest.hexdigest()
 
 
-def build_stage(db):
+def build_stage(db, attachment_manifest=None, output=None):
     """Build the staging element tree; returns (root, exporter)."""
-    exporter = Exporter(db, source_sha256(db.path))
+    digest = source_sha256(db.path)
+    manifest = AttachmentManifest(attachment_manifest, digest) if attachment_manifest else None
+    if manifest and output:
+        manifest.check_output(output)
+    exporter = Exporter(db, digest, manifest)
     root = exporter.build()
     summary = root.add(El('summary'))
     summary.add(El('undecoded', {'count': sum(exporter.undecoded.values())}))

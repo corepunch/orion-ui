@@ -491,6 +491,7 @@ def main(argv=None):
     stage.add_argument('--output', required=True, help='new JSON staging file; existing files are never overwritten')
     export = sub.add_parser('export-stage', help='export business data to one self-contained staging XML file')
     export.add_argument('--output', required=True, help='new staging XML file')
+    export.add_argument('--attachment-manifest', help='explicit local attachment manifest JSON')
     export.add_argument('--overwrite', action='store_true', help='replace an existing output file')
     extract = sub.add_parser('extract', help='extract an explicitly identified catalog for review')
     source = extract.add_mutually_exclusive_group(required=True)
@@ -524,7 +525,7 @@ def main(argv=None):
         elif args.command == 'export-stage':
             if Path(args.output).exists() and not args.overwrite:
                 raise ValueError(f'{args.output} exists; pass --overwrite to replace it')
-            root, exporter = onecd_stage.build_stage(db)
+            root, exporter = onecd_stage.build_stage(db, args.attachment_manifest, args.output)
             size = onecd_stage.write_stage(root, args.output, args.source, args.overwrite)
             print(onecd_stage.summary_text(root, exporter, size))
         elif args.command == 'stage-register':

@@ -800,4 +800,7 @@
   <string source="Save Attachment">Сохранить вложение</string>
   <string source="The attachment could not be saved. Check that the selected file does not already exist.">Не удалось сохранить вложение. Проверьте, что выбранного файла ещё нет.</string>
   <string source="Cannot import an invalid attachment.">Не удалось импортировать вложение с неверными данными.</string>
+  <string source="External attachment records found: %s. Select a manifest for the copied files?">Найдены записи внешних вложений (%s). Выбрать манифест для скопированных файлов?</string>
+  <string source="Attachment manifests (*.json)">Манифесты вложений (*.json)</string>
+  <string source="%s: contribution field %s is retained as source detail only">%s: поле взносов %s сохранено в исходных реквизитах</string>
 </strings>

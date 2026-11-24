@@ -800,4 +800,7 @@ In die Datenbank importieren?</string>
   <string source="Save Attachment">Anhang speichern</string>
   <string source="The attachment could not be saved. Check that the selected file does not already exist.">Der Anhang konnte nicht gespeichert werden. Prüfen Sie, ob die ausgewählte Datei bereits existiert.</string>
   <string source="Cannot import an invalid attachment.">Ein ungültiger Anhang konnte nicht importiert werden.</string>
+  <string source="External attachment records found: %s. Select a manifest for the copied files?">Externe Anhänge gefunden: %s. Manifest für die kopierten Dateien auswählen?</string>
+  <string source="Attachment manifests (*.json)">Anhangsmanifeste (*.json)</string>
+  <string source="%s: contribution field %s is retained as source detail only">%s: Beitragsfeld %s wurde als Quelldetail gespeichert</string>
 </strings>

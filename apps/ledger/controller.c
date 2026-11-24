@@ -694,7 +694,7 @@ static result_t ledger_read_1cd_proc(window_t *win, uint32_t msg, uint32_t wpara
   }
 }
 
-static bool convert_1cd_to_stage(const char *path_1cd, char *stage_path, size_t stage_sz) {
+static bool convert_1cd_to_stage(const char *path_1cd, const char *manifest, char *stage_path, size_t stage_sz) {
   char script[LEDGER_PATH_MAX * 2];
   snprintf(script, sizeof(script), "%s/tools/inspect_1cd.py", g_ledger->share_dir);
   if (!axPathExists(script)) snprintf(script, sizeof(script), "%s/../tools/inspect_1cd.py", g_ledger->share_dir);
@@ -720,7 +720,8 @@ static bool convert_1cd_to_stage(const char *path_1cd, char *stage_path, size_t 
   snprintf(log, sizeof(log), "%s.log", stage_path);
   snprintf(partial, sizeof(partial), "%s.tmp", stage_path);
   const char *argv[] = { python, "-I", "-B", script, "--diagnostics", log,
-                         "--", path_1cd, "export-stage", "--output", stage_path, NULL };
+                         "--", path_1cd, "export-stage", "--output", stage_path,
+                         manifest ? "--attachment-manifest" : NULL, manifest, NULL };
   ledger_1cd_reader_t reader = { .child = ui_process_start(argv), .exit_code = -1 };
   if (!reader.child) {
     message_box(g_ledger->main_win, ui_tr("Python 3 could not be started. Install Python 3 or import a prepared staging XML."),
@@ -747,6 +748,20 @@ static bool convert_1cd_to_stage(const char *path_1cd, char *stage_path, size_t 
   return converted;
 }
 
+static bool pick_attachment_manifest(const char *stage_path, char *path, size_t size) {
+  ledger_stage_header_t hdr;
+  if (!ledger_stage_header(stage_path, &hdr) || !hdr.external_attachments) return false;
+  char text[512], count[32], filters[256];
+  snprintf(text, sizeof(text),
+    ui_tr("External attachment records found: %s. Select a manifest for the copied files?"),
+    ui_format_number(hdr.external_attachments, 0, count, sizeof(count)));
+  if (message_box(g_ledger->main_win, text, ui_tr("Import from 1C"), MB_YESNO) != IDYES) return false;
+  snprintf(filters, sizeof(filters), "%s%c*.json%c", ui_tr("Attachment manifests (*.json)"), 0, 0);
+  openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win,
+    .lpstrFile = path, .nMaxFile = (uint32_t)size, .lpstrFilter = filters, .Flags = OFN_FILEMUSTEXIST };
+  return get_open_filename(&ofn);
+}
+
 // Catalogs and opening balances from a 1C:Enterprise 8 exchange file, with a
 // summary of what was added, found, and left out; a 1CD staging file; or a
 // raw 1CD database converted to staging by inspect_1cd.py export-stage.
@@ -764,8 +779,12 @@ static void import_from_1c(void) {
     (path[plen-3] == '1') && (path[plen-2] == 'C' || path[plen-2] == 'c') &&
     (path[plen-1] == 'D' || path[plen-1] == 'd');
   if (is_1cd) {
-    char stage_path[LEDGER_PATH_MAX];
-    if (!convert_1cd_to_stage(path, stage_path, sizeof(stage_path))) return;
+    char stage_path[LEDGER_PATH_MAX], manifest[LEDGER_PATH_MAX] = "";
+    if (!convert_1cd_to_stage(path, NULL, stage_path, sizeof(stage_path))) return;
+    if (pick_attachment_manifest(stage_path, manifest, sizeof(manifest))) {
+      remove(stage_path);
+      if (!convert_1cd_to_stage(path, manifest, stage_path, sizeof(stage_path))) return;
+    }
     import_stage_file(stage_path);
     remove(stage_path);
     return;

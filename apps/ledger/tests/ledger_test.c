@@ -205,6 +205,16 @@ static void test_fixed_assets(void) {
   bool ok = approx(computer->depreciation, 3000) && approx(computer->residual, 33000) && approx(second->monthly, 500) && approx(second->depreciation, 0);
   free_result_list(rows);
   ASSERT(ok, "asset register");
+  db_entry_t reversal = { .document_id = 8, .debit_id = 2, .debit_subconto_id = 1, .credit_id = 60, .amount = 500 };
+  snprintf(reversal.date, sizeof(reversal.date), "2003-03-31");
+  db_entry_t *stored = (db_entry_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_ENTRIES, &reversal);
+  ASSERT_NOT_NULL(stored);
+  int reversal_id = stored->id;
+  report_through("2003-03-31");
+  db_asset_row_t *reversed = (db_asset_row_t *)send_db_message(g_ledger->ib, dbFind,
+    MAKEDWORD(TABLE_ASSET_ROWS, ledger_field(g_ledger->ib, TABLE_ASSET_ROWS, "asset_id")), (void *)(intptr_t)1);
+  ASSERT(reversed && approx(reversed->depreciation, 2500) && approx(reversed->residual, 33500), "debit reversals reduce accumulated depreciation");
+  send_db_message(g_ledger->ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)reversal_id);
   db_document_t blank = { .doc_type_id = 14 };
   snprintf(blank.date, sizeof(blank.date), "2003-04-30");
   db_document_t *april = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
@@ -2218,8 +2228,21 @@ static void test_import_stage_assets(void) {
   db_account_t *dep = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "02");
   ASSERT(a && acc && dep && a->account_id == acc->id && a->depreciation_id == dep->id && a->life == 24 && approx(a->cost, 1200) && !strcmp(a->commissioned, "2024-03-01") && !strcmp(a->depreciation_method, "linear"), "acceptance details follow the asset GUID");
   db_asset_t *c = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "TEST-ASSET-3");
-  ASSERT(b && approx(b->cost, 2000) && !strcmp(b->commissioned, "2024-04-01"), "per-asset register cost wins over the multi-asset total");
+  ASSERT(b && approx(b->cost, 2000) && !strcmp(b->commissioned, "2024-04-01") &&
+    b->account_id == acc->id && b->depreciation_id == dep->id, "per-asset cost and accounts come from the registers");
   ASSERT(c && !c->cost, "a multi-asset total is not assigned to each asset");
+  ASSERT(r.entries == 0 && r.detail_fields == 2, "calculation rows are source details without extra postings");
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_assets.xml", &r));
+  db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ASSET1");
+  ASSERT_NOT_NULL(doc);
+  int field = ledger_field(g_ledger->ib, TABLE_IMPORT_DOCUMENT_DETAILS, "document_id");
+  result_node_t *details = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_IMPORT_DOCUMENT_DETAILS, field), (void *)(intptr_t)doc->id);
+  int matches = 0, count = count_result_list(details);
+  EACH_RECORD(db_import_document_detail_t, row, details)
+    if (!strcmp(row->section_name, "РасчетАмортизации") && !strcmp(row->field_name, "СуммаАмортизацииБУ") &&
+        !strcmp(row->value, "50.00") && row->line_number == 1) matches++;
+  free_result_list(details);
+  ASSERT(matches == 1 && count == 2, "reimport retains the calculation exactly once");
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_assets_sparse.xml", &r));
   a = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "TEST-ASSET-1");
   ASSERT(a && a->life == 24 && approx(a->cost, 1200) && a->account_id && a->depreciation_id && !strcmp(a->commissioned, "2024-03-01"), "sparse resync retains earlier card values");
@@ -2407,7 +2430,7 @@ static void test_import_stage_payroll(void) {
   ledger_stage_import_t r;
   for (int pass = 0; pass < 2; pass++) {
     ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r), r.error);
-    ASSERT_EQUAL(r.detail_fields, 2);
+    ASSERT_EQUAL(r.detail_fields, 6);
     db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "PAYROLL-TEST");
     ASSERT(doc, "payroll document imported");
     if (!doc) return;
@@ -2417,6 +2440,7 @@ static void test_import_stage_payroll(void) {
     if (rows) {
       db_payroll_line_t *line = *(db_payroll_line_t **)rows->data;
       ASSERT(fabs(line->amount - 1200.75) < .001 && fabs(line->withheld - 156) < .001, "accrual and all tax slices are summed");
+      ASSERT(fabs(line->contributions - 302.10) < .001 && strstr(r.notes, "ПФРПоСуммарномуТарифу"), "supported contribution amounts retain cents; unverified fields stay in source details");
     }
     free_result_list(rows);
     doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "PAYOUT-TEST");
@@ -2982,6 +3006,9 @@ static void test_import_stage_attachments(void) {
   TEST("1CD attachments: import, retry, reopen, export and rollback on invalid data");
   ledger_stage_import_t r;
   const char *stage = "apps/ledger/tests/fixtures/onecd/stage_attachments.xml";
+  ledger_stage_header_t header;
+  ASSERT_TRUE(ledger_stage_header(stage, &header));
+  ASSERT_EQUAL(header.external_attachments, 1);
   char dir[128], path[192];
   ASSERT_TRUE(ledger_test_directory(dir, sizeof(dir)));
   snprintf(path, sizeof(path), "%s/attachment.bin", dir);
@@ -3009,6 +3036,16 @@ static void test_import_stage_attachments(void) {
   ASSERT(!ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_attachments_invalid.xml", &r), "invalid base64 is rejected");
   ASSERT(!ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_attachments_bad_hash.xml", &r), "incorrect digest is rejected");
   ASSERT_TRUE(ledger_attachment_export(g_ledger->ib, id, path));
+  remove(path);
+  const char *volume_guid = "a0000000-0000-0000-0000-000000000002";
+  a = find_by(g_ledger->ib, TABLE_IMPORT_ATTACHMENTS, "guid", volume_guid);
+  ASSERT(a && a->unavailable[0], "external attachment metadata is imported before its file is available");
+  int volume_id = a->id;
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_attachment_volume.xml", &r));
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  a = find_by(g_ledger->ib, TABLE_IMPORT_ATTACHMENTS, "guid", volume_guid);
+  ASSERT(a && a->id == volume_id && a->size == 3 && !a->unavailable[0], "resolving a volume file keeps its ID and a later partial stage keeps its bytes");
+  ASSERT_TRUE(ledger_attachment_export(g_ledger->ib, volume_id, path));
   remove(path);
   PASS();
 }

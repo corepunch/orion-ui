@@ -62,7 +62,7 @@ typedef struct {
   struct { char ref_type[96]; int kind_id; } kinds[128];  // 1C type an analytics kind holds -> Ledger kind
   int kind_count;
   xmlNodePtr documents, registers;               // source documents and registers
-  struct { xmlNodePtr node; int next; } *movements;  // register movements, chained by recorder
+  struct { xmlNodePtr node; int next; bool depreciation; } *movements;  // register movements, chained by recorder
   int movement_count, buckets[1024];             // buckets hold index + 1; 0 is empty
 } stage_t;
 
@@ -630,6 +630,11 @@ static bool fill_asset(stage_t *st, xmlNodePtr rec, void *out, const char **why)
     a->account_id = ref_id(st, acceptance, "СчетУчета");
     a->depreciation_id = ref_id(st, acceptance, "СчетНачисленияАмортизации");
   }
+  if (!a->account_id || !a->depreciation_id) {
+    xmlNodePtr accounts = asset_register(st, rec, "РегистрСведений.СчетаБухгалтерскогоУчетаОС");
+    if (!a->account_id) a->account_id = ref_id(st, accounts, "СчетУчета");
+    if (!a->depreciation_id) a->depreciation_id = ref_id(st, accounts, "СчетНачисленияАмортизации");
+  }
   return true;
 }
 
@@ -931,16 +936,18 @@ static bool index_movements(stage_t *st, xmlNodePtr root) {
     if (!is_el(reg, "register")) continue;
     attr(reg, "type", reg_type, sizeof(reg_type));
     bool accounting = !strncmp(reg_type, "РегистрБухгалтерии", strlen("РегистрБухгалтерии"));
+    bool depreciation = !strcmp(reg_type, "РегистрСведений.РасчетАмортизации");
     for (xmlNodePtr m = reg->children; m; m = m->next) {
       char recorder[40];
       if (!is_el(m, "movement")) continue;
       attr(m, "recorder", recorder, sizeof(recorder));
-      if (!accounting) {
+      if ((!accounting && !depreciation) || (depreciation && !recorder[0])) {
         tally(st, reg_type, 0, 0, 1);
         continue;
       }
       unsigned b = guid_bucket(recorder);
       st->movements[st->movement_count].node = m;
+      st->movements[st->movement_count].depreciation = depreciation;
       st->movements[st->movement_count].next = st->buckets[b];
       st->buckets[b] = ++st->movement_count;
     }
@@ -1125,41 +1132,44 @@ static bool supported_detail_section(const char *name) {
   return false;
 }
 
-static bool import_section_details(stage_t *st, int doc_id, xmlNodePtr table, const char *section, const char *type) {
-  for (xmlNodePtr row = table->children; row; row = row->next) {
-    if (!is_el(row, "row")) continue;
-    char number[16];
-    attr(row, "line", number, sizeof(number));
-    for (xmlNodePtr value = row->children; value; value = value->next) {
-      if (!is_el(value, "v")) continue;
-      db_import_document_detail_t d = { .document_id = doc_id, .line_number = atoi(number) };
-      ledger_copy_text(d.section_name, sizeof(d.section_name), section);
-      attr(value, "n", d.field_name, sizeof(d.field_name));
-      attr(value, "t", d.value_type, sizeof(d.value_type));
-      attr(value, "type", d.reference_type, sizeof(d.reference_type));
-      attr(value, "id", d.reference_guid, sizeof(d.reference_guid));
-      char flag[8];
-      attr(value, "empty", flag, sizeof(flag)); d.is_empty = !strcmp(flag, "true");
-      attr(value, "dangling", flag, sizeof(flag)); d.is_dangling = !strcmp(flag, "true");
-      xmlChar *text = xmlChildElementCount(value) ? NULL : xmlNodeGetContent(value);
-      if (!text || xmlStrlen(text) >= (int)sizeof(d.value)) {
-        note(st, "%s: a field in %s exceeds the source detail format", type, section);
-        xmlFree(text);
-        continue;
-      }
-      ledger_copy_text(d.value, sizeof(d.value), (const char *)text);
+static bool import_detail_row(stage_t *st, int doc_id, xmlNodePtr row, const char *section, const char *type) {
+  char number[16];
+  attr(row, "line", number, sizeof(number));
+  for (xmlNodePtr value = row->children; value; value = value->next) {
+    if (!is_el(value, "v")) continue;
+    db_import_document_detail_t d = { .document_id = doc_id, .line_number = atoi(number) };
+    ledger_copy_text(d.section_name, sizeof(d.section_name), section);
+    attr(value, "n", d.field_name, sizeof(d.field_name));
+    attr(value, "t", d.value_type, sizeof(d.value_type));
+    attr(value, "type", d.reference_type, sizeof(d.reference_type));
+    attr(value, "id", d.reference_guid, sizeof(d.reference_guid));
+    char flag[8];
+    attr(value, "empty", flag, sizeof(flag)); d.is_empty = !strcmp(flag, "true");
+    attr(value, "dangling", flag, sizeof(flag)); d.is_dangling = !strcmp(flag, "true");
+    xmlChar *text = xmlChildElementCount(value) ? NULL : xmlNodeGetContent(value);
+    if (!text || xmlStrlen(text) >= (int)sizeof(d.value)) {
+      note(st, "%s: a field in %s exceeds the source detail format", type, section);
       xmlFree(text);
-      if (!strcmp(d.value_type, "enum"))
-        attr(value, "name", d.value, sizeof(d.value));
-      else if (!strcmp(d.value_type, "ref")) {
-        xmlNodePtr record = record_by_guid(st, d.reference_guid);
-        if (record) attr(record, "description", d.value, sizeof(d.value));
-      } else if (!strcmp(d.value_type, "undecoded"))
-        attr(value, "hex", d.value, sizeof(d.value));
-      if (!send_db_message(st->ib, dbInsert, TABLE_IMPORT_DOCUMENT_DETAILS, &d)) return false;
-      st->out->detail_fields++;
+      continue;
     }
+    ledger_copy_text(d.value, sizeof(d.value), (const char *)text);
+    xmlFree(text);
+    if (!strcmp(d.value_type, "enum"))
+      attr(value, "name", d.value, sizeof(d.value));
+    else if (!strcmp(d.value_type, "ref")) {
+      xmlNodePtr record = record_by_guid(st, d.reference_guid);
+      if (record) attr(record, "description", d.value, sizeof(d.value));
+    } else if (!strcmp(d.value_type, "undecoded"))
+      attr(value, "hex", d.value, sizeof(d.value));
+    if (!send_db_message(st->ib, dbInsert, TABLE_IMPORT_DOCUMENT_DETAILS, &d)) return false;
+    st->out->detail_fields++;
   }
+  return true;
+}
+
+static bool import_section_details(stage_t *st, int doc_id, xmlNodePtr table, const char *section, const char *type) {
+  for (xmlNodePtr row = table->children; row; row = row->next)
+    if (is_el(row, "row") && !import_detail_row(st, doc_id, row, section, type)) return false;
   return true;
 }
 
@@ -1241,18 +1251,21 @@ static double payroll_value(xmlNodePtr row, const char *name) {
 // 1C stores accruals by employment, but tax by person. Ledger's employee
 // catalog represents people, so resolve employment through its source catalog.
 static bool import_1c_payroll(stage_t *st, int doc_id, xmlNodePtr doc, const char *type) {
-  db_payroll_line_t *lines = NULL;
+  typedef struct { db_payroll_line_t line; int64_t contributions_minor; } staged_payroll_line_t;
+  staged_payroll_line_t *lines = NULL;
   size_t count = 0;
   bool ok = true, payout = !strcmp(type, "Документ.ВедомостьНаВыплатуЗарплатыВКассу");
   static const char *payout_tax_fields[] = { "Сумма", "СуммаСПревышения", "СуммаСПревышенияПоСтавке18",
     "СуммаСПревышенияПоСтавке20", "СуммаСПревышенияПоСтавке22" };
+  static const char *contribution_fields[] = { "ПФРДоПредельнойВеличины", "ФФОМС", "ФСС", "ФССНесчастныеСлучаи" };
   static const char *tax_fields[] = { "Налог", "НалогСПревышения", "НалогСПревышенияПоСтавке18",
     "НалогСПревышенияПоСтавке20", "НалогСПревышенияПоСтавке22" };
   for (xmlNodePtr t = doc->children; t && ok; t = t->next) {
     if (!is_el(t, "table")) continue;
     char name[80]; attr(t, "n", name, sizeof(name));
     bool accrual = !strcmp(name, payout ? "Зарплата" : "Начисления"), tax = !strcmp(name, "НДФЛ");
-    if (!accrual && !tax) continue;
+    bool contributions = !payout && !strcmp(name, "Взносы");
+    if (!accrual && !tax && !contributions) continue;
     for (xmlNodePtr row = t->children; row; row = row->next) {
       if (!is_el(row, "row")) continue;
       int emp_id = ref_id(st, row, "ФизическоеЛицо");
@@ -1262,25 +1275,45 @@ static bool import_1c_payroll(stage_t *st, int doc_id, xmlNodePtr doc, const cha
       }
       if (!emp_id) { note(st, "%s: a payroll line names an employee that was not imported", type, ""); continue; }
       size_t i = 0;
-      while (i < count && lines[i].employee_id != emp_id) i++;
+      while (i < count && lines[i].line.employee_id != emp_id) i++;
       if (i == count) {
-        db_payroll_line_t *more = realloc(lines, (count + 1) * sizeof(*lines));
+        staged_payroll_line_t *more = realloc(lines, (count + 1) * sizeof(*lines));
         if (!more) { ok = false; break; }
         lines = more; memset(&lines[count], 0, sizeof(*lines));
-        send_db_message(st->ib, dbInitRecord, TABLE_PAYROLL_LINES, &lines[count]);
-        lines[count].document_id = doc_id; lines[count].employee_id = emp_id; count++;
+        send_db_message(st->ib, dbInitRecord, TABLE_PAYROLL_LINES, &lines[count].line);
+        lines[count].line.document_id = doc_id; lines[count].line.employee_id = emp_id; count++;
       }
       if (accrual) {
         double amount = payroll_value(row, payout ? "КВыплате" : "Результат");
-        lines[i].amount += amount;
-        if (payout) lines[i].net += amount;
+        lines[i].line.amount += amount;
+        if (payout) lines[i].line.net += amount;
       }
       if (tax) for (size_t j = 0; j < ARRAY_LEN(tax_fields); j++)
-        lines[i].withheld += payroll_value(row, payout ? payout_tax_fields[j] : tax_fields[j]);
+        lines[i].line.withheld += payroll_value(row, payout ? payout_tax_fields[j] : tax_fields[j]);
+      if (contributions) {
+        for (xmlNodePtr v = row->children; v; v = v->next) {
+          if (!is_el(v, "v")) continue;
+          char field[128], value[64], value_type[32];
+          attr(v, "n", field, sizeof(field)); attr(v, "t", value_type, sizeof(value_type));
+          if (strcmp(value_type, "decimal")) continue;
+          v_text(row, field, value, sizeof(value));
+          int64_t minor = 0;
+          if (!money_parse_decimal(value, 2, &minor) || !minor) continue;
+          bool known = false;
+          for (size_t j = 0; j < ARRAY_LEN(contribution_fields); j++)
+            if (!strcmp(field, contribution_fields[j])) { known = true; break; }
+          if (known) {
+            if (!money_add(lines[i].contributions_minor, minor, &lines[i].contributions_minor)) { ok = false; break; }
+          }
+          else note(st, "%s: contribution field %s is retained as source detail only", type, field);
+        }
+      }
+      if (!ok) break;
     }
   }
   for (size_t i = 0; i < count && ok; i++) {
-    ok = send_db_message(st->ib, dbInsert, TABLE_PAYROLL_LINES, &lines[i]) != 0;
+    lines[i].line.contributions = (double)lines[i].contributions_minor / 100.0;
+    ok = send_db_message(st->ib, dbInsert, TABLE_PAYROLL_LINES, &lines[i].line) != 0;
   }
   free(lines);
   return ok;
@@ -1410,6 +1443,7 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   }
   int first = st->buckets[guid_bucket(guid)], moves = 0, active_moves = 0;
   for (int i = first; i; i = st->movements[i - 1].next) {
+    if (st->movements[i - 1].depreciation) continue;
     char recorder[40], active[8];
     attr(st->movements[i - 1].node, "recorder", recorder, sizeof(recorder));
     if (strcmp(recorder, guid)) continue;
@@ -1488,8 +1522,13 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
     snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store a line of the imported document %s."), number);
   for (int i = first; i && !st->out->error[0]; i = st->movements[i - 1].next) {
     char recorder[40];
-    attr(st->movements[i - 1].node, "recorder", recorder, sizeof(recorder));
-    if (!strcmp(recorder, guid) && !import_movement(st, doc_id, st->movements[i - 1].node))
+    xmlNodePtr movement = st->movements[i - 1].node;
+    attr(movement, "recorder", recorder, sizeof(recorder));
+    if (strcmp(recorder, guid)) continue;
+    if (st->movements[i - 1].depreciation) {
+      if (!import_detail_row(st, doc_id, movement, "РасчетАмортизации", type))
+        snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store a line of the imported document %s."), number);
+    } else if (!import_movement(st, doc_id, movement))
       snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an entry of the imported document %s."), number);
   }
   if (!st->out->error[0] && !finish_imported_document(st, doc_id, doc, is_posted || active_moves))
@@ -1860,6 +1899,14 @@ bool ledger_stage_header(const char *path, ledger_stage_header_t *out) {
   for (xmlNodePtr reg = registers ? registers->children : NULL; reg; reg = reg->next)
     if (is_el(reg, "register"))
       for (xmlNodePtr n = reg->children; n; n = n->next) out->movements += is_el(n, "movement");
+  xmlNodePtr attachments = child(root, "attachments");
+  for (xmlNodePtr n = attachments ? attachments->children : NULL; n; n = n->next) {
+    char volume[40], unavailable[8];
+    if (!is_el(n, "attachment")) continue;
+    attr(n, "volume-id", volume, sizeof(volume));
+    attr(n, "unavailable", unavailable, sizeof(unavailable));
+    out->external_attachments += volume[0] && unavailable[0];
+  }
   char skipped[24];
   attr(child(root, "skipped"), "tables", skipped, sizeof(skipped));
   out->skipped = atoi(skipped);
