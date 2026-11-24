@@ -1,4 +1,5 @@
 import importlib.util
+import struct
 import subprocess
 import sys
 import tempfile
@@ -15,7 +16,7 @@ fake = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = fake
 spec.loader.exec_module(fake)
 sys.path.insert(0, str(HERE.parent / 'tools'))
-from onecd_stage import ref_uuid
+from onecd_stage import decode_value_storage, ref_uuid
 
 F = fake.FixtureField
 
@@ -142,9 +143,11 @@ class StageFixture(unittest.TestCase):
         def cat(guid, code, name, **kw):
             return fake.encode_row(cat_f, {'_IDRREF': R(guid), '_CODE': code, '_DESCRIPTION': name, **base, **kw})
         self.bank_guid = v(2001)
+        serialized = '\ufeff{"#",87126200-3e98-44e0-b931-ccb1d7edc497,{1,{0}}}'.encode('utf-8')
+        storage = b'\x01\x01' + struct.pack('<Q', len(serialized)) + serialized + struct.pack('<IQ', 0, 3) + b'abc'
         catalog_rows = [
             cat(k1, '1', 'Альфа', _FLD1001='Название', _FLD1002='-1234.50', _FLD1003=True, _FLD1004_TYPE=b'\x05',
-                _FLD1004_S='строка', _FLD1005=(0, 7), _FLD1006RREF=R(ENUM_B)),
+                _FLD1004_S='строка', _FLD1005=(1, len(storage)), _FLD1006RREF=R(ENUM_B)),
             cat(k2, '2', 'Бета', _FLD1002='0.00', _FLD1004_TYPE=b'\x08', _FLD1004_RTREF=T(101),
                 _FLD1004_RRREF=R(self.bank_guid), _FLD1006RREF=R(ENUM_A)),
             cat(k3, '3', 'Гамма', _FLD1004_TYPE=b'\x03', _FLD1004_N='12.34'),
@@ -155,7 +158,9 @@ class StageFixture(unittest.TestCase):
                 F('_FLD1012', 'NVC', length=20)]
         vt_rows = [fake.encode_row(vt_f, {'_REFERENCE100_IDRREF': R(k1), '_LINENO1011': n, '_FLD1012': t})
                    for n, t in ((3, 'третья'), (1, 'первая'), (2, 'вторая'))]
-        tables += [fake.FixtureTable('_Reference100', cat_f, catalog_rows), fake.FixtureTable('_Reference100_VT1010', vt_f, vt_rows)]
+        catalog = fake.FixtureTable('_Reference100', cat_f, catalog_rows)
+        catalog.blobs[1] = (0, storage)
+        tables += [catalog, fake.FixtureTable('_Reference100_VT1010', vt_f, vt_rows)]
         bank_f = [F('_IDRREF', 'B', length=16), F('_VERSION', 'RV'), F('_MARKED', 'L'), F('_FOLDER', 'L'),
                   F('_CODE', 'NVC', length=9), F('_DESCRIPTION', 'NVC', length=50)]
         tables.append(fake.FixtureTable('_Reference101', bank_f, [fake.encode_row(
@@ -318,12 +323,26 @@ class StageExportTest(StageFixture):
         self.assertEqual((group.get('folder'), alpha.get('folder'), group.get('deleted'), group.get('parent')),
                          ('true', 'false', 'true', self.k[0]))
         blob = alpha.find('v[@n="Файл"]')
-        self.assertEqual((blob.get('t'), blob.get('bytes')), ('blob', '7'))
+        self.assertEqual(blob.get('t'), 'value-storage')
+        self.assertIn('87126200-3e98-44e0-b931-ccb1d7edc497', blob.findtext('serialized'))
+        self.assertEqual(blob.find('segment').attrib, {'encoding': 'base64', 'bytes': '3'})
+        self.assertEqual(blob.findtext('segment'), 'YWJj')
         self.assertEqual(beta.find('v[@n="Файл"]').get('t'), 'null')
         enum = alpha.find('v[@n="Вид"]')
         self.assertEqual(enum.attrib, {'n': 'Вид', 't': 'enum', 'type': 'Перечисление.Виды', 'name': 'Второй', 'id': ENUM_B})
         listed = {(e.get('name'), e.get('order')) for e in root.find('enums')}
         self.assertEqual(listed, {('Первый', '0'), ('Второй', '1')})
+
+    def test_compressed_value_storage(self):
+        source = b'\xef\xbb\xbf{}'
+        body = struct.pack('<Q', len(source)) + source + struct.pack('<IQ', 0, 2) + b'xy'
+        header = b'\x02\x01' + bytes.fromhex('534b6ff4888dc14ea0d5ebb6bda0a70d')
+        compressed = zlib.compress(body)[2:-4]
+        self.assertEqual(decode_value_storage(header + compressed), ('{}', [b'xy']))
+        with self.assertRaises(ValueError):
+            decode_value_storage(header + compressed[:-1])
+        with self.assertRaises(ValueError):
+            decode_value_storage(b'\x01\x01' + body[:-1])
 
     def test_dangling_pulled_and_missing(self):
         root = self.export()

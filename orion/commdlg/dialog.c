@@ -107,7 +107,7 @@ static void db_dialog_bind_details(window_t *root, window_t *win, db_dlg_ctx_t *
 
 // A ComboBox bound to a polymorphic relation (relation="ib.{debit.subconto_kind.table}.id")
 // lists the table the record's path names: the analytics of the chosen account.
-static void db_dialog_sync_sources(window_t *win, db_dlg_ctx_t *ctx, bool keep_values) {
+static void db_dialog_sync_sources(window_t *win, db_dlg_ctx_t *ctx, uint32_t changed_control) {
   const db_schema_def_t *schema = (const db_schema_def_t *)send_db_message(ctx->db, dbGetSchema, 0, NULL);
   const db_table_schema_t *t = db_schema_table(schema, ctx->def->db_table_id);
   if (!t) return;
@@ -117,6 +117,8 @@ static void db_dialog_sync_sources(window_t *win, db_dlg_ctx_t *ctx, bool keep_v
   dialog_pull(win, current, ctx->def->bindings, ctx->def->binding_count);
   for (int b = 0; b < ctx->def->binding_count; b++) {
     const ctrl_binding_t *binding = &ctx->def->bindings[b];
+    window_t *combo = get_window_item(win, binding->ctrl_id);
+    if (window_is_class(combo, "ComboBox")) send_message(combo, cbSyncMaster, changed_control, win);
     int f = 0;
     while (f < t->meta_count && t->meta[f].offset != binding->offset) f++;
     const db_field_schema_t *fs = NULL;
@@ -140,10 +142,9 @@ static void db_dialog_sync_sources(window_t *win, db_dlg_ctx_t *ctx, bool keep_v
     if (ctx->sources[slot].ctrl_id == binding->ctrl_id && ctx->sources[slot].table_id == table_id) continue;
     ctx->sources[slot].ctrl_id = binding->ctrl_id;
     ctx->sources[slot].table_id = table_id;
-    window_t *combo = get_window_item(win, binding->ctrl_id);
     if (target) send_message(combo, cbSetSource, (uint32_t)target->table_id, target_db);
     else send_message(combo, cbClear, 0, NULL);
-    send_message(combo, cbSetCurrentValue, keep_values ? (uint32_t)*(const int *)((const char *)current + binding->offset) : 0, NULL);
+    send_message(combo, cbSetCurrentValue, changed_control ? 0 : (uint32_t)*(const int *)((const char *)current + binding->offset), NULL);
     enable_window(combo, target != NULL);
   }
   free(current);
@@ -209,7 +210,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
                     ctx->def->bindings, ctx->def->binding_count);
       }
       if (ctx->synced) memcpy(ctx->synced, ctx->record_buf, ctx->def->db_record_size);
-      db_dialog_sync_sources(win, ctx, true);
+      db_dialog_sync_sources(win, ctx, 0);
       if (ctx->record_id > 0)
         db_dialog_bind_details(win, win, ctx, (const db_schema_def_t *)send_db_message(ctx->db, dbGetSchema, 0, NULL));
       if (ctx->hook) ctx->hook(win, evCreate, 0, NULL);
@@ -218,7 +219,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
     case evCommand: {
       if (!ctx) return false;
       uint16_t notif = HIWORD(wparam);
-      if (notif == cbSelectionChange) db_dialog_sync_sources(win, ctx, false);
+      if (notif == cbSelectionChange) db_dialog_sync_sources(win, ctx, LOWORD(wparam));
       if (notif == tvnChanged) {
         db_dialog_resync(win, ctx);
         return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : true;

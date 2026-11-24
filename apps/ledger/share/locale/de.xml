@@ -735,4 +735,6 @@ In die Datenbank importieren?</string>
   <string source="Cannot finish the imported document." where="code">Der Belegimport konnte nicht abgeschlossen werden.</string>
   <string source="The 1CD conversion tool (inspect_1cd.py) could not be found." where="code">Das 1C-Konvertierungsprogramm (inspect_1cd.py) wurde nicht gefunden.</string>
   <string source="The 1CD conversion failed." where="code">Die 1C-Datenbank konnte nicht gelesen werden.</string>
+  <string source="1C files (*.xml, *.1CD)" where="code">1C-Dateien (*.xml, *.1CD)</string>
+  <string source="All Files" where="code">Alle Dateien</string>
 </strings>

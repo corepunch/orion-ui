@@ -76,9 +76,6 @@ static void open_dropdown(window_t *win) {
   if (!list)
     return;
   list->userdata = win;
-  list->userdata2 = malloc(sizeof(win->title));
-  if (list->userdata2)
-    memcpy(list->userdata2, win->title, sizeof(win->title));
 
   list->vscroll.pos = scroll;
   send_message(list, lstSetItem, (uint32_t)selected, NULL);
@@ -97,7 +94,8 @@ static void open_dropdown(window_t *win) {
 }
 
 // Helper: Populate combobox from database using combobox_params_t
-static void cb_populate_from_database(window_t *win, const combobox_params_t *params) {
+static void cb_populate_from_database(window_t *win, const combobox_params_t *params,
+                                      const char *master_value, int retained_value) {
   if (!params || !params->display_field || !params->value_field) {
     return;
   }
@@ -126,6 +124,11 @@ static void cb_populate_from_database(window_t *win, const combobox_params_t *pa
   // Allocate values array if not already allocated
   if (!state->values) {
     state->values = calloc(MAX_COMBOBOX_STRINGS, sizeof(int));
+    if (!state->values) {
+      fprintf(stderr, "[combobox] unable to allocate values win=%u\n", win->id); fflush(stderr);
+      free_result_list(results);
+      return;
+    }
   }
   
   // Add each record to combobox
@@ -144,22 +147,23 @@ static void cb_populate_from_database(window_t *win, const combobox_params_t *pa
                                      display_buf, sizeof(display_buf));
     
     if (success && display_buf[0] != '\0') {
-      if (params->filter_field && params->filter_field[0] &&
-          params->filter_value && params->filter_value[0]) {
+      char value_buf[64] = {0};
+      db_get_field_text(db, params->table_id, record, params->value_field, value_buf, sizeof(value_buf));
+      int value = atoi(value_buf);
+      bool static_filter = params->filter_value && params->filter_value[0] &&
+        (!params->master_id || master_value);
+      if (params->filter_field && params->filter_field[0] && (master_value || static_filter) &&
+          (!retained_value || value != retained_value)) {
         char filter_buf[64] = {0};
         if (!db_get_field_text(db, params->table_id, record,
                                params->filter_field,
                                filter_buf, sizeof(filter_buf)) ||
-            strcmp(filter_buf, params->filter_value) != 0)
+            ((!master_value || !master_value[0] || strcmp(filter_buf, master_value)) &&
+             (!static_filter || strcmp(filter_buf, params->filter_value))))
           continue;
       }
       send_message(win, cbAddString, 0, display_buf);
-      char value_buf[64];
-      if (db_get_field_text(db, params->table_id, record,
-                            params->value_field,
-                            value_buf, sizeof(value_buf))) {
-        state->values[count] = atoi(value_buf);
-      }
+      state->values[count] = value;
       count++;
     }
   }
@@ -186,6 +190,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         return false;
       }
       win->userdata = state;
+      state->selection = kComboBoxError;
       texts = state->texts;
       
       // Check if created from form with combobox_params_t
@@ -199,7 +204,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
           // Try to get database if params has db name info.
           // When unavailable at create time, the parent later propagates
           // evSetDatabase through the child tree.
-          cb_populate_from_database(win, &state->params);
+          cb_populate_from_database(win, &state->params, NULL, 0);
         }
       }
       
@@ -292,16 +297,16 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       invalidate_window(win);
       return false;
     case cbClear:
-      memset(texts, 0, sizeof(combobox_string_t) * win->cursor_pos);
+      if (!state) return false;
+      state->selection = kComboBoxError;
       win->cursor_pos = 0;
       win->title[0] = '\0';
       return true;
     case cbAddString:
-      if (win->cursor_pos < MAX_COMBOBOX_STRINGS) {
-        strncpy(texts[win->cursor_pos++], lparam, sizeof(combobox_string_t));
-        strncpy(win->title, lparam, sizeof(win->title));
-        win->title[sizeof(win->title) - 1] = '\0';
-        return true;
+      if (state && lparam && win->cursor_pos < MAX_COMBOBOX_STRINGS) {
+        uint32_t index = win->cursor_pos++;
+        snprintf(texts[index], sizeof(texts[index]), "%s", (const char *)lparam);
+        return send_message(win, cbSetCurrentSelection, index, NULL);
       } else {
         return false;
       }
@@ -313,7 +318,8 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         return false;
       }
     case cbSetCurrentSelection:
-      if (wparam < win->cursor_pos) {
+      if (state && wparam < win->cursor_pos) {
+        state->selection = (int)wparam;
         strncpy(win->title, texts[wparam], sizeof(win->title));
         win->title[sizeof(win->title) - 1] = '\0';
         return true;
@@ -323,8 +329,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case edSetText:   // selects the item with this text (CB_SELECTSTRING), so a DDX_TEXT binding round-trips
       for (uint32_t i = 0; lparam && i < win->cursor_pos; i++) {
         if (strncmp(texts[i], (const char *)lparam, sizeof(combobox_string_t))) continue;
-        strncpy(win->title, texts[i], sizeof(win->title));
-        win->title[sizeof(win->title) - 1] = '\0';
+        send_message(win, cbSetCurrentSelection, i, NULL);
         invalidate_window(win);
         return true;
       }
@@ -338,36 +343,20 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (lparam && wparam) snprintf((char *)lparam, wparam, "%s", win->title);
       return (result_t)strlen(win->title);
     case cbGetCurrentSelection:
-      for (uint32_t i = 0; i < win->cursor_pos; i++) {
-        if (!strncmp(texts[i], win->title, sizeof(win->title))) {
-          if (lparam)
-            *(int *)lparam = (int)i;
-          return i;
-        }
-      }
-      if (lparam)
-        *(int *)lparam = kComboBoxError;
-      return kComboBoxError;
-    case cbGetCurrentValue:
-      // Return value_field data (e.g., ID) instead of row index
-      if (state && state->values) {
-        for (uint32_t i = 0; i < win->cursor_pos; i++) {
-          if (!strncmp(texts[i], win->title, sizeof(win->title))) {
-            if (lparam)
-              *(int *)lparam = state->values[i];
-            return state->values[i];
-          }
-        }
-      }
-      if (lparam)
-        *(int *)lparam = kComboBoxError;
-      return kComboBoxError;
+    case cbGetCurrentValue: {
+      int selection = state ? state->selection : kComboBoxError;
+      int value = msg == cbGetCurrentSelection || selection == kComboBoxError ? selection :
+        state->values ? state->values[selection] : kComboBoxError;
+      if (lparam) *(int *)lparam = value;
+      return (result_t)value;
+    }
     case cbSetCurrentValue:
+      if (!state) return false;
+      state->selection = kComboBoxError;
       win->title[0] = '\0';
-      for (uint32_t i = 0; state && state->values && i < win->cursor_pos; i++) {
+      for (uint32_t i = 0; state->values && i < win->cursor_pos; i++) {
         if (state->values[i] != (int)wparam) continue;
-        strncpy(win->title, texts[i], sizeof(win->title));
-        win->title[sizeof(win->title) - 1] = '\0';
+        send_message(win, cbSetCurrentSelection, i, NULL);
         break;
       }
       invalidate_window(win);
@@ -377,10 +366,28 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       state->params.table_id = (int)wparam;
       if (lparam) state->params.db = (database_t *)lparam;
       state->params.filter_field = state->params.filter_value = NULL;
+      state->params.master_id = 0;
       send_message(win, cbClear, 0, NULL);
-      cb_populate_from_database(win, &state->params);
+      cb_populate_from_database(win, &state->params, NULL, 0);
       invalidate_window(win);
       return true;
+    case cbSyncMaster: {
+      if (!state || !state->params.master_id || (wparam && wparam != state->params.master_id)) return false;
+      window_t *master = get_window_item((window_t *)lparam, state->params.master_id);
+      if (!master || !window_is_class(master, "ComboBox")) {
+        fprintf(stderr, "[combobox] invalid master win=%u master=%u\n", win->id, state->params.master_id);
+        fflush(stderr);
+        return false;
+      }
+      int master_value = (int)send_message(master, cbGetCurrentValue, 0, NULL);
+      char filter[32] = "";
+      if (master_value > 0) snprintf(filter, sizeof(filter), "%d", master_value);
+      int selected = (int)send_message(win, cbGetCurrentValue, 0, NULL);
+      send_message(win, cbClear, 0, NULL);
+      cb_populate_from_database(win, &state->params, filter, !wparam && selected > 0 ? selected : 0);
+      send_message(win, cbSetCurrentValue, (uint32_t)selected, NULL);
+      return true;
+    }
     case evSetDatabase:
       // Set database pointer and populate combobox
       if (state && lparam) {
@@ -388,7 +395,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         // Clear existing items
         send_message(win, cbClear, 0, NULL);
         // Populate from database
-        cb_populate_from_database(win, &state->params);
+        cb_populate_from_database(win, &state->params, NULL, 0);
         invalidate_window(win);
       }
       return true;

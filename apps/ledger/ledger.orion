@@ -1826,8 +1826,8 @@
             <Space name="number_flex" />
           </StackView>
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
-          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" />
-          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" />
+          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" master="counterparty" filter-field="counterparty_id" />
+          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" master="counterparty" filter-field="counterparty_id" filter-value="0" />
         </Column>
         <Column name="labels2" width="auto">
           <Label name="lbl_type" text="Document:" />
@@ -2214,9 +2214,9 @@
           <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
           <TextBox name="date" field="ib.documents.date" />
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
-          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" />
+          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" master="counterparty" filter-field="counterparty_id" />
           <ComboBox name="warehouse" field="ib.documents.warehouse_id" source="ib.warehouses" display="name" value="id" />
-          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" />
+          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" master="counterparty" filter-field="counterparty_id" filter-value="0" />
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>

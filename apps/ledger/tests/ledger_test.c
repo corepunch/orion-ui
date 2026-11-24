@@ -2358,6 +2358,8 @@ static void test_import_stage_documents(void) {
   db_document_t *d2 = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000002");
   db_document_t *d5 = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ВО-000001");
   ASSERT(d1 && d1->posted && !strcmp(d1->date, "2015-01-12") && !strcmp(d1->comment, "Аренда за январь") && d1->counterparty_id, "a posted document keeps its date, comment and counterparty");
+  db_doc_type_t *cash_type = d1 ? (db_doc_type_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)d1->doc_type_id) : NULL;
+  ASSERT(cash_type && !strcmp(cash_type->code, "cash_in"), "the cash order uses its configured Ledger form");
   ASSERT(d1 && !strcmp(d1->payment_reference, "Оплата по договору аренды № 15"), "НазначениеПлатежа is imported into payment_reference");
   ASSERT(d2 && d2->posted && strstr(r.notes, "not posted in 1C but with register movements"), "a document with movements is posted and the report says so");
   ASSERT(find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000003") && !find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000004"), "an unposted draft is imported; a deleted document with no Ledger record is not");

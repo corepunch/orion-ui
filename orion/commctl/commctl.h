@@ -467,6 +467,7 @@ typedef struct {
   const char *value_field;    // Field name for actual value (e.g. "id")
   const char *filter_field;   // Optional: field name to filter on (e.g. "is_remote")
   const char *filter_value;   // Optional: value to match as string (e.g. "1" or "0")
+  uint32_t    master_id;      // Optional: match filter_field against another ComboBox's value
 } combobox_params_t;
 
 // Combobox internal state (shared with list control for dropdown)
@@ -476,6 +477,7 @@ typedef struct {
   combobox_params_t params;  // Copy of creation params
   combobox_string_t *texts;  // Display strings
   int *values;               // Value field data (e.g., IDs) for foreign keys
+  int selection;
 } combobox_state_t;
 
 result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

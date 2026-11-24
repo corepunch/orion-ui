@@ -157,6 +157,7 @@ jobs:
           done
           test -f gitclient/lib/gitclient_components.dll
           test -f gitclient/lib/terminal_components.dll
+          python -I -B ledger/share/ledger/tools/inspect_1cd.py --help
       - name: Verify the macOS downloads
         if: runner.os == 'macOS'
         run: |
@@ -164,6 +165,7 @@ jobs:
           ditto -x -k dist/ledger-macos-arm64.zip "$RUNNER_TEMP/try-macos"
           codesign --verify --deep --strict "$RUNNER_TEMP/try-macos/Git Client.app"
           codesign --verify --deep --strict "$RUNNER_TEMP/try-macos/Ledger.app"
+          python3 -I -B "$RUNNER_TEMP/try-macos/Ledger.app/Contents/Resources/share/ledger/tools/inspect_1cd.py" --help
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version != '' && 'packages' || 'downloads' }}-${{ matrix.platform }}

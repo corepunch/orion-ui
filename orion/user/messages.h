@@ -232,6 +232,7 @@ enum {
   // HTTP_INVALID_REQUEST indicates an immediate error (bad URL, OOM, etc.).
   evHttpDone,
   evHttpProgress,
+  cbSyncMaster,       // wparam=changed control id (0 on load), lparam=form root; apply the master filter
 };
 
 // Control notification messages

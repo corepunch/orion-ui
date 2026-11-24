@@ -725,9 +725,11 @@ static bool convert_1cd_to_stage(const char *path_1cd, char *stage_path, size_t 
 // summary of what was added, found, and left out; a 1CD staging file; or a
 // raw 1CD database converted to staging by inspect_1cd.py export-stage.
 static void import_from_1c(void) {
-  char path[LEDGER_PATH_MAX] = "", money_dr[32], money_cr[32], text[1024];
+  char path[LEDGER_PATH_MAX] = "", money_dr[32], money_cr[32], text[1024], filters[512];
+  snprintf(filters, sizeof(filters), "%s%c*.xml;*.1cd%c%s%c*.*%c",
+           ui_tr("1C files (*.xml, *.1CD)"), 0, 0, ui_tr("All Files"), 0, 0);
   openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win, .lpstrFile = path, .nMaxFile = sizeof(path),
-                         .lpstrFilter = "1C files (*.xml, *.1CD)\0*.xml;*.1cd\0All Files\0*.*\0", .Flags = OFN_FILEMUSTEXIST };
+                         .lpstrFilter = filters, .Flags = OFN_FILEMUSTEXIST };
   if (!get_open_filename(&ofn)) return;
   // .1CD database: convert to staging XML first, then import the XML.
   size_t plen = strlen(path);

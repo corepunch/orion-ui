@@ -6,10 +6,12 @@ decimals are exact text, NULL stays distinct from zero and empty values, nothing
 matched by name, and whatever cannot be decoded reliably becomes an explicit
 `undecoded` marker. Every table that is not (fully) exported is listed.
 """
+import base64
 import hashlib
 import os
 import re
 import struct
+import zlib
 from collections import Counter, defaultdict
 from decimal import Decimal
 from pathlib import Path
@@ -37,6 +39,41 @@ XML_BAD = re.compile('[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff￾￿]')
 FLD_RE = re.compile(r'^_FLD(\d+)(DT|CT)?(RREF)?$', re.I)
 PART_RE = re.compile(r'^(.*?)(_TYPE|_L|_N|_T|_S|_RTREF|_RRREF)$', re.I)
 ZERO16 = bytes(16)
+VALUE_STORAGE = 'e199ca70-93cf-46ce-a54b-6edc88c3a296'
+VALUE_STORAGE_MAX = 8 * 1024 * 1024
+VALUE_STORAGE_STAGE_MAX = 16 * 1024 * 1024
+
+
+def decode_value_storage(raw):
+    """Split the envelope into serialized UTF-8 text and binary segments."""
+    prefix = raw[:2]
+    if prefix == b'\x01\x01':
+        body = raw[2:]
+    elif prefix == b'\x02\x01' and len(raw) >= 18:
+        stream = zlib.decompressobj(-15)
+        body = stream.decompress(raw[18:], VALUE_STORAGE_MAX + 1)
+        if not stream.eof or stream.unused_data or stream.unconsumed_tail:
+            raise ValueError('incomplete or oversized ValueStorage stream')
+    else:
+        raise ValueError('unknown ValueStorage envelope')
+    if not 8 <= len(body) <= VALUE_STORAGE_MAX:
+        raise ValueError('invalid ValueStorage body length')
+    text_size = struct.unpack_from('<Q', body)[0]
+    cursor = 8 + text_size
+    if cursor > len(body) or not body[8:cursor].startswith(b'\xef\xbb\xbf'):
+        raise ValueError('invalid ValueStorage text')
+    text = body[8:cursor].decode('utf-8-sig')
+    segments = []
+    while cursor < len(body):
+        if len(segments) >= 1024 or len(body) - cursor < 12:
+            raise ValueError('invalid ValueStorage segment headers')
+        reserved, size = struct.unpack_from('<IQ', body, cursor)
+        cursor += 12
+        if reserved or size > len(body) - cursor:
+            raise ValueError('invalid ValueStorage segment')
+        segments.append(body[cursor:cursor + size])
+        cursor += size
+    return text, segments
 
 
 def ref_uuid(raw):
@@ -121,6 +158,7 @@ class Stage:
         self.vt_cache = {}
         self.common_names = {}
         self.not_exported = []
+        self.value_storage_bytes = 0
 
     # -- tables -----------------------------------------------------------------
 
@@ -395,6 +433,10 @@ class Stage:
             if fname is None:
                 self.unnamed[loc] += 1
                 fname = base
+            if field.type == 'I' and any(len(p) > 1 and str(p[0]) == '#' and
+                                         str(p[1]).lower() == VALUE_STORAGE for p in (pattern or [])):
+                out.append((side, number, self.value_storage(table, row, field, fname, floc)))
+                continue
             if base in lay.composite:
                 attrs, text = self.decode_composite(table, row, lay.composite[base], floc, pattern)
             elif single_ref:
@@ -413,6 +455,39 @@ class Stage:
             el = El('v', {'n': fname, **attrs}, text)
             out.append((side, number, el))
         return out
+
+    def value_storage(self, table, row, field, name, loc):
+        size = 0
+        try:
+            null, data = self.cell(row, field)
+            if null:
+                return El('v', {'n': name, 't': 'null'})
+            start, size = struct.unpack('<II', data[:8])
+            if not size:
+                return El('v', {'n': name, 't': 'value-storage', 'bytes': 0})
+            if size > VALUE_STORAGE_MAX:
+                raise ValueError('ValueStorage exceeds the staging size limit')
+            blob = self.blob(table)
+            if blob is None:
+                raise ValueError('missing ValueStorage blob object')
+            raw = blob.read_chain(start, size)
+            if len(raw) != size:
+                raise ValueError('truncated ValueStorage blob')
+            text, segments = decode_value_storage(raw)
+            content_size = len(text.encode('utf-8')) + sum(len(segment) for segment in segments)
+            if self.value_storage_bytes + content_size > VALUE_STORAGE_STAGE_MAX:
+                raise ValueError('ValueStorage exceeds the aggregate staging size limit')
+            self.value_storage_bytes += content_size
+            el = El('v', {'n': name, 't': 'value-storage', 'bytes': size})
+            attrs, text = self.string(text, loc)
+            el.add(El('serialized', attrs, text))
+            for segment in segments:
+                el.add(El('segment', {'encoding': 'base64', 'bytes': len(segment)},
+                          base64.b64encode(segment).decode('ascii')))
+            return el
+        except (ValueError, UnicodeError, struct.error, zlib.error) as exc:
+            attrs, _ = self.undec(loc, str(exc))
+            return El('v', {'n': name, **attrs, 'bytes': size})
 
     # -- predefined names ------------------------------------------------------
 

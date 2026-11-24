@@ -735,4 +735,6 @@
   <string source="Cannot finish the imported document." where="code">Не удалось завершить импорт документа.</string>
   <string source="The 1CD conversion tool (inspect_1cd.py) could not be found." where="code">Не удалось найти программу преобразования базы 1С (inspect_1cd.py).</string>
   <string source="The 1CD conversion failed." where="code">Не удалось прочитать файл базы 1С.</string>
+  <string source="1C files (*.xml, *.1CD)" where="code">Файлы 1С (*.xml, *.1CD)</string>
+  <string source="All Files" where="code">Все файлы</string>
 </strings>

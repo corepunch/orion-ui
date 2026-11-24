@@ -10,7 +10,7 @@
 // Every record imported keeps its source metadata name and GUID in
 // import_sources, apart from the Ledger record, so importing again finds it.
 // A document found again is rewritten from the file — same document, its
-// lines and entries replaced and posted again; one the file marks deleted is
+// lines and entries replaced with the source history; one the file marks deleted is
 // removed with its source identity. A closed period or a linked reversal
 // keeps it untouched, with a note saying which.
 // The import is one editing context: a file that fails leaves nothing behind.
