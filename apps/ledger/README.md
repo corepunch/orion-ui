@@ -272,9 +272,9 @@ For read-only 1С:УНФ online catalog export and warehouse quantity previews,
 see [the OData connector](docs/unf-odata.md).
 
 An experimental, read-only tool can resolve a catalog from metadata and extract it from
-an offline `1Cv8.1CD` copy without 1C and prepare XML for this importer. It is
-limited to file format 8.3.8.0 and remains experimental; a small catalog from
-one real educational infobase has been checked. See the [1CD research and instructions](docs/1c-accounting-replacement-plan.md#эксперимент-чтение-1cd-без-платформы)
+an offline `1Cv8.1CD` copy without 1C and prepare XML for this importer. It
+reads formats 8.3.8.0 and 8.2.14.0. The latter is covered by a synthetic fixture.
+See the [1CD research and instructions](docs/1c-accounting-replacement-plan.md#эксперимент-чтение-1cd-без-платформы)
 before using it.
 
 `python3 apps/ledger/tools/inspect_1cd.py SOURCE.1CD export-stage --output stage.xml` (add
@@ -368,14 +368,24 @@ and automated regression tests.
 
 ### Staging file from a 1CD database
 
-The same command takes the staging file `inspect_1cd.py export-stage` writes and
-recognises it by its first line. One transaction brings in the chart of accounts and
-analytics kinds the configuration lacks, the organization, catalogs, and every
-document that has register movements, as operations holding the entries 1C wrote.
-Imported documents cannot be unposted or posted again; reverse them. Records keep
-their 1C GUIDs, so importing the file again updates catalogs instead of duplicating
-them. The summary shows totals; the full report, a line per 1C type and every held-back
-item, is saved as `import-1cd-report.txt` beside the infobase.
+**File > Import from 1C** accepts a consistent offline `.1CD` copy or the XML
+produced by `inspect_1cd.py export-stage`. For a `.1CD`, Ledger runs its bundled
+reader with Python 3 on the system PATH, then displays extracted counts for
+review. The reader opens the source read-only. You can also prepare the XML
+on the machine holding the snapshot and open only the XML in Ledger.
+
+The import transaction brings in accounts, analytics, catalogs, and historical
+documents using the 1C movements. Configured types open in their corresponding
+Ledger forms. An incoming organization with a different tax ID is held back
+when the destination already has an INN. Imported documents keep their
+original movements and are protected from posting again. Repeat imports retain
+source GUIDs. Ledger saves the import report as `import-1cd-report.txt` beside
+the infobase.
+
+For selective inspection, `inspect_1cd.py` accepts an immutable HTTPS snapshot
+with a strong ETag and byte ranges. Full staging takes a local path and hashes
+the complete source. Selected information and accumulation register rows are
+available for review in the staging XML. Exchange rates have a Ledger mapping.
 Details: [the 1CD verification notes](docs/1cd-verification-without-1c.md).
 
 ## Research on 1C programmer tasks

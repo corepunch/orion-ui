@@ -6,6 +6,12 @@
 #include "marketplace_host.h"
 #include <orion/commdlg/commdlg.h>
 #include <orion/user/file.h>
+#include <orion/user/process.h>
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include <time.h>
 #include <ctype.h>
 #include <orion/script/script_internal.h>
@@ -470,7 +476,7 @@ static void post_drafts(void) {
   result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *n = docs; n; n = n->next) {
     const db_document_t *d = *(db_document_t **)n->data;
-    if (d->posted) continue;
+    if (d->posted || ledger_document_imported(d)) continue;
     ui_format_date(d->date, date, sizeof(date));
     snprintf(line, sizeof(line), "%s %s, %s\n", d->number, date, ui_format_number(d->total, 2, total, sizeof(total)));
     if (++count <= 12) { size_t used = strlen(list); snprintf(list + used, sizeof(list) - used, "%s", line); }
@@ -481,7 +487,7 @@ static void post_drafts(void) {
     int failed = 0;
     for (result_node_t *n = docs; n; n = n->next) {
       const db_document_t *d = *(db_document_t **)n->data;
-      if (!d->posted && !ledger_post(g_ledger->ib, g_ledger->cfg, d->id)) failed++;
+      if (!d->posted && !ledger_document_imported(d) && !ledger_post(g_ledger->ib, g_ledger->cfg, d->id)) failed++;
     }
     after_save(0);
     if (failed) {
@@ -598,17 +604,23 @@ static bool save_stage_report(const ledger_stage_import_t *r, char *path, size_t
 
 // A 1CD staging file (inspect_1cd.py export-stage): preview, then import.
 static void import_stage_file(const char *path) {
-  // Preview: show source metadata before writing to the infobase.
   ledger_stage_header_t hdr;
-  if (ledger_stage_header(path, &hdr)) {
-    char preview[1024];
-    char sha_short[14] = "";
-    if (hdr.source_sha256[0]) snprintf(sha_short, sizeof(sha_short), "%.12s…", hdr.source_sha256);
-    snprintf(preview, sizeof(preview), ui_tr("Import staging file from 1C\n\nConfiguration: %s %s\nSource: %s\nSHA-256: %s\n\nImport into the infobase?"),
-      hdr.config_name[0] ? hdr.config_name : ui_tr("(unknown)"), hdr.config_version,
-      hdr.source_file[0] ? hdr.source_file : path, sha_short);
-    if (message_box(g_ledger->main_win, preview, ui_tr("Import from 1C"), MB_YESNO) != IDYES) return;
+  if (!ledger_stage_header(path, &hdr)) {
+    message_box(g_ledger->main_win, ui_tr("Unable to read the 1C import preview."), ui_tr("Import from 1C"), MB_OK);
+    return;
   }
+  char preview[1024];
+  char accounts[32], records[32], documents[32], movements[32], skipped[32];
+  snprintf(preview, sizeof(preview),
+    ui_tr("Configuration: %s %s\nSource: %s\n\nExtracted from 1C: %s accounts, %s catalog records, %s documents and %s movements.\nTables outside the export: %s.\n\nImport into the infobase?"),
+    hdr.config_name[0] ? hdr.config_name : ui_tr("(unknown)"), hdr.config_version,
+    hdr.source_file[0] ? hdr.source_file : path,
+    ui_format_number(hdr.accounts, 0, accounts, sizeof(accounts)),
+    ui_format_number(hdr.records, 0, records, sizeof(records)),
+    ui_format_number(hdr.documents, 0, documents, sizeof(documents)),
+    ui_format_number(hdr.movements, 0, movements, sizeof(movements)),
+    ui_format_number(hdr.skipped, 0, skipped, sizeof(skipped)));
+  if (message_box(g_ledger->main_win, preview, ui_tr("Import from 1C"), MB_YESNO) != IDYES) return;
   ledger_stage_import_t *r = calloc(1, sizeof(*r));
   char text[1024], report[LEDGER_PATH_MAX + 16];
   if (!r) return;
@@ -625,35 +637,88 @@ static void import_stage_file(const char *path) {
   free(r);
 }
 
-// Convert a 1CD file to a staging XML using inspect_1cd.py export-stage.
-// Returns true and fills stage_path on success; shows an error on failure.
+typedef struct {
+  ui_process_t *child;
+  uint32_t timer;
+  int exit_code;
+} ledger_1cd_reader_t;
+
+static result_t ledger_read_1cd_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  ledger_1cd_reader_t *reader = win->userdata;
+  switch (msg) {
+    case evCreate:
+      reader = win->userdata = lparam;
+      reader->timer = axSetTimer(win, 100, NULL, true);
+      return reader->timer != 0;
+    case evTimer:
+      if (reader && wparam == reader->timer && ui_process_poll(reader->child, &reader->exit_code))
+        end_dialog(win, 1);
+      return true;
+    case evCommand:
+      if (LOWORD(wparam) != ID_READ_1CD_CANCEL || HIWORD(wparam) != btnClicked) return false;
+      end_dialog(win, 0);
+      return true;
+    case evClose:
+      end_dialog(win, 0);
+      return true;
+    case evDestroy:
+      if (reader && reader->timer) axCancelTimer(reader->timer);
+      return false;
+    case evPaint: default: return false;
+  }
+}
+
 static bool convert_1cd_to_stage(const char *path_1cd, char *stage_path, size_t stage_sz) {
   char script[LEDGER_PATH_MAX * 2];
-  snprintf(script, sizeof(script), "%s/../tools/inspect_1cd.py", g_ledger->share_dir);
-  if (!axPathExists(script)) snprintf(script, sizeof(script), "%s/tools/inspect_1cd.py", g_ledger->share_dir);
+  snprintf(script, sizeof(script), "%s/tools/inspect_1cd.py", g_ledger->share_dir);
+  if (!axPathExists(script)) snprintf(script, sizeof(script), "%s/../tools/inspect_1cd.py", g_ledger->share_dir);
   if (!axPathExists(script)) {
     message_box(g_ledger->main_win, ui_tr("The 1CD conversion tool (inspect_1cd.py) could not be found."), ui_tr("Import from 1C"), MB_OK);
     return false;
   }
-  snprintf(stage_path, stage_sz, "%s/import-1cd-stage.xml", g_ledger->data_dir);
-  char cmd[LEDGER_PATH_MAX * 4], error_text[2048] = "";
-  snprintf(cmd, sizeof(cmd), "python3 \"%s\" \"%s\" export-stage --output \"%s\" --overwrite 2>&1",
-    script, path_1cd, stage_path);
-  FILE *fp = popen(cmd, "r");
-  if (!fp) {
-    message_box(g_ledger->main_win, ui_tr("The 1CD conversion could not be started."), ui_tr("Import from 1C"), MB_OK);
+  static unsigned sequence;
+#ifdef _WIN32
+  const char *python = "python.exe";
+  int pid = _getpid();
+#else
+  const char *python = "python3";
+  int pid = (int)getpid();
+#endif
+  int length = snprintf(stage_path, stage_sz, "%s/.import-1cd-%d-%lld-%u.xml",
+                        g_ledger->data_dir, pid, (long long)time(NULL), ++sequence);
+  if (length < 0 || (size_t)length >= stage_sz) {
+    message_box(g_ledger->main_win, ui_tr("The import folder path is too long."), ui_tr("Import from 1C"), MB_OK);
     return false;
   }
-  size_t n = fread(error_text, 1, sizeof(error_text) - 1, fp);
-  error_text[n] = '\0';
-  int rc = pclose(fp);
-  if (rc != 0) {
+  char log[LEDGER_PATH_MAX + 8], partial[LEDGER_PATH_MAX + 8];
+  snprintf(log, sizeof(log), "%s.log", stage_path);
+  snprintf(partial, sizeof(partial), "%s.tmp", stage_path);
+  const char *argv[] = { python, "-I", "-B", script, "--diagnostics", log,
+                         "--", path_1cd, "export-stage", "--output", stage_path, NULL };
+  ledger_1cd_reader_t reader = { .child = ui_process_start(argv), .exit_code = -1 };
+  if (!reader.child) {
+    message_box(g_ledger->main_win, ui_tr("Python 3 could not be started. Install Python 3 or import a prepared staging XML."),
+                ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  bool finished = show_dialog_from_form(&ledger_read_1cd_form, NULL, g_ledger->main_win, ledger_read_1cd_proc, &reader) != 0;
+  ui_process_close(reader.child);
+  bool converted = finished && reader.exit_code == 0;
+  if (finished && !converted) {
+    char error_text[2048] = "";
+    FILE *fp = fopen(log, "rb");
+    if (fp) {
+      error_text[fread(error_text, 1, sizeof(error_text) - 1, fp)] = '\0';
+      fclose(fp);
+    }
     char msg[2560];
     snprintf(msg, sizeof(msg), "%s%s%s", ui_tr("The 1CD conversion failed."), error_text[0] ? "\n\n" : "", error_text);
     message_box(g_ledger->main_win, msg, ui_tr("Import from 1C"), MB_OK);
-    return false;
   }
-  return true;
+  remove(log);
+  remove(partial);
+  if (!converted) remove(stage_path);
+  return converted;
 }
 
 // Catalogs and opening balances from a 1C:Enterprise 8 exchange file, with a
@@ -673,6 +738,7 @@ static void import_from_1c(void) {
     char stage_path[LEDGER_PATH_MAX];
     if (!convert_1cd_to_stage(path, stage_path, sizeof(stage_path))) return;
     import_stage_file(stage_path);
+    remove(stage_path);
     return;
   }
   if (ledger_file_is_stage(path)) { import_stage_file(path); return; }

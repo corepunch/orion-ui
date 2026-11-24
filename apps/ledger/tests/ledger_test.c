@@ -2308,7 +2308,7 @@ static bool ledger_turnovers(stage_turnover_t *list, int *count) {
     bool ours = false;
     for (int i = 0; d && ledger_document_imported(d) && i < g_recorder_count && !ours; i++) ours = !strcmp(d->import_source + 4, g_recorders[i]);
     if (!ours) continue;
-    if (!e->active) continue;
+    if (e->source_inactive) continue;
     const db_account_t *dr = e->debit_id ? (const db_account_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)e->debit_id) : NULL;
     const db_account_t *cr = e->credit_id ? (const db_account_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)e->credit_id) : NULL;
     int64_t minor = e->amount_minor;
@@ -2394,14 +2394,23 @@ static void test_import_stage_documents(void) {
   ASSERT(first && first->debit_tax_set && first->debit_tax_minor == 10050 && !first->debit_permanent_minor && !first->debit_temporary_minor && !first->credit_tax_set, "tax-accounting amounts keep their unset flag per side");
   ASSERT(second && second->credit_tax_set && second->credit_tax_minor == 4950 && second->credit_permanent_minor == -500 && second->credit_temporary_minor == 325, "credit-side tax amounts (НУ, ПР, ВР) round-trip through the import");
   ASSERT(first && first->credit_subconto_id && second && second->debit_subconto_id && second->credit_subconto_id == cp->id, "enum and document values became analytics records");
-  ASSERT(first && first->source_line == 1 && first->active, "source_line and active flag stored on imported entry");
+  ASSERT(first && first->source_line == 1 && !first->source_inactive && first->debit_quantity_set &&
+         first->debit_quantity_milli == 2500 && !first->credit_quantity_set, "original active state and per-side quantity are stored");
   ASSERT(first && first->debit_currency_id == 0 && first->credit_currency_id == 0, "per-side currency IDs stored (zero when movement has none)");
   free_result_list(rows);
   db_document_t *d2_doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000002");
   result_node_t *d2_rows = d2_doc ? (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)d2_doc->id) : NULL;
   const db_entry_t *d2_inactive = NULL;
-  for (result_node_t *n = d2_rows; n; n = n->next) { const db_entry_t *e = *(db_entry_t **)n->data; if (!e->active) d2_inactive = e; }
-  ASSERT(d2_inactive && !d2_inactive->active && d2_inactive->source_line == 4, "inactive movement imported with active=false and correct source_line");
+  for (result_node_t *n = d2_rows; n; n = n->next) {
+    const db_entry_t *e = *(db_entry_t **)n->data;
+    if (e->source_inactive) d2_inactive = e;
+  }
+  ASSERT(d2_inactive && d2_inactive->source_line == 4, "inactive movement keeps its source state and line");
+  db_entry_t **posted_entries = NULL;
+  int posted_count = ledger_posted_entries(g_ledger->ib, &posted_entries);
+  for (int i = 0; i < posted_count; i++)
+    ASSERT(!posted_entries[i]->source_inactive, "reports exclude inactive imported movements");
+  free(posted_entries);
   free_result_list(d2_rows);
   db_analytic_item_t *tax = find_by(g_ledger->ib, TABLE_ANALYTIC_ITEMS, "name", "Налог");
   ASSERT(tax && first && tax->id == first->credit_subconto_id, "the enum value is an analytic item");
@@ -2797,21 +2806,26 @@ static void test_subconto2_3_posting(void) {
   ASSERT(e->credit_subconto2_id == 40, "credit_subconto2 still auto-derives when no override");
   ASSERT(e->credit_subconto3_id == 99, "explicit credit_subconto3 override");
   free_result_list(rows);
+  db_document_t doc3 = { .id = 3, .doc_type_id = 1, .date = "2026-04-01", .posted = true };
+  ASSERT_TRUE(send_db_message(fresh_ib, dbInsert, TABLE_DOCUMENTS, &doc3));
+  ledger_post_t posting3 = { .ib = fresh_ib, .cfg = cfg, .doc = &doc3, .type = &dtype, .rate = 1.0, .entry_failed = &failed };
+  ledger_subjects_t collision = { .item = 21, .warehouse = 20 };
+  ledger_add_entry(&posting3, stock->id, payable->id, 250.0, &collision, 1.0, 0, 0, NULL);
   db_document_t curr = { .id = 10, .doc_type_id = 1, .date = "2026-04-02" };
   ASSERT_TRUE(send_db_message(fresh_ib, dbInsert, TABLE_DOCUMENTS, &curr));
   ledger_post_t p3 = { .ib = fresh_ib, .cfg = cfg, .doc = &curr, .type = &dtype };
   ledger_turnover_t t = ledger_turnover(&p3, stock->id, 20, -1);
   ASSERT(approx(t.dr, 1500), "slot1 item filter: both entries with item=20");
-  t = ledger_turnover(&p3, stock->id, 30, -1);
+  t = ledger_turnover_slot(&p3, stock->id, 30, -1, 2);
   ASSERT(approx(t.dr, 1000), "slot2 warehouse=30: doc1 only (doc2 overridden to 77)");
-  t = ledger_turnover(&p3, stock->id, 77, -1);
+  t = ledger_turnover_slot(&p3, stock->id, 77, -1, 2);
   ASSERT(approx(t.dr, 500),  "slot2 explicit override=77: doc2 only");
-  t = ledger_turnover(&p3, payable->id, 40, -1);
+  t = ledger_turnover_slot(&p3, payable->id, 40, -1, 2);
   ASSERT(approx(t.cr, 1500), "slot2 contract=40: both entries");
-  t = ledger_turnover(&p3, payable->id, 99, -1);
+  t = ledger_turnover_slot(&p3, payable->id, 99, -1, 3);
   ASSERT(approx(t.cr, 500),  "slot3 explicit override=99: doc2 only");
   t = ledger_turnover(&p3, stock->id, -1, -1);
-  ASSERT(approx(t.dr, 1500), "wildcard matches all analytics");
+  ASSERT(approx(t.dr, 1750), "wildcard matches all analytics");
   t = ledger_turnover(&p3, stock->id, 0, -1);
   ASSERT(approx(t.dr, 0),    "subconto_id=0 means no analytics, not wildcard");
   cfg->dirty = fresh_ib->dirty = false;

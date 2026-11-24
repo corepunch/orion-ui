@@ -37,8 +37,9 @@ function ledger.entry(entry) end
 ---@param account string|integer
 ---@param subconto? integer Analytics ID; omitted means all.
 ---@param currency? integer Currency ID; omitted means all.
+---@param slot? integer Analytics slot 1–3. Defaults to 1.
 ---@return table
-function ledger.turnover(account, subconto, currency) end
+function ledger.turnover(account, subconto, currency, slot) end
 
 ---Read the exchange rate on a date. Zero means no rate was found.
 ---@param currency_id integer

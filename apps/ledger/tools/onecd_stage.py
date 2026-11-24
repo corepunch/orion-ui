@@ -25,6 +25,10 @@ BUSINESS_CATALOGS = (
     'ПодразделенияОрганизаций', 'ФизическиеЛица', 'Валюты', 'СтатьиЗатрат', 'СтатьиДвиженияДенежныхСредств',
     'ПрочиеДоходыИРасходы', 'НоменклатурныеГруппы', 'РасходыБудущихПериодов', 'ВидыНоменклатуры',
     'КлассификаторЕдиницИзмерения', 'Сотрудники', 'ОсновныеСредства', 'НематериальныеАктивы')
+MIGRATION_REGISTERS = (
+    'СчетаУчетаНоменклатуры', 'СчетаУчетаРасчетовСКонтрагентами', 'УчетнаяПолитика',
+    'ТарифыСтраховыхВзносов', 'РазмерВычетовНДФЛ', 'РасчетНалогаУСН',
+    'КнигаУчетаДоходовИРасходов', 'РеализацияУслуг')
 ACCOUNT_KINDS = {0: 'active', 1: 'passive', 2: 'active-passive'}
 COMPOSITE_PARTS = ('_TYPE', '_L', '_N', '_T', '_S', '_RTREF', '_RRREF')
 # the common attribute that separates data areas: constant 0 in a non-separated database
@@ -899,6 +903,42 @@ class Exporter(Stage):
         table = self.meta.object_table(info)
         return table is not None and M.count_live_rows(self.db, table) > 0
 
+    def export_auxiliary_register(self, info, rates):
+        table = self.table_for(info)
+        layout = self.layout(table)
+        is_rates = info.short_name == 'КурсыВалют'
+        register = El('register', {'type': info.name})
+        for data in M.live_rows(self.db, table):
+            values = [value for _, _, value in self.fields(table, data, info, info.name)]
+            attrs = {}
+            for name in ('_PERIOD', '_ACTIVE', '_LINENO', '_RECORDKIND'):
+                field = layout.get(name)
+                if field:
+                    flags, value = self.primitive(table, data, field, f'{info.name}.{name}')
+                    if value is not None and flags.get('empty') != 'true':
+                        attrs[{'_PERIOD': 'period', '_ACTIVE': 'active', '_LINENO': 'line',
+                               '_RECORDKIND': 'movement-kind'}[name]] = value
+            recorder_type, recorder = layout.get('_RECORDERTREF'), layout.get('_RECORDERRREF')
+            if recorder_type and recorder:
+                target = self.meta.type_by_number.get(int.from_bytes(self.cell(data, recorder_type)[1], 'big'))
+                reference = self.cell(data, recorder)[1]
+                if target and target.kind == 'Document':
+                    ref, _ = self.reference(target, reference, f'{info.name}.recorder')
+                    attrs.update({'recorder-type': target.name, 'recorder': ref.get('id', '')})
+                else:
+                    self.note(info.name, 'unknown recorder type')
+                    attrs.update({'recorder': ref_uuid(reference), 'recorder-undecoded': 'true'})
+            if is_rates:
+                currency = next((v.attrs.get('id') for v in values if v.attrs['n'] == 'Валюта'), None)
+                if not currency or not attrs.get('period'):
+                    self.note(info.name, 'exchange rate is missing its currency or period')
+                    continue
+                rates.add(El('rate', {'currency': currency, 'period': attrs['period']})).kids.extend(values)
+            else:
+                register.add(El('movement', attrs)).kids.extend(values)
+            self.exported_rows[table.name] += 1
+        return register
+
     def build(self):
         meta, root = self.meta, El('stage', {'format': FORMAT})
         header = root.add(El('header'))
@@ -912,12 +952,18 @@ class Exporter(Stage):
             for raw, row in self.index(sub_info).items():
                 self.export_object(sub_info, raw, row)
         registers = []
+        rates = El('rates', {'register': 'РегистрСведений.КурсыВалют'})
         for (kind, _), info in sorted(meta.objects.items()):
             if kind == 'AccRg' and self.nonempty(info):
                 chart = self.chart_for(info)
                 if chart.number not in charts:
                     raise ValueError(f'{info.name}: chart {chart.name} is empty')
                 registers.append(self.export_register(info, chart, charts[chart.number][1]))
+            elif kind in ('InfoRg', 'AccumRg') and (info.short_name in MIGRATION_REGISTERS or
+                                                   (kind == 'InfoRg' and info.short_name == 'КурсыВалют')) and self.nonempty(info):
+                register = self.export_auxiliary_register(info, rates)
+                if register.kids:
+                    registers.append(register)
         catalogs, missing = self.catalog_infos()
         for info in catalogs:
             for raw, row in self.index(info).items():
@@ -953,6 +999,8 @@ class Exporter(Stage):
         regs = root.add(El('registers'))
         for reg in registers:
             regs.add(reg)
+        if rates.kids:
+            root.add(rates)
         enums = root.add(El('enums'))
         for (number, raw), (name, order) in sorted(self.enums.items(), key=lambda kv: (kv[0][0], kv[1][1], kv[0][1])):
             info = meta.type_by_number[number]

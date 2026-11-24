@@ -136,7 +136,7 @@
   <string source="Tax:" obsolete="true">Steuer:</string>
   <string source="Total:" where="operation,payroll">Gesamt:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">OK und buchen</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,contract,bank_account,warehouse,report_settings">Abbrechen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,read_1cd,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,contract,bank_account,warehouse,report_settings">Abbrechen</string>
   <string source="Document Line" where="doc_line">Belegposition</string>
   <string source="Item:" where="doc_line">Artikel:</string>
   <string source="Quantity:" where="doc_line,entry">Menge:</string>
@@ -628,7 +628,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Kind:" where="contract,warehouse">Art:</string>
   <string source="Valid until:" where="contract">Gültig bis:</string>
   <string source="supplier, customer, other" where="contract">Lieferant, Kunde, sonstige</string>
-  <string source="Organization:" where="bank_account">Organisation:</string>
+  <string source="Organization:" where="contract,bank_account">Organisation:</string>
   <string source="Account number:" where="bank_account">Kontonummer:</string>
   <string source="SWIFT:" where="bank_account">SWIFT:</string>
   <string source="Keeper:" where="warehouse">Lagerverwalter:</string>
@@ -674,32 +674,26 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Rebuild reports from entries">Berichte aus den Buchungen neu aufbauen</string>
   <string source="Print report forms: cash book">Berichtsformulare drucken: Kassenbuch</string>
   <string source="Infobase">Mandant</string>
-  <context name="currencies_page">
-    <string source="Rate">Kurs</string>
-  </context>
-  <context name="reports_page">
-    <string source="Expense">Ausgabe</string>
-  </context>
   <string source="Help Topics" where="menu">Hilfethemen</string>
   <string source="Tutorial: Review the Journal" where="menu">Lernprogramm: Belegjournal prüfen</string>
   <string source="Tutorial: Read the Trial Balance" where="menu">Lernprogramm: Summen- und Saldenliste lesen</string>
-  <string source="Tutorials" where="labels">Lernprogramme</string>
-  <string source="Review the Journal" where="labels">Belegjournal prüfen</string>
-  <string source="Read the Trial Balance" where="labels">Summen- und Saldenliste lesen</string>
-  <string source="Choose a document in the journal. The row shows its date, type and whether it is posted." where="labels">Wählen Sie einen Beleg im Journal aus. Die Zeile zeigt das Datum, die Belegart und den Buchungsstatus.</string>
-  <string source="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits." where="labels">Im unteren Bereich sehen Sie die Details zum ausgewählten Beleg. Unter „Positionen“ stehen die Artikel und unter „Buchungen“ die Soll- und Habenbuchungen.</string>
-  <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." where="labels">Wählen Sie „Bearbeiten“, um den Beleg zu öffnen, oder „Soll/Haben“, um zu den Buchungen zu wechseln. Ein Entwurf hat keine Buchungen.</string>
-  <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." where="labels">Wählen Sie in der Berichtsliste die Summen- und Saldenliste. Legen Sie den Zeitraum über „Einstellungen“ (Strg+R) fest.</string>
-  <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." where="labels">Lesen Sie von links nach rechts: Anfangssaldo, Soll- und Habenumsatz und dann den Schlusssaldo. Vergleichen Sie die Soll- und Habenumsätze in der Summenzeile.</string>
+  <string source="Tutorials">Lernprogramme</string>
+  <string source="Review the Journal">Belegjournal prüfen</string>
+  <string source="Read the Trial Balance">Summen- und Saldenliste lesen</string>
+  <string source="Choose a document in the journal. The row shows its date, type and whether it is posted.">Wählen Sie einen Beleg im Journal aus. Die Zeile zeigt das Datum, die Belegart und den Buchungsstatus.</string>
+  <string source="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits.">Im unteren Bereich sehen Sie die Details zum ausgewählten Beleg. Unter „Positionen“ stehen die Artikel und unter „Buchungen“ die Soll- und Habenbuchungen.</string>
+  <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries.">Wählen Sie „Bearbeiten“, um den Beleg zu öffnen, oder „Soll/Haben“, um zu den Buchungen zu wechseln. Ein Entwurf hat keine Buchungen.</string>
+  <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range.">Wählen Sie in der Berichtsliste die Summen- und Saldenliste. Legen Sie den Zeitraum über „Einstellungen“ (Strg+R) fest.</string>
+  <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row.">Lesen Sie von links nach rechts: Anfangssaldo, Soll- und Habenumsatz und dann den Schlusssaldo. Vergleichen Sie die Soll- und Habenumsätze in der Summenzeile.</string>
   <string source="Print Item Labels..." where="menu">Artikeletiketten drucken...</string>
-  <string source="Labels" where="items_page">Etiketten</string>
-  <string source="Print item labels" where="items_page">Artikeletiketten drucken</string>
-  <string source="Printable HTML (*.html)">Druckbares HTML (*.html)</string>
-  <string source="Print Item Labels">Artikeletiketten drucken</string>
-  <string source="Replace the existing printable file?">Die vorhandene Druckdatei ersetzen?</string>
-  <string source="Use the .html extension for printable labels.">Verwenden Sie die Dateiendung .html.</string>
-  <string source="The printable file could not be created.">Die Druckdatei konnte nicht erstellt werden.</string>
-  <string source="The printable file could not be saved.">Die Druckdatei konnte nicht gespeichert werden.</string>
+  <string source="Labels">Etiketten</string>
+  <string source="Print item labels">Artikeletiketten drucken</string>
+  <string source="Printable HTML (*.html)" obsolete="true">Druckbares HTML (*.html)</string>
+  <string source="Print Item Labels" obsolete="true">Artikeletiketten drucken</string>
+  <string source="Replace the existing printable file?" obsolete="true">Die vorhandene Druckdatei ersetzen?</string>
+  <string source="Use the .html extension for printable labels." obsolete="true">Verwenden Sie die Dateiendung .html.</string>
+  <string source="The printable file could not be created." obsolete="true">Die Druckdatei konnte nicht erstellt werden.</string>
+  <string source="The printable file could not be saved." obsolete="true">Die Druckdatei konnte nicht gespeichert werden.</string>
   <string source="Automation Recipes..." where="menu">Automationsrezepte...</string>
   <string source="Marketplaces..." where="menu">Marktplätze...</string>
   <string source="Marketplaces" where="code">Marktplätze</string>
@@ -717,4 +711,28 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="No eligible pick sheet is available for this snapshot." where="code">Für diese Daten ist keine Kommissionierliste verfügbar.</string>
   <string source="Preview this pick sheet before saving it." where="code">Öffnen Sie die Vorschau, bevor Sie die Kommissionierliste speichern.</string>
   <string source="Use the .html extension for the printable file." where="code">Verwenden Sie die Endung .html für die Druckdatei.</string>
+  <string source="Analytics kind" where="reports_page">Analyseart</string>
+  <string source="Read 1C Infobase" where="read_1cd">1C-Datenbank lesen</string>
+  <string source="Reading the 1C copy and preparing an import preview." where="read_1cd">Die 1C-Kopie wird gelesen und die Importvorschau wird vorbereitet.</string>
+  <string source="Subject:" where="contract">Gegenstand:</string>
+  <string source="Analytics slot (1–3):" where="report_settings">Analyseplatz (1–3):</string>
+  <context name="currencies_page">
+    <string source="Rate">Kurs</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Ausgabe</string>
+  </context>
+  <string source="Unable to read the 1C import preview." where="code">Die Vorschau für den 1C-Import konnte nicht gelesen werden.</string>
+  <string source="Configuration: %s %s&#10;Source: %s&#10;&#10;Extracted from 1C: %s accounts, %s catalog records, %s documents and %s movements.&#10;Tables outside the export: %s.&#10;&#10;Import into the infobase?" where="code">Konfiguration: %s %s
+Quelle: %s
+
+Aus 1C extrahiert: %s Konten, %s Stammdatensätze, %s Belege und %s Bewegungen.
+Tabellen außerhalb des Exports: %s.
+
+In die Datenbank importieren?</string>
+  <string source="The import folder path is too long." where="code">Der Pfad zum Importordner ist zu lang.</string>
+  <string source="Python 3 could not be started. Install Python 3 or import a prepared staging XML." where="code">Python 3 konnte nicht gestartet werden. Installieren Sie Python 3 oder importieren Sie eine vorbereitete XML-Datei.</string>
+  <string source="Cannot finish the imported document." where="code">Der Belegimport konnte nicht abgeschlossen werden.</string>
+  <string source="The 1CD conversion tool (inspect_1cd.py) could not be found." where="code">Das 1C-Konvertierungsprogramm (inspect_1cd.py) wurde nicht gefunden.</string>
+  <string source="The 1CD conversion failed." where="code">Die 1C-Datenbank konnte nicht gelesen werden.</string>
 </strings>

@@ -61,6 +61,7 @@ void ledger_add_entry(const ledger_post_t *p, int debit, int credit, double amou
 // Turnovers of account (with subaccounts) before the document being posted plus
 // its own entries so far; subconto and currency filter when >= 0.
 ledger_turnover_t ledger_turnover(const ledger_post_t *p, int account_id, int subconto_id, int currency_id);
+ledger_turnover_t ledger_turnover_slot(const ledger_post_t *p, int account_id, int subconto_id, int currency_id, int slot);
 double ledger_rate_on(database_t *ib, int currency_id, const char *date);
 int  ledger_field(database_t *db, int table_id, const char *field);
 // The account or one of its subaccounts (41.01 is within 41).
@@ -193,6 +194,7 @@ typedef struct {
   char locale[8];
   char config_name[64];
   char config_version[16];
+  int accounts, records, documents, movements, skipped;
 } ledger_stage_header_t;
 bool ledger_stage_header(const char *path, ledger_stage_header_t *out);
 

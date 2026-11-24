@@ -192,7 +192,10 @@ static int l_entry(lua_State *L) {
 
 static int l_turnover(lua_State *L) {
   if (!g_post) return luaL_error(L, "ledger.turnover outside a posting");
-  ledger_turnover_t t = ledger_turnover(g_post, account_id(L, 1), (int)luaL_optinteger(L, 2, -1), (int)luaL_optinteger(L, 3, -1));
+  int slot = (int)luaL_optinteger(L, 4, 1);
+  if (slot < 1 || slot > 3) return luaL_argerror(L, 4, "analytics slot must be 1, 2 or 3");
+  ledger_turnover_t t = ledger_turnover_slot(g_post, account_id(L, 1), (int)luaL_optinteger(L, 2, -1),
+                                             (int)luaL_optinteger(L, 3, -1), slot);
   lua_createtable(L, 0, 6);
   lua_pushnumber(L, t.dr); lua_setfield(L, -2, "dr");         lua_pushnumber(L, t.cr); lua_setfield(L, -2, "cr");
   lua_pushnumber(L, t.dr_qty); lua_setfield(L, -2, "dr_qty"); lua_pushnumber(L, t.cr_qty); lua_setfield(L, -2, "cr_qty");

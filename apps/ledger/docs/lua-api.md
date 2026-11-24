@@ -66,7 +66,7 @@ Add an entry to the document currently being posted. Only available inside posti
 
 **Returns:** `nil` — No values.
 
-## `ledger.turnover(account, subconto?, currency?)`
+## `ledger.turnover(account, subconto?, currency?, slot?)`
 
 Read cumulative turnovers before the current document plus its entries so far. Only available inside posting context.
 
@@ -75,6 +75,7 @@ Read cumulative turnovers before the current document plus its entries so far. O
 | `account` | `string\|integer` |  |
 | `subconto` | `integer?` | Analytics ID; omitted means all. |
 | `currency` | `integer?` | Currency ID; omitted means all. |
+| `slot` | `integer?` | Analytics slot 1–3. Defaults to 1. |
 
 **Returns:** `table` — dr, cr, dr_qty, cr_qty, dr_cur, cr_cur.
 
@@ -732,7 +733,13 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `credit_permanent_minor` | `int64` |  |
 | `credit_temporary_minor` | `int64` |  |
 | `source_line` | `integer` |  |
-| `active` | `boolean` |  |
+| `source_inactive` | `boolean` |  |
+| `source_period` | `string` |  |
+| `debit_quantity_set` | `boolean` |  |
+| `credit_quantity_set` | `boolean` |  |
+| `debit_quantity_milli` | `int64` |  |
+| `credit_quantity_milli` | `int64` |  |
+| `source_currencies_set` | `boolean` |  |
 | `debit_currency_id` | `integer` | currencies.id |
 | `credit_currency_id` | `integer` | currencies.id |
 | `debit_currency_amount` | `double` |  |
@@ -813,6 +820,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `account_id` | `integer` | cfg.accounts.id |
+| `subconto_slot` | `integer` |  |
 | `date_from` | `date` |  |
 | `date_to` | `date` |  |
 
@@ -837,7 +845,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `id` | `integer` |  |
 | `document_id` | `integer` | documents.id |
 | `account_id` | `integer` | cfg.accounts.id |
-| `subconto_id` | `integer` | ib.{account.subconto_kind.table}.id |
+| `subconto_kind_id` | `integer` | cfg.subconto_kinds.id |
+| `subconto_id` | `integer` | ib.{subconto_kind.table}.id |
 | `corr_id` | `integer` | cfg.accounts.id |
 | `date` | `date` |  |
 | `debit` | `double` |  |
@@ -851,7 +860,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `account_id` | `integer` | cfg.accounts.id |
-| `subconto_id` | `integer` | ib.{account.subconto_kind.table}.id |
+| `subconto_kind_id` | `integer` | cfg.subconto_kinds.id |
+| `subconto_id` | `integer` | ib.{subconto_kind.table}.id |
 | `opening_dr` | `double` |  |
 | `opening_cr` | `double` |  |
 | `debit_turnover` | `double` |  |

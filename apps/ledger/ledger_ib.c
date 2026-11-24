@@ -77,7 +77,8 @@ bool ledger_period_closed(database_t *db, const char *date) {
 }
 
 bool ledger_close_document_blocks(const db_document_t *doc, const char *date) {
-  return !doc || !ledger_valid_date(doc->date) || (!doc->posted && strcmp(doc->date, date) <= 0);
+  return !doc || !ledger_valid_date(doc->date) ||
+    (!doc->posted && !ledger_document_imported(doc) && strcmp(doc->date, date) <= 0);
 }
 
 bool ledger_close_through(database_t *db, const char *date) {
@@ -312,7 +313,8 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
   if (table_id == TABLE_DOCUMENTS && msg != dbDelete && lparam) {
     staged_doc = *(const db_document_t *)lparam;
     const db_document_t *old = msg == dbUpdate ? (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)staged_doc.id) : NULL;
-    if (msg == dbInsert && !staged_doc.currency_id && exact_trade_type(staged_doc.doc_type_id)) staged_doc.exact_money = true;
+    if (msg == dbInsert && !ledger_document_imported(&staged_doc) && !staged_doc.currency_id &&
+        exact_trade_type(staged_doc.doc_type_id)) staged_doc.exact_money = true;
     if (!ledger_posting_active() && staged_doc.exact_money && staged_doc.posted) {
       fprintf(stderr, "[ledger] document rejected: exact document=%d must be posted by the posting API\n", staged_doc.id); fflush(stderr); return 0;
     }

@@ -2,6 +2,7 @@
 """Experimental, read-only 1CD catalog extraction for Ledger."""
 import argparse
 from collections import Counter
+from contextlib import redirect_stdout, redirect_stderr
 import hashlib
 import json
 import os
@@ -9,7 +10,6 @@ from pathlib import Path
 import re
 import struct
 import sys
-import uuid
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 
@@ -80,7 +80,7 @@ def export_catalog(db, table_name, kind):
         if ref in seen_ids or name in seen_names or (kind == 'items' and code and code in seen_codes):
             raise ValueError(f'duplicate identity, name or item code at byte {offset}')
         seen_ids.add(ref); seen_names.add(name); seen_codes.add(code)
-        rows.append((str(uuid.UUID(bytes_le=ref)), name, code))
+        rows.append((onecd_stage.ref_uuid(ref), name, code))
     if not rows:
         raise ValueError('no importable records')
     root = ET.Element('Message')
@@ -477,9 +477,9 @@ def write_register_stage(db, table_name, output_path):
     return len(encoded), payload
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('source', help='consistent offline copy of 1Cv8.1CD')
+    parser.add_argument('source', help='consistent offline copy of 1Cv8.1CD or an immutable HTTPS snapshot for inspection')
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('tables', help='list physical catalog tables; does not identify their meaning')
     sub.add_parser('catalogs', help='resolve catalog names and tables from CONFIG and DBNames')
@@ -498,9 +498,11 @@ def main():
     source.add_argument('--catalog', help='metadata name: Номенклатура or Контрагенты')
     extract.add_argument('--kind', choices=('items', 'counterparties'), help='required with --table')
     extract.add_argument('--output', required=True, help='new EnterpriseData-shaped XML file')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     db = None
     try:
+        if args.source.startswith('https://') and args.command in ('stage-register', 'export-stage'):
+            raise ValueError('full staging requires a local snapshot with a verified SHA-256')
         db = Database1CD(args.source)
         if args.command == 'tables':
             for name, table in sorted(db.tables.items()):
@@ -562,4 +564,10 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    arguments = sys.argv[1:]
+    if len(arguments) >= 2 and arguments[0] == '--diagnostics':
+        with os.fdopen(os.open(arguments[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600),
+                       'w', encoding='utf-8') as diagnostics:
+            with redirect_stdout(diagnostics), redirect_stderr(diagnostics):
+                sys.exit(main(arguments[2:]))
+    sys.exit(main(arguments))

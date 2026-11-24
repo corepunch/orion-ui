@@ -4,14 +4,13 @@ Everything here resolves names from CONFIG and PARAMS/DBNames by GUID. Nothing
 is matched by position or by similar names. Blobs are read lazily page by page,
 so the 0.5 GB CONFIG blob object is never loaded into memory.
 """
-import math
 import re
 import struct
 import zlib
 from collections import OrderedDict
 
 from vendor.onecreader import bracket
-from vendor.onecreader.raw1cd import BLOB_CHUNK, OBJ_SIG, PAGE_HEADER_SIZE, decode_nvc, decode_numeric
+from vendor.onecreader.raw1cd import BLOB_CHUNK, decode_nvc, decode_numeric
 
 GUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$', re.I)
 
@@ -30,31 +29,7 @@ class LazyObject:
 
     def __init__(self, db, header_page, cache_pages=256):
         self.db = db
-        buf = db.read_page(header_page)
-        if buf[:2] != OBJ_SIG:
-            raise ValueError(f'bad object signature at page {header_page}')
-        fat_level = struct.unpack('<H', buf[2:4])[0]
-        self.length = struct.unpack('<Q', buf[16:24])[0]
-        if self.length > db.total_pages * db.page_size:
-            raise ValueError('object larger than database')
-        count = (db.page_size - PAGE_HEADER_SIZE) // 4
-        fat = struct.unpack(f'<{count}I', buf[PAGE_HEADER_SIZE:])
-        pages = []
-        if fat_level == 0:
-            pages = list(fat[:math.ceil(self.length / db.page_size)])
-        elif fat_level == 1:
-            for index_page in fat:
-                if index_page == 0:
-                    break
-                for value in struct.unpack(f'<{db.page_size // 4}I', db.read_page(index_page)):
-                    if value == 0:
-                        break
-                    pages.append(value)
-        else:
-            raise NotImplementedError(f'fat_level {fat_level}')
-        if len(pages) * db.page_size < self.length or any(p == 0 for p in pages):
-            raise ValueError('incomplete object page list')
-        self.pages = pages
+        self.length, self.pages = db.object_pages(header_page)
         self.cache = OrderedDict()
         self.cache_pages = cache_pages
 

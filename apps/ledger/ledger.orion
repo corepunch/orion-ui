@@ -879,7 +879,13 @@
         <field name="credit_permanent_minor" type="int64" />
         <field name="credit_temporary_minor" type="int64" />
         <field name="source_line" type="integer" />
-        <field name="active" type="boolean" default="true" />
+        <field name="source_inactive" type="boolean" />
+        <field name="source_period" type="string" length="24" />
+        <field name="debit_quantity_set" type="boolean" />
+        <field name="credit_quantity_set" type="boolean" />
+        <field name="debit_quantity_milli" type="int64" />
+        <field name="credit_quantity_milli" type="int64" />
+        <field name="source_currencies_set" type="boolean" />
         <field name="debit_currency_id" type="integer" relation="currencies.id" />
         <field name="credit_currency_id" type="integer" relation="currencies.id" />
         <field name="debit_currency_amount" type="double" />
@@ -948,6 +954,7 @@
       <table name="report_settings">
         <field name="id" type="integer" key="YES" />
         <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="subconto_slot" type="integer" default="1" />
         <field name="date_from" type="date" />
         <field name="date_to" type="date" />
       </table>
@@ -968,7 +975,8 @@
         <field name="id" type="integer" key="YES" />
         <field name="document_id" type="integer" relation="documents.id" />
         <field name="account_id" type="integer" relation="cfg.accounts.id" />
-        <field name="subconto_id" type="integer" relation="ib.{account.subconto_kind.table}.id" />
+        <field name="subconto_kind_id" type="integer" relation="cfg.subconto_kinds.id" />
+        <field name="subconto_id" type="integer" relation="ib.{subconto_kind.table}.id" />
         <field name="corr_id" type="integer" relation="cfg.accounts.id" />
         <field name="date" type="date" />
         <field name="debit" type="double" />
@@ -979,7 +987,8 @@
       <table name="analysis_rows" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="account_id" type="integer" relation="cfg.accounts.id" />
-        <field name="subconto_id" type="integer" relation="ib.{account.subconto_kind.table}.id" />
+        <field name="subconto_kind_id" type="integer" relation="cfg.subconto_kinds.id" />
+        <field name="subconto_id" type="integer" relation="ib.{subconto_kind.table}.id" />
         <field name="opening_dr" type="double" />
         <field name="opening_cr" type="double" />
         <field name="debit_turnover" type="double" />
@@ -1587,6 +1596,7 @@
             <Column field="balance" title="Balance" width="86" />
           </TableView>
           <TableView name="analysis" zeros="blank" text="Account Analysis" source="ib.analysis_rows" flags="notitle,nofill,vscroll">
+            <Column field="subconto_kind.name" title="Analytics kind" width="115" />
             <Column field="subconto.name" title="Analytics" width="0" min-width="140" />
             <Column field="opening_dr" title="Opening Dr" width="86" total="sum" />
             <Column field="opening_cr" title="Opening Cr" width="86" total="sum" />
@@ -2146,6 +2156,14 @@
       </StackView>
     </form>
 
+    <form name="read_1cd" title="Read 1C Infobase" focus="cancel" width="440" spacing="8" padding="8">
+      <Label text="Reading the 1C copy and preparing an import preview." />
+      <StackView orientation="horizontal">
+        <Space />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
     <form name="lock_period" title="Close Accounting Period" focus="date" width="520" spacing="6" padding="8">
       <Label text="Closing is permanent. Reversals must use a later open date." />
       <GridView spacing="4"><Column width="auto"><Label text="Close through:" /></Column><Column><TextBox name="date" /></Column></GridView>
@@ -2607,11 +2625,13 @@
           <Label name="lbl_from" text="From:" />
           <Label name="lbl_to" text="To:" />
           <Label name="lbl_account" text="Account:" />
+          <Label text="Analytics slot (1–3):" />
         </Column>
         <Column name="inputs">
           <TextBox name="date_from" field="ib.report_settings.date_from" placeholder="Beginning" />
           <TextBox name="date_to" field="ib.report_settings.date_to" placeholder="End" />
           <ComboBox name="account" field="ib.report_settings.account_id" source="cfg.accounts" display="code" value="id" />
+          <TextBox name="subconto_slot" field="ib.report_settings.subconto_slot" type="integer" />
         </Column>
       </GridView>
       <Label name="hint" text="The account card and analysis show the chosen account; the cash book, assets and payroll use the period." />

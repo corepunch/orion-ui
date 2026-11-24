@@ -125,34 +125,74 @@ static int doc_order(database_t *cfg, const db_document_t *a, const db_document_
 
 typedef ledger_turnover_t turnover_t;
 
+static int entry_subconto(const db_entry_t *entry, bool credit, int slot) {
+  switch (slot) {
+    case 1: return credit ? entry->credit_subconto_id : entry->debit_subconto_id;
+    case 2: return credit ? entry->credit_subconto2_id : entry->debit_subconto2_id;
+    case 3: return credit ? entry->credit_subconto3_id : entry->debit_subconto3_id;
+    default: return 0;
+  }
+}
+
+static int entry_currency(const db_entry_t *entry, bool credit) {
+  if (!entry->source_currencies_set) return entry->currency_id;
+  return credit ? entry->credit_currency_id : entry->debit_currency_id;
+}
+
+static double entry_currency_amount(const db_entry_t *entry, bool credit) {
+  if (!entry->source_currencies_set) return entry->currency_amount;
+  return credit ? entry->credit_currency_amount : entry->debit_currency_amount;
+}
+
+static double entry_quantity(const db_entry_t *entry, bool credit) {
+  if (!entry->source_period[0]) return entry->quantity;
+  return (double)(credit ? entry->credit_quantity_milli : entry->debit_quantity_milli) / 1000.0;
+}
+
+static bool entry_has_warehouse(database_t *cfg, const db_entry_t *entry, bool credit, int warehouse) {
+  if (!warehouse) return true;
+  int account = credit ? entry->credit_id : entry->debit_id;
+  for (int slot = 1; slot <= 3; slot++)
+    if (!strcmp(ledger_subconto_slot_table(cfg, account, slot), "warehouses"))
+      return entry_subconto(entry, credit, slot) == warehouse;
+  return false;
+}
+
 // Turnovers of account (with subaccounts) on what precedes the document being
 // posted, plus its own entries so far. subconto and currency filter when >= 0.
-turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int currency_id) {
+static turnover_t turnover_for(const post_t *p, int account_id, int subconto_id, int currency_id, int slot, int warehouse) {
   turnover_t t = {0};
   result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
   EACH_RECORD(db_entry_t, e, entries) {
-    if (currency_id >= 0 && e->currency_id != currency_id) continue;
-    // Resolve documents only for matching sides; stock/payroll queries are selective.
-    bool debit = (subconto_id < 0 || e->debit_subconto_id == subconto_id ||
-                  (subconto_id > 0 && (e->debit_subconto2_id == subconto_id || e->debit_subconto3_id == subconto_id))) &&
-                 ledger_account_within(p->cfg, e->debit_id, account_id);
-    bool credit = (subconto_id < 0 || e->credit_subconto_id == subconto_id ||
-                   (subconto_id > 0 && (e->credit_subconto2_id == subconto_id || e->credit_subconto3_id == subconto_id))) &&
-                   ledger_account_within(p->cfg, e->credit_id, account_id);
+    if (e->source_inactive) continue;
+    bool debit = (subconto_id < 0 || entry_subconto(e, false, slot) == subconto_id) &&
+      (currency_id < 0 || entry_currency(e, false) == currency_id) &&
+      ledger_account_within(p->cfg, e->debit_id, account_id) && entry_has_warehouse(p->cfg, e, false, warehouse);
+    bool credit = (subconto_id < 0 || entry_subconto(e, true, slot) == subconto_id) &&
+      (currency_id < 0 || entry_currency(e, true) == currency_id) &&
+      ledger_account_within(p->cfg, e->credit_id, account_id) && entry_has_warehouse(p->cfg, e, true, warehouse);
     if (!debit && !credit) continue;
     if (e->document_id != p->doc->id) {
       const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
       if (!d || !d->posted || doc_order(p->cfg, d, p->doc) >= 0) continue;
     }
     if (debit) {
-      t.dr += e->amount; t.dr_qty += e->quantity; t.dr_cur += e->currency_amount;
+      t.dr += e->amount; t.dr_qty += entry_quantity(e, false); t.dr_cur += entry_currency_amount(e, false);
     }
     if (credit) {
-      t.cr += e->amount; t.cr_qty += e->quantity; t.cr_cur += e->currency_amount;
+      t.cr += e->amount; t.cr_qty += entry_quantity(e, true); t.cr_cur += entry_currency_amount(e, true);
     }
   }
   free_result_list(entries);
   return t;
+}
+
+turnover_t ledger_turnover_slot(const post_t *p, int account_id, int subconto_id, int currency_id, int slot) {
+  return turnover_for(p, account_id, subconto_id, currency_id, slot, 0);
+}
+
+turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int currency_id) {
+  return ledger_turnover_slot(p, account_id, subconto_id, currency_id, 1);
 }
 
 void ledger_add_entry(const post_t *p, int debit, int credit, double amount, const subjects_t *s, double quantity,
@@ -330,6 +370,7 @@ static void sum_entries(database_t *ib, db_document_t *doc) {
   int64_t exact_total = 0; bool exact = true;
   result_node_t *entries = fetch(ib, TABLE_ENTRIES, "document_id", doc->id);
   EACH_RECORD(db_entry_t, e, entries) {
+    if (e->source_inactive) continue;
     total += e->amount;
     if (doc->exact_money && (!e->exact_money || !money_add(exact_total, e->amount_minor, &exact_total))) exact = false;
   }
@@ -433,7 +474,7 @@ static void recalc_assets(database_t *ib, db_document_t *doc) {
 
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
-  if (!doc) return;
+  if (!doc || ledger_document_imported(doc)) return;
   if (!ledger_posting_active() && ((doc->exact_money && doc->posted) || ledger_reversal_linked(ib, doc_id))) {
     fprintf(stderr, "[ledger] recalculation rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return;
   }
@@ -459,8 +500,11 @@ static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
     bool ok = true;
     result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
     EACH_RECORD(db_entry_t, e, entries) {
-      bool debit = e->debit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->debit_id, p->type->cost_credit_id);
-      bool credit = e->credit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->credit_id, p->type->cost_credit_id);
+      if (e->source_inactive) continue;
+      bool debit = e->debit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->debit_id, p->type->cost_credit_id) &&
+                   entry_has_warehouse(p->cfg, e, false, p->doc->warehouse_id);
+      bool credit = e->credit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->credit_id, p->type->cost_credit_id) &&
+                    entry_has_warehouse(p->cfg, e, true, p->doc->warehouse_id);
       if (!debit && !credit) continue;
       if (e->document_id != p->doc->id) {
         const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
@@ -481,8 +525,15 @@ static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
     ledger_add_entry(p, p->type->cost_debit_id, p->type->cost_credit_id, (double)cost / 100.0, &s, line->quantity, 0, 0, NULL);
     return;
   }
-  turnover_t t = ledger_turnover(p, p->type->cost_credit_id, line->item_id, -1);
+  turnover_t t = turnover_for(p, p->type->cost_credit_id, line->item_id, -1, 1, p->doc->warehouse_id);
   double qty = t.dr_qty - t.cr_qty, value = t.dr - t.cr;
+  if (p->doc->warehouse_id && (qty <= 0 || line->quantity > qty)) {
+    fprintf(stderr, "[ledger] cost of sales rejected: document=%s item=%d warehouse=%d insufficient stock\n",
+            p->doc->number, line->item_id, p->doc->warehouse_id);
+    fflush(stderr);
+    if (p->entry_failed) *p->entry_failed = true;
+    return;
+  }
   if (qty <= 0) {
     fprintf(stderr, "[ledger] cost of sales skipped: document=%s item=%d has no stock on the date\n", p->doc->number, line->item_id);
     return;
@@ -609,10 +660,12 @@ static void close_revaluation(const post_t *p, const db_closing_rule_t *rule) {
   key_set_t set = {0};
   result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
   EACH_RECORD(db_entry_t, e, entries) {
-    for (int side = 0; side < 2 && e->currency_id; side++) {
+    if (e->source_inactive) continue;
+    for (int side = 0; side < 2; side++) {
       int account = side ? e->credit_id : e->debit_id, subconto = side ? e->credit_subconto_id : e->debit_subconto_id;
+      int currency = entry_currency(e, side != 0);
       const db_account_t *a = find(p->cfg, TABLE_ACCOUNTS, account);
-      if (a && a->currency) key_set_add(&set, (id_triple_t){ account, e->currency_id, subconto });
+      if (a && a->currency && currency) key_set_add(&set, (id_triple_t){ account, currency, subconto });
     }
   }
   free_result_list(entries);
@@ -722,6 +775,7 @@ static bool exact_stock_order_valid(const post_t *p) {
         if (!item) continue;
         int64_t quantity = 0, value = 0;
         EACH_RECORD(db_entry_t, movement, all) {
+          if (movement->source_inactive) continue;
           bool debit = movement->debit_subconto_id == item && ledger_account_within(p->cfg, movement->debit_id, type->cost_credit_id);
           bool credit = movement->credit_subconto_id == item && ledger_account_within(p->cfg, movement->credit_id, type->cost_credit_id);
           if (!debit && !credit) continue;
@@ -741,7 +795,7 @@ static bool exact_stock_order_valid(const post_t *p) {
         }
       }
       EACH_RECORD(db_entry_t, other, all) {
-        if (other->document_id == p->doc->id) continue;
+        if (other->source_inactive || other->document_id == p->doc->id) continue;
         const db_document_t *doc = find(p->ib, TABLE_DOCUMENTS, other->document_id);
         if (!doc || !doc->posted || doc_order(p->cfg, doc, p->doc) <= 0) continue;
         int other_items[] = {
@@ -780,7 +834,7 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
   if (ledger_exact_posted(ib, doc_id) || ledger_reversal_linked(ib, doc_id)) {
     fprintf(stderr, "[ledger] post rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return false;
   }
-  if (!preview && p.doc->posted && ledger_document_imported(p.doc)) {
+  if (ledger_document_imported(p.doc)) {
     fprintf(stderr, "[ledger] post rejected: document=%d was imported from 1C and keeps its entries\n", doc_id); fflush(stderr); return false;
   }
   if (!preview && ledger_period_closed(ib, p.doc->date)) {
@@ -864,7 +918,7 @@ void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
   if (ledger_period_closed(ib, doc->date)) {
     fprintf(stderr, "[ledger] unpost rejected: document=%d date=%s is closed\n", doc_id, doc->date); fflush(stderr); return;
   }
-  if (doc->posted && ledger_document_imported(doc)) {
+  if (ledger_document_imported(doc)) {
     fprintf(stderr, "[ledger] unpost rejected: document=%d was imported from 1C; reverse it instead\n", doc_id); fflush(stderr); return;
   }
   if (!doc->posted) {
@@ -999,7 +1053,7 @@ bool ledger_repost_all(database_t *ib, database_t *cfg) {
   for (int i = 0; i < count && ok; i++) {
     int id = order[i]->id;
     if (ledger_period_closed(ib, order[i]->date) || (order[i]->exact_money && order[i]->posted) || ledger_reversal_linked(ib, order[i]->id) ||
-        (order[i]->posted && ledger_document_imported(order[i]))) continue;
+        ledger_document_imported(order[i])) continue;
     ledger_recalc_document(ib, cfg, id);
     if (order[i]->posted) ok = ledger_post(ib, cfg, id);
     else ledger_unpost(ib, cfg, id);
@@ -1141,6 +1195,7 @@ static void build_trial_balance(const report_t *r) {
 // Account card: every movement of the chosen account with a running balance.
 static void build_card(const report_t *r) {
   int account = r->rs->account_id;
+  int slot = r->rs->subconto_slot >= 1 && r->rs->subconto_slot <= 3 ? r->rs->subconto_slot : 1;
   double balance = 0;
   for (int i = 0; i < r->count && account; i++) {
     const db_entry_t *e = r->entries[i];
@@ -1148,8 +1203,10 @@ static void build_card(const report_t *r) {
     if (!dr && !cr) continue;
     balance += (dr ? e->amount : 0) - (cr ? e->amount : 0);
     if (in_period(r->rs, e->date) != WITHIN) continue;
-    db_card_t row = { .document_id = e->document_id, .account_id = dr ? e->debit_id : e->credit_id,
-                      .subconto_id = dr ? e->debit_subconto_id : e->credit_subconto_id,
+    int side_account = dr ? e->debit_id : e->credit_id;
+    const db_subconto_kind_t *kind = ledger_subconto_kind(r->cfg, side_account, slot);
+    db_card_t row = { .document_id = e->document_id, .account_id = side_account,
+                      .subconto_id = entry_subconto(e, !dr, slot), .subconto_kind_id = kind ? kind->id : 0,
                       .corr_id = dr ? e->credit_id : e->debit_id, .debit = dr ? e->amount : 0,
                       .credit = cr ? e->amount : 0, .balance = round2(balance) };
     snprintf(row.date, sizeof(row.date), "%s", e->date);
@@ -1158,27 +1215,38 @@ static void build_card(const report_t *r) {
   }
 }
 
+static int entry_kind_id(const report_t *r, int account, int slot) {
+  const db_subconto_kind_t *kind = ledger_subconto_kind(r->cfg, account, slot);
+  return kind ? kind->id : 0;
+}
+
 // Account analysis: the chosen account's balance per analytics object.
 static void build_analysis(const report_t *r) {
   int account = r->rs->account_id;
+  int slot = r->rs->subconto_slot >= 1 && r->rs->subconto_slot <= 3 ? r->rs->subconto_slot : 1;
   key_set_t objects = {0};
   for (int i = 0; i < r->count && account; i++) {
     const db_entry_t *e = r->entries[i];
-    for (int side = 0; side < 2; side++)
-      if (ledger_account_within(r->cfg, side ? e->credit_id : e->debit_id, account))
-        key_set_add(&objects, (id_triple_t){ account, 0, side ? e->credit_subconto_id : e->debit_subconto_id });
+    for (int side = 0; side < 2; side++) {
+      int side_account = side ? e->credit_id : e->debit_id;
+      if (ledger_account_within(r->cfg, side_account, account))
+        key_set_add(&objects, (id_triple_t){ entry_kind_id(r, side_account, slot), 0, entry_subconto(e, side != 0, slot) });
+    }
   }
   for (int k = 0; k < objects.n; k++) {
-    int object = objects.v[k].subconto;
+    int object = objects.v[k].subconto, kind_id = objects.v[k].account;
     totals_t t = {0};
     for (int i = 0; i < r->count; i++) {
       const db_entry_t *e = r->entries[i];
-      bool dr = ledger_account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == object;
-      bool cr = ledger_account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == object;
+      bool dr = ledger_account_within(r->cfg, e->debit_id, account) && entry_subconto(e, false, slot) == object &&
+                entry_kind_id(r, e->debit_id, slot) == kind_id;
+      bool cr = ledger_account_within(r->cfg, e->credit_id, account) && entry_subconto(e, true, slot) == object &&
+                entry_kind_id(r, e->credit_id, slot) == kind_id;
       add_totals(&t, in_period(r->rs, e->date), dr ? e->amount : 0, cr ? e->amount : 0);
     }
     if (totals_empty(&t)) continue;
-    db_analysis_row_t row = { .account_id = account, .subconto_id = object, .debit_turnover = t.turn_dr, .credit_turnover = t.turn_cr };
+    db_analysis_row_t row = { .account_id = account, .subconto_id = object, .subconto_kind_id = kind_id,
+                              .debit_turnover = t.turn_dr, .credit_turnover = t.turn_cr };
     split_saldo(t.open_dr, t.open_cr, &row.opening_dr, &row.opening_cr);
     split_saldo(t.open_dr + t.turn_dr, t.open_cr + t.turn_cr, &row.balance_dr, &row.balance_cr);
     send_db_message(r->ib, dbInsert, TABLE_ANALYSIS_ROWS, &row);
@@ -1347,7 +1415,7 @@ int ledger_posted_entries(database_t *ib, db_entry_t ***out) {
   db_entry_t **entries = n ? malloc((size_t)n * sizeof(*entries)) : NULL;
   EACH_RECORD(db_entry_t, e, all) {
     const db_document_t *doc = find(ib, TABLE_DOCUMENTS, e->document_id);
-    if (entries && doc && doc->posted) entries[count++] = e;
+    if (entries && doc && doc->posted && !e->source_inactive) entries[count++] = e;
   }
   free_result_list(all);
   if (entries) qsort(entries, (size_t)count, sizeof(*entries), by_date);

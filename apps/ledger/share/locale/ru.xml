@@ -115,7 +115,7 @@
   <string source="Tax:" obsolete="true">Налог:</string>
   <string source="Total:" where="operation,payroll">Всего:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">ОК и провести</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,contract,bank_account,warehouse,report_settings">Отмена</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,read_1cd,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,contract,bank_account,warehouse,report_settings">Отмена</string>
   <string source="Document Line" where="doc_line">Строка документа</string>
   <string source="Item:" where="doc_line">Номенклатура:</string>
   <string source="Quantity:" where="doc_line,entry">Количество:</string>
@@ -628,7 +628,7 @@
   <string source="Kind:" where="contract,warehouse">Вид:</string>
   <string source="Valid until:" where="contract">Действует до:</string>
   <string source="supplier, customer, other" where="contract">поставщик, покупатель, прочее</string>
-  <string source="Organization:" where="bank_account">Организация:</string>
+  <string source="Organization:" where="contract,bank_account">Организация:</string>
   <string source="Account number:" where="bank_account">Номер счета:</string>
   <string source="SWIFT:" where="bank_account">SWIFT:</string>
   <string source="Keeper:" where="warehouse">Кладовщик:</string>
@@ -674,32 +674,26 @@
   <string source="Rebuild reports from entries">Пересчитать отчеты по проводкам</string>
   <string source="Print report forms: cash book">Печатные формы отчетов: кассовая книга</string>
   <string source="Infobase">Информационная база</string>
-  <context name="currencies_page">
-    <string source="Rate">Курс</string>
-  </context>
-  <context name="reports_page">
-    <string source="Expense">Расход</string>
-  </context>
   <string source="Help Topics" where="menu">Содержание справки</string>
   <string source="Tutorial: Review the Journal" where="menu">Урок: просмотр журнала</string>
   <string source="Tutorial: Read the Trial Balance" where="menu">Урок: чтение оборотно-сальдовой ведомости</string>
-  <string source="Tutorials" where="labels">Уроки</string>
-  <string source="Review the Journal" where="labels">Просмотр журнала</string>
-  <string source="Read the Trial Balance" where="labels">Чтение оборотно-сальдовой ведомости</string>
-  <string source="Choose a document in the journal. The row shows its date, type and whether it is posted." where="labels">Выберите документ в журнале. В строке указаны дата, вид и признак проведения.</string>
-  <string source="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits." where="labels">В нижней панели показаны сведения о выбранном документе. На вкладке «Строки» видны позиции, на вкладке «Проводки» — дебет и кредит.</string>
-  <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries." where="labels">Нажмите «Изменить», чтобы открыть документ, или «Дт/Кт», чтобы перейти к проводкам. У непроведённого документа проводок нет.</string>
-  <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range." where="labels">Выберите «Оборотно-сальдовая ведомость» в списке отчётов. Задайте период через «Настройки» (Ctrl+R).</string>
-  <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row." where="labels">Читайте слева направо: начальное сальдо, обороты по дебету и кредиту и конечное сальдо. Сравните итоговые обороты по дебету и кредиту в строке «Итого».</string>
+  <string source="Tutorials">Уроки</string>
+  <string source="Review the Journal">Просмотр журнала</string>
+  <string source="Read the Trial Balance">Чтение оборотно-сальдовой ведомости</string>
+  <string source="Choose a document in the journal. The row shows its date, type and whether it is posted.">Выберите документ в журнале. В строке указаны дата, вид и признак проведения.</string>
+  <string source="The lower pane shows details for the selected document. Use Lines for items and Entries for its debits and credits.">В нижней панели показаны сведения о выбранном документе. На вкладке «Строки» видны позиции, на вкладке «Проводки» — дебет и кредит.</string>
+  <string source="Use Edit to inspect the document or Dr/Cr to jump to its entries. A draft has no posted entries.">Нажмите «Изменить», чтобы открыть документ, или «Дт/Кт», чтобы перейти к проводкам. У непроведённого документа проводок нет.</string>
+  <string source="Choose Trial Balance in the report list. Use Settings (Ctrl+R) to choose the date range.">Выберите «Оборотно-сальдовая ведомость» в списке отчётов. Задайте период через «Настройки» (Ctrl+R).</string>
+  <string source="Read from left to right: opening balance, debit and credit turnover, then closing balance. Compare total debit and credit turnover on the Totals row.">Читайте слева направо: начальное сальдо, обороты по дебету и кредиту и конечное сальдо. Сравните итоговые обороты по дебету и кредиту в строке «Итого».</string>
   <string source="Print Item Labels..." where="menu">Печать этикеток...</string>
-  <string source="Labels" where="items_page">Этикетки</string>
-  <string source="Print item labels" where="items_page">Печать этикеток товаров</string>
-  <string source="Printable HTML (*.html)">HTML для печати (*.html)</string>
-  <string source="Print Item Labels">Печать этикеток</string>
-  <string source="Replace the existing printable file?">Заменить существующий файл для печати?</string>
-  <string source="Use the .html extension for printable labels.">Укажите расширение .html для печати этикеток.</string>
-  <string source="The printable file could not be created.">Не удалось создать файл для печати.</string>
-  <string source="The printable file could not be saved.">Не удалось сохранить файл для печати.</string>
+  <string source="Labels">Этикетки</string>
+  <string source="Print item labels">Печать этикеток товаров</string>
+  <string source="Printable HTML (*.html)" obsolete="true">HTML для печати (*.html)</string>
+  <string source="Print Item Labels" obsolete="true">Печать этикеток</string>
+  <string source="Replace the existing printable file?" obsolete="true">Заменить существующий файл для печати?</string>
+  <string source="Use the .html extension for printable labels." obsolete="true">Укажите расширение .html для печати этикеток.</string>
+  <string source="The printable file could not be created." obsolete="true">Не удалось создать файл для печати.</string>
+  <string source="The printable file could not be saved." obsolete="true">Не удалось сохранить файл для печати.</string>
   <string source="Automation Recipes..." where="menu">Сценарии автоматизации...</string>
   <string source="Marketplaces..." where="menu">Маркетплейсы...</string>
   <string source="Marketplaces" where="code">Маркетплейсы</string>
@@ -717,4 +711,28 @@
   <string source="No eligible pick sheet is available for this snapshot." where="code">Для этого снимка нет доступного листа сборки.</string>
   <string source="Preview this pick sheet before saving it." where="code">Откройте предпросмотр листа сборки перед сохранением.</string>
   <string source="Use the .html extension for the printable file." where="code">Для печатной формы используйте расширение .html.</string>
+  <string source="Analytics kind" where="reports_page">Вид аналитики</string>
+  <string source="Read 1C Infobase" where="read_1cd">Чтение базы 1С</string>
+  <string source="Reading the 1C copy and preparing an import preview." where="read_1cd">Читаем копию 1С и готовим предпросмотр импорта.</string>
+  <string source="Subject:" where="contract">Предмет:</string>
+  <string source="Analytics slot (1–3):" where="report_settings">Номер субконто (1–3):</string>
+  <context name="currencies_page">
+    <string source="Rate">Курс</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Расход</string>
+  </context>
+  <string source="Unable to read the 1C import preview." where="code">Не удалось прочитать предпросмотр импорта из 1С.</string>
+  <string source="Configuration: %s %s&#10;Source: %s&#10;&#10;Extracted from 1C: %s accounts, %s catalog records, %s documents and %s movements.&#10;Tables outside the export: %s.&#10;&#10;Import into the infobase?" where="code">Конфигурация: %s %s
+Источник: %s
+
+Извлечено из 1С: счетов — %s, записей справочников — %s, документов — %s, движений — %s.
+Таблиц вне выгрузки: %s.
+
+Импортировать в базу?</string>
+  <string source="The import folder path is too long." where="code">Путь к папке импорта слишком длинный.</string>
+  <string source="Python 3 could not be started. Install Python 3 or import a prepared staging XML." where="code">Не удалось запустить Python 3. Установите Python 3 или импортируйте подготовленный XML.</string>
+  <string source="Cannot finish the imported document." where="code">Не удалось завершить импорт документа.</string>
+  <string source="The 1CD conversion tool (inspect_1cd.py) could not be found." where="code">Не удалось найти программу преобразования базы 1С (inspect_1cd.py).</string>
+  <string source="The 1CD conversion failed." where="code">Не удалось прочитать файл базы 1С.</string>
 </strings>
