@@ -49,7 +49,7 @@ typedef struct {
   xmlNodePtr records;                            // <records>: the catalogs
   struct { char ref_type[96]; int kind_id; } kinds[128];  // 1C type an analytics kind holds -> Ledger kind
   int kind_count;
-  xmlNodePtr documents;                          // <documents>
+  xmlNodePtr documents, registers;               // source documents and registers
   struct { xmlNodePtr node; int next; } *movements;  // register movements, chained by recorder
   int movement_count, buckets[1024];             // buckets hold index + 1; 0 is empty
 } stage_t;
@@ -521,11 +521,58 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
 }
 
 static const char *asset_depreciation_method(const char *enum_name) {
-  if (!strcmp(enum_name, "ЛинейныйСпособ"))                              return "linear";
+  if (!strcmp(enum_name, "ЛинейныйСпособ") || !strcmp(enum_name, "Линейный"))                              return "linear";
   if (!strcmp(enum_name, "СпособУменьшаемогоОстатка"))                   return "declining";
   if (!strcmp(enum_name, "СпособСуммыЧиселЛет"))                         return "sum_of_years";
   if (!strcmp(enum_name, "СпособСписанияПропорциональноОбъемуПродукции")) return "output";
   return "";
+}
+
+// A card has no organization dimension: do not combine register records from different organizations.
+static xmlNodePtr asset_register(stage_t *st, xmlNodePtr rec, const char *type) {
+  char id[40], name[160], guid[40], organization[40] = "", period[40], latest[40] = "", active[8];
+  attr(rec, "id", id, sizeof(id));
+  xmlNodePtr found = NULL;
+  for (xmlNodePtr reg = st->registers ? st->registers->children : NULL; reg; reg = reg->next) {
+    attr(reg, "type", name, sizeof(name));
+    if (!is_el(reg, "register") || strcmp(name, type)) continue;
+    for (xmlNodePtr m = reg->children; m; m = m->next) {
+      if (!is_el(m, "movement")) continue;
+      attr(m, "active", active, sizeof(active)); v_ref(m, "ОсновноеСредство", guid, sizeof(guid));
+      if (!id[0] || strcmp(id, guid) || !strcmp(active, "false")) continue;
+      v_ref(m, "Организация", guid, sizeof(guid));
+      if (organization[0] && strcmp(organization, guid)) return NULL;
+      if (!guid[0]) return NULL;
+      ledger_copy_text(organization, sizeof(organization), guid);
+      attr(m, "period", period, sizeof(period));
+      if (!period[0]) continue;
+      if (found && !strcmp(period, latest)) return NULL;
+      if (!found || strcmp(period, latest) > 0) { found = m; ledger_copy_text(latest, sizeof(latest), period); }
+    }
+  }
+  return found;
+}
+
+// Acceptance headers describe the listed assets; their total cost is safe only for one row.
+static xmlNodePtr asset_acceptance(stage_t *st, xmlNodePtr rec, int *row_count) {
+  char id[40], type[96], posted[8], deleted[8], guid[40];
+  attr(rec, "id", id, sizeof(id));
+  xmlNodePtr found = NULL;
+  for (xmlNodePtr d = st->documents ? st->documents->children : NULL; d; d = d->next) {
+    attr(d, "type", type, sizeof(type)); attr(d, "posted", posted, sizeof(posted)); attr(d, "deleted", deleted, sizeof(deleted));
+    if (!is_el(d, "document") || strcmp(type, "Документ.ПринятиеКУчетуОС") || strcmp(posted, "true") || !strcmp(deleted, "true")) continue;
+    for (xmlNodePtr t = d->children; t; t = t->next) {
+      char name[32]; attr(t, "n", name, sizeof(name));
+      if (!is_el(t, "table") || strcmp(name, "ОС")) continue;
+      int count = 0; bool match = false;
+      for (xmlNodePtr r = t->children; r; r = r->next) if (is_el(r, "row")) {
+        count++; v_ref(r, "ОсновноеСредство", guid, sizeof(guid));
+        if (id[0] && !strcmp(id, guid)) match = true;
+      }
+      if (match) { if (found) return NULL; found = d; *row_count = count; }
+    }
+  }
+  return found;
 }
 
 static bool fill_asset(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
@@ -542,6 +589,35 @@ static bool fill_asset(stage_t *st, xmlNodePtr rec, void *out, const char **why)
   if (buf[0]) a->cost = strtod(buf, NULL);
   v_enum(rec, "СпособНачисленияАмортизации", method, sizeof(method));
   ledger_copy_text(a->depreciation_method, sizeof(a->depreciation_method), asset_depreciation_method(method));
+  xmlNodePtr initial = asset_register(st, rec, "РегистрСведений.ПервоначальныеСведенияОСБухгалтерскийУчет");
+  xmlNodePtr params = asset_register(st, rec, "РегистрСведений.ПараметрыАмортизацииОСБухгалтерскийУчет");
+  if (initial) {
+    v_text(initial, "ПервоначальнаяСтоимость", buf, sizeof(buf));
+    if (buf[0] && strtod(buf, NULL) > 0) a->cost = strtod(buf, NULL);
+    if (!a->inventory[0]) text_field(a->inventory, sizeof(a->inventory), initial, "ИнвентарныйНомер");
+    v_enum(initial, "СпособНачисленияАмортизации", method, sizeof(method));
+    if (method[0]) ledger_copy_text(a->depreciation_method, sizeof(a->depreciation_method), asset_depreciation_method(method));
+  }
+  if (params) {
+    v_text(params, "СрокПолезногоИспользования", buf, sizeof(buf));
+    if (buf[0]) a->life = atoi(buf);
+    v_enum(params, "СпособНачисленияАмортизации", method, sizeof(method));
+    if (method[0]) ledger_copy_text(a->depreciation_method, sizeof(a->depreciation_method), asset_depreciation_method(method));
+  }
+  int rows = 0;
+  xmlNodePtr acceptance = asset_acceptance(st, rec, &rows);
+  if (acceptance) {
+    attr(acceptance, "date", date, sizeof(date));
+    if (strlen(date) >= 10) { date[10] = '\0'; ledger_copy_text(a->commissioned, sizeof(a->commissioned), date); }
+    v_text(acceptance, "СрокПолезногоИспользованияБУ", buf, sizeof(buf));
+    if (!params && buf[0]) a->life = atoi(buf);
+    v_text(acceptance, "СтоимостьБУ", buf, sizeof(buf));
+    if (!initial && rows == 1 && buf[0] && strtod(buf, NULL) > 0) a->cost = strtod(buf, NULL);
+    v_enum(acceptance, "СпособНачисленияАмортизацииБУ", method, sizeof(method));
+    if (!params && !initial && method[0]) ledger_copy_text(a->depreciation_method, sizeof(a->depreciation_method), asset_depreciation_method(method));
+    a->account_id = ref_id(st, acceptance, "СчетУчета");
+    a->depreciation_id = ref_id(st, acceptance, "СчетНачисленияАмортизации");
+  }
   return true;
 }
 
@@ -662,6 +738,14 @@ static void import_catalog_record(stage_t *st, const stage_catalog_t *cat, xmlNo
     *(int *)((char *)buf + t->meta[0].offset) = key;
     const void *existing = (const void *)send_db_message(st->ib, dbFind, MAKEDWORD(cat->table_id, 0), (void *)(intptr_t)key);
     if (existing) {
+      if (cat->table_id == TABLE_ASSETS) {
+        db_asset_t *a = (db_asset_t *)buf; const db_asset_t *old = existing;
+        if (!a->cost) a->cost = old->cost;
+        if (!a->life) a->life = old->life;
+        if (!a->account_id) a->account_id = old->account_id;
+        if (!a->depreciation_id) a->depreciation_id = old->depreciation_id;
+        a->expense_id = old->expense_id;
+      }
       for (int i = 0; i < t->field_count; i++) {
         if (t->meta[i].type != DB_TYPE_STRING && t->meta[i].type != DB_TYPE_DATE) continue;
         const char *src = (const char *)buf + t->meta[i].offset;
@@ -1503,6 +1587,8 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
   // Kinds first: accounts name them.
   xmlNodePtr kinds = child(root, "subkonto-kinds"), chart = child(root, "chart-of-accounts");
   st.records = child(root, "records");
+  st.documents = child(root, "documents");
+  st.registers = child(root, "registers");
   for (xmlNodePtr r = st.records ? st.records->children : NULL; r && !out->error[0]; r = r->next) {
     char type[96];
     attr(r, "type", type, sizeof(type));

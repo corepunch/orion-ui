@@ -2209,6 +2209,24 @@ static void test_import_stage_chart(void) {
   PASS();
 }
 
+static void test_import_stage_assets(void) {
+  TEST("1CD staging import: asset acceptance and sparse resync");
+  ledger_stage_import_t r;
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_assets.xml", &r));
+  db_asset_t *a = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "TEST-ASSET-1");
+  db_asset_t *b = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "TEST-ASSET-2");
+  db_account_t *acc = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "01");
+  db_account_t *dep = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "02");
+  ASSERT(a && acc && dep && a->account_id == acc->id && a->depreciation_id == dep->id && a->life == 24 && approx(a->cost, 1200) && !strcmp(a->commissioned, "2024-03-01") && !strcmp(a->depreciation_method, "linear"), "acceptance details follow the asset GUID");
+  db_asset_t *c = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "TEST-ASSET-3");
+  ASSERT(b && approx(b->cost, 2000) && !strcmp(b->commissioned, "2024-04-01"), "per-asset register cost wins over the multi-asset total");
+  ASSERT(c && !c->cost, "a multi-asset total is not assigned to each asset");
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_assets_sparse.xml", &r));
+  a = find_by(g_ledger->ib, TABLE_ASSETS, "inventory", "TEST-ASSET-1");
+  ASSERT(a && a->life == 24 && approx(a->cost, 1200) && a->account_id && a->depreciation_id && !strcmp(a->commissioned, "2024-03-01"), "sparse resync retains earlier card values");
+  PASS();
+}
+
 static void test_import_stage_catalogs(void) {
   TEST("1CD staging import: catalogs, folders, owners, bank data and repeat updates");
   ledger_stage_import_t r;
@@ -2996,6 +3014,7 @@ int main(int argc, char **argv) {
   test_import_stage_chart();
   test_import_stage_catalogs();
   test_import_stage_payroll();
+  test_import_stage_assets();
   test_import_stage_documents();
   test_import_stage_reports();
   test_import_stage_snapshot();
