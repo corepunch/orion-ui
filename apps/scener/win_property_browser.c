@@ -67,6 +67,7 @@ static const prop_def_t kWindowProperties[] = {
 	PF("Frame Material", "frameMaterial", "material", "wood"), P("Glass Material", "glassMaterial", "glass"), PB("Pane", "pane", "1"),
 	P("Pane Depth", "paneDepth", "2"), P("Pane Offset", "paneOffset", "0"), PB("Cut Walls", "cutWalls", "1"), P("Cut Depth", "cutDepth", "frame depth"),
 	P("Sill", "sill", "preset"), P("Sill Height", "sillHeight", "frame width"), P("Sill Projection", "sillProjection", "frame width"), P("Segments", "segments", "32"),
+	P("Bars", "bars", "1 1"), P("Bar Width", "barWidth", "0.4 x frame width"), P("Bar Depth", "barDepth", "half depth"),
 };
 static const prop_def_t kCapsuleProperties[] = { P("Radius", "radius", "50"), P("Height", "height", "100"), P("Rings", "rings", "12"), P("Slices", "slices", "24") };
 static const prop_def_t kWallProperties[] = { P("Length", "length", "400"), P("Height", "height", "270"), P("Thickness", "thickness", "20") };

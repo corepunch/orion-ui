@@ -100,7 +100,7 @@ for the complete attribute classification and renderer data flow.
 
 ## Procedural windows
 
-- Use the existing presets and parameters from the schema; do not infer features from other modellers. `style="storybook"` is valid with any of the three presets. `style="cartoon"`, bars, tracery and opening sashes are not implemented.
+- Use the existing presets and parameters from the schema; do not infer features from other modellers. `style="storybook"` is valid with any of the three presets. `bars="columns rows"` divides the pane with glazing bars that cast the window's pattern on the floor. `style="cartoon"`, radial fans, tracery and opening sashes are not implemented.
 - Author windows as siblings of walls or inside a shared group/prefab, never as wall children. Use `rot="90 0 0"` for an otherwise unrotated Z-up window; keep its cutter plane parallel to its wall.
 - Specify outer dimensions; the frame, inner pane and exact wall cut derive from them. Use `frameWidth` and `depth` directly; `<window>` rejects all child elements, including modifiers.
 - Treat `pane`, `sill`, `cutWalls`, `renderable` and `castShadow` as independent controls. Omit a pane with `pane="0"`, not a zero thickness. `sill` is a boolean on a window but an elevation on a legacy `<opening>`.

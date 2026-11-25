@@ -29,7 +29,7 @@ The complete supported element inventory is:
 
 | Placement | Elements |
 |-----------|----------|
-| `<scene>` attributes | `ambient`, `background`, `up`, `convention`, `duration` |
+| `<scene>` attributes | `ambient`, `background`, `skyReflection`, `aoRadius`, `aoStrength`, `aoDirect`, `up`, `convention`, `duration` |
 | Scene configuration | `<camera>`, `<pose>`, `<clip>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
 | Character rig parts | `<bone>`, `<hub>`, `<spine>`, `<tail>`, `<limb>`, `<collarbone>`, `<palm>`, `<ankle>`, `<digit>` |
 | Transformable content | `<box>`, `<rect>`, `<rect>`, `<circle>`, `<ellipse>`, `<star>`, `<shape>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<surface>`, `<mesh>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
@@ -265,6 +265,21 @@ Default 0 (off). A positive value mirrors the sky, the `ambient` colour times th
 surfaces: a Fresnel-weighted reflection that is stronger on smooth materials, fades with roughness and
 shows sky above and darkness below. It stands in for the environment reflections a path tracer gives for
 free; 3 to 5 reads as a satin sheen with `ambient` around 0.3.
+
+### `aoRadius`, `aoStrength`, `aoDirect` (attributes of `<scene>`)
+
+They shape screen-space ambient occlusion, which `--ssao` (or View → Toggle Ambient Occlusion) switches on;
+without it they change nothing. Occlusion is read from the camera's depth map, so it costs one depth pass.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `aoRadius` | float, cm | 35 | How far a surface looks for occluders. 35 draws tight contact lines; 80 to 150 gives a room's corners and the foot of its furniture a soft gradient |
+| `aoStrength` | float ≥ 0 | 1 | Scales the darkening; visibility never drops below 25% |
+| `aoDirect` | 0..1 | 0 | Share of the occlusion that also dims `<light>` and `<sun>` light. 0 is the physical reading (occlusion only blocks ambient light) and stays invisible where lights dominate; 0.5 to 1 grounds objects in a brightly lit render made for painting over |
+
+```xml
+<scene up="z" ambient="0.30 0.26 0.24" aoRadius="90" aoStrength="1.2" aoDirect="0.6">
+```
 
 ### `background` (attribute of `<scene>`)
 
@@ -894,6 +909,16 @@ current dimensions, style and frame width each time the scene is loaded.
 | `cutWalls` | boolean | 1 | Register the outer profile as a cutter for matching `<wall>` elements |
 | `cutDepth` | positive float, cm | `depth` | Depth of the matching volume, centred on the window; does not set the hole's final depth |
 | `segments` | integer | 32 | Arc subdivisions, 8–128 inclusive; odd values round up to even; accepted/validated but geometrically unused for cottage |
+| `bars` | `columns rows` (one value: both) | `1 1` | Glazing bars dividing the opening into that many panes across and up, 1–12 each; `1 1` leaves it undivided |
+| `barWidth` | positive float, cm | `0.4 * frameWidth` | Face width of each bar; must be narrower than a pane cell |
+| `barDepth` | positive float, cm | `depth / 2` | Bar depth along local Z, centred on the window, no deeper than `depth` |
+
+`bars="3 4"` lays an even grid over the bounding box of the inner opening: two
+uprights and three rails, clipped to the arched or pointed head, plus a rim half
+a bar wide along the inside of the frame. The lattice is one solid in the frame
+material, casts shadows with the frame (the patterned light a window throws on a
+floor) and stays when `pane="0"` opens the aperture. Keep `barDepth` above
+`paneDepth` so the bars stand proud of the glass.
 
 For example, a 140 × 200 round-arch with storybook style defaults to a 14 cm
 frame and 21 cm depth. Setting `frameWidth="8"` changes the default depth to
@@ -985,8 +1010,9 @@ rectangular, round-arch and circular cutters.
   give a transparent view of outside scenery. Panes never cast shadows, so
   lighting may pass through conceptually. No window light is created; author
   a separate sun or motivated point light in the scene/group/prefab.
-- Only fixed, undivided panes are supported. Opening sashes, shutters, grids,
-  fans, tracery, bevels and custom curve syntax are not window parameters.
+- Only fixed panes are supported, undivided or split by an even `bars` grid.
+  Opening sashes, shutters, radial fans, tracery, bevels and custom curve
+  syntax are not window parameters.
 - The editor's Create controls offer all three presets, and the property
   browser displays their attributes. The browser is currently read-only;
   configure detailed parameters in XML. The editor can move/rotate/scale and

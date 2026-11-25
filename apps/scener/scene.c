@@ -54,6 +54,9 @@
 #define WINDOW_STORYBOOK_FRAME_RATIO 0.10f
 #define WINDOW_DEPTH_RATIO 1.5f
 #define WINDOW_PANE_DEPTH 0.02f
+#define WINDOW_BAR_WIDTH_RATIO 0.4f
+#define WINDOW_BAR_DEPTH_RATIO 0.5f
+#define WINDOW_MAX_BAR_DIVISIONS 12
 #define WINDOW_DEFAULT_SEGMENTS 32
 #define WINDOW_MIN_SEGMENTS 8
 #define WINDOW_MAX_SEGMENTS 128
@@ -1537,12 +1540,40 @@ static const window_preset_t window_presets[]={
 
 typedef struct {
 	Shape2D outer,inner;
-	float width,height,depth,frame,paneDepth,paneOffset,cutDepth,sillHeight,sillProjection;
-	int pane,sill,cutWalls;
+	float width,height,depth,frame,paneDepth,paneOffset,cutDepth,sillHeight,sillProjection,barWidth,barDepth;
+	int pane,sill,cutWalls,barCols,barRows;
 } window_spec_t;
 
 static void window_spec_free(window_spec_t *w){
 	shape2d_free(&w->outer); shape2d_free(&w->inner);
+}
+
+static int window_has_bars(const window_spec_t *w){ return w->barCols>1||w->barRows>1; }
+
+/* Glazing bars: the inner profile less one hole per pane, so crossings and the rim along the frame never overlap. */
+static Mesh window_bars_mesh(const window_spec_t *w){
+	Shape2D sash=shape2d_inset(&w->inner,w->barWidth/2);
+	if(!sash.npts) return (Mesh){0};
+	vec3 lo=w->inner.pts[0],hi=lo;
+	for(int i=1;i<w->inner.npts;i++){
+		vec3 p=w->inner.pts[i];
+		lo.x=fminf(lo.x,p.x); lo.y=fminf(lo.y,p.y); hi.x=fmaxf(hi.x,p.x); hi.y=fmaxf(hi.y,p.y);
+	}
+	float cellW=(hi.x-lo.x)/w->barCols,cellH=(hi.y-lo.y)/w->barRows;
+	Shape2D *cells=NULL; int ncells=0,ccells=0;
+	for(int row=0;row<w->barRows;row++) for(int col=0;col<w->barCols;col++){
+		vec3 centre=v3(lo.x+cellW*(col+0.5f),lo.y+cellH*(row+0.5f),0);
+		Shape2D moved={0}; moved.closed=1;
+		for(int i=0;i<sash.npts;i++){ vec3 p=vsub(sash.pts[i],centre); DA_PUSH(moved.pts,moved.npts,moved.cpts,p); }
+		Shape2D cell=shape2d_clip_rect(&moved,cellW-w->barWidth,cellH-w->barWidth);
+		for(int i=0;i<cell.npts;i++) cell.pts[i]=vadd(cell.pts[i],centre);
+		shape2d_free(&moved);
+		if(cell.npts) DA_PUSH(cells,ncells,ccells,cell);
+	}
+	Mesh mesh=gen_profile_cutouts(&w->inner,cells,ncells,w->barDepth);
+	for(int i=0;i<ncells;i++) shape2d_free(&cells[i]);
+	free(cells); shape2d_free(&sash);
+	return mesh;
 }
 
 static int window_spec(XmlNode *n,window_spec_t *w){
@@ -1569,9 +1600,15 @@ static int window_spec(XmlNode *n,window_spec_t *w){
 	w->sillHeight=door?w->frame:xml_attr_f_cm(n,"sillHeight",w->frame);
 	w->sillProjection=door?w->frame:xml_attr_f_cm(n,"sillProjection",w->frame);
 	w->pane=door?0:xml_attr_i(n,"pane",1); w->sill=door?0:xml_attr_i(n,"sill",p->sill); w->cutWalls=xml_attr_i(n,"cutWalls",1);
+	w->barCols=w->barRows=1;
+	const char *bars=door?NULL:xml_attr(n,"bars",NULL);
+	if(bars&&sscanf(bars,"%d %d",&w->barCols,&w->barRows)<2) w->barRows=w->barCols;
+	w->barWidth=door?w->frame:xml_attr_f_cm(n,"barWidth",w->frame*WINDOW_BAR_WIDTH_RATIO);
+	w->barDepth=door?w->depth:xml_attr_f_cm(n,"barDepth",w->depth*WINDOW_BAR_DEPTH_RATIO);
 	int segments=xml_attr_i(n,"segments",WINDOW_DEFAULT_SEGMENTS);
-	float positive[]={w->width,w->height,w->frame,w->depth,w->paneDepth,w->cutDepth,w->sillHeight};
+	float positive[]={w->width,w->height,w->frame,w->depth,w->paneDepth,w->cutDepth,w->sillHeight,w->barWidth,w->barDepth};
 	int valid=segments>=WINDOW_MIN_SEGMENTS&&segments<=WINDOW_MAX_SEGMENTS;
+	valid&=w->barCols>=1&&w->barCols<=WINDOW_MAX_BAR_DIVISIONS&&w->barRows>=1&&w->barRows<=WINDOW_MAX_BAR_DIVISIONS;
 	for(int i=0;i<(int)(sizeof(positive)/sizeof(positive[0]));i++) valid&=isfinite(positive[i])&&positive[i]>WINDOW_EPSILON;
 	valid&=isfinite(w->paneOffset)&&isfinite(w->sillProjection)&&w->sillProjection>=0;
 	valid&=!w->pane||(fabsf(w->paneOffset)+w->paneDepth/2<=w->depth/2);
@@ -1580,8 +1617,13 @@ static int window_spec(XmlNode *n,window_spec_t *w){
 		w->inner=shape2d_inset(&w->outer,w->frame);
 		valid=w->inner.npts>0;
 	}
+	if(valid&&window_has_bars(w)){
+		/* Every pane keeps some glass: the bars are thinner than a cell and no deeper than the frame. */
+		float cellW=(w->width-2*w->frame)/w->barCols,cellH=(w->height-2*w->frame)/w->barRows;
+		valid=w->barWidth<fminf(cellW,cellH)-WINDOW_EPSILON&&w->barDepth<=w->depth+WINDOW_EPSILON;
+	}
 	if(!valid){
-		fprintf(stderr,"[scener] %s: invalid dimensions, frame inset, pane placement or segments for '%s'\n",n->tag,preset);
+		fprintf(stderr,"[scener] %s: invalid dimensions, frame inset, pane placement, bars or segments for '%s'\n",n->tag,preset);
 		window_spec_free(w); return 0;
 	}
 	return 1;
@@ -1607,6 +1649,7 @@ static void parse_window(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos
 		mat4 paneM=mat4_mul(M,mat4_translate(v3(0,0,w.paneOffset)));
 		scene_add_obj(s,mesh,paneM,R,glass?glass->color:color,glass?glass->shininess:shin,0,renderable,unlit);
 	}
+	if(window_has_bars(&w)) scene_add_obj(s,window_bars_mesh(&w),M,R,color,shin,castsShadow,renderable,unlit);
 	window_spec_free(&w);
 }
 
@@ -3198,10 +3241,15 @@ static void scene_rebuild_view(Scene *s){
 	s->duration=fmaxf(0,xml_attr_f(sceneRoot,"duration",0));
 	s->worldUp=!s->convention3dsMax&&!strcmp(xml_attr(sceneRoot,"up","y"),"z")?v3(0,0,1):v3(0,1,0);
 	s->ambient=v3(0.12f,0.12f,0.14f); s->bg=v3(0.08f,0.10f,0.14f);
+	s->aoRadius=SCENE_AO_RADIUS; s->aoStrength=1; s->aoDirect=0;
 	if(prefabMode){ s->ambient=v3(0.48f,0.50f,0.56f); s->bg=v3(0.14f,0.16f,0.20f); }
 	else {
 		s->ambient=xml_attr_v3(root,"ambient",s->ambient);
 		s->skyReflection=fmaxf(xml_attr_f(root,"skyReflection",0.0f),0.0f);
+		s->aoRadius=xml_attr_f_cm(root,"aoRadius",SCENE_AO_RADIUS);
+		if(!(s->aoRadius>0)) s->aoRadius=SCENE_AO_RADIUS;
+		s->aoStrength=fmaxf(xml_attr_f(root,"aoStrength",1.0f),0.0f);
+		s->aoDirect=fminf(fmaxf(xml_attr_f(root,"aoDirect",0.0f),0.0f),1.0f);
 		const char *bg=xml_attr(root,"background",NULL);
 		if(bg){
 			if(strchr(bg,' ')) sscanf(bg,"%f %f %f",&s->bg.x,&s->bg.y,&s->bg.z);
@@ -3392,6 +3440,7 @@ int load_scene(const char *path, Scene *s){
 	scene_rebuild_view(s);
 	if(s->assetError){ scene_free(s); return 0; }
 	xml_attr(root,"up",NULL); xml_attr(root,"convention",NULL); xml_attr(root,"ambient",NULL); xml_attr(root,"background",NULL); xml_attr(root,"skyReflection",NULL);
+	xml_attr(root,"aoRadius",NULL); xml_attr(root,"aoStrength",NULL); xml_attr(root,"aoDirect",NULL);
 	warn_unused_attributes(s,root,path);
 	warn_unlit_scene(s,path);
 	for(int i=0;i<s->nprefabs;i++) warn_unused_attributes(s,(XmlNode*)s->prefabs[i].root,s->prefabs[i].path);

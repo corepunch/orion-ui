@@ -831,6 +831,11 @@ static void test_explicit_scene_up_axis(void) {
 #define WINDOW_TEST_MAX_SEGMENTS 128
 #define WINDOW_TEST_FRONT_POINTS 3
 #define WINDOW_TEST_MAX_PATH 1024
+#define WINDOW_TEST_BARRED_PARTS 3
+#define WINDOW_TEST_BAR_COLS 3
+#define WINDOW_TEST_BAR_ROWS 4
+#define WINDOW_TEST_BAR 0.04f
+#define WINDOW_TEST_BAR_DEPTH 0.1f
 
 static float window_test_area(const Shape2D *p){
 	float a=0;
@@ -1097,6 +1102,49 @@ static void test_window_invalid_and_opt_out(void){
 	ASSERT_EQUAL(s.nnegativeProfiles,0);
 	ASSERT_EQUAL(s.nobjs,2);
 	ASSERT_TRUE(window_test_wall_at(&s,v3(0,1,0)));
+	scene_free(&s);
+	PASS();
+}
+
+static void test_window_glazing_bars(void){
+	TEST("window bars: one lattice of the expected volume beside frame and pane; invalid bars reject the window");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene><sun/><window preset='cottage' width='120' height='220' frameWidth='10' depth='20' sill='0'"
+		" bars='3 4' barWidth='4' barDepth='10'/></scene>"));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	ASSERT_EQUAL(s.nobjs,WINDOW_TEST_BARRED_PARTS);
+	SceneObj *bars=&s.objs[WINDOW_TEST_BARRED_PARTS-1];
+	ASSERT_TRUE(bars->castsShadow); ASSERT_TRUE(bars->editNode==s.objs[0].editNode);
+	/* A 100 x 200 cm opening less twelve panes, each a cell shrunk by the 4 cm bar, 10 cm deep. */
+	float cellW=1.0f/WINDOW_TEST_BAR_COLS,cellH=2.0f/WINDOW_TEST_BAR_ROWS;
+	float expected=(1.0f*2.0f-WINDOW_TEST_BAR_COLS*WINDOW_TEST_BAR_ROWS*(cellW-WINDOW_TEST_BAR)*(cellH-WINDOW_TEST_BAR))*WINDOW_TEST_BAR_DEPTH;
+	ASSERT_TRUE(fabsf(mesh_signed_volume(world_mesh(bars))-expected)<WINDOW_TEST_EPSILON);
+	scene_free(&s);
+	ASSERT_TRUE(window_test_load(&s,"<scene><sun/><window preset='round-arch' width='120' height='180' bars='3 4'/></scene>"));
+	ASSERT_EQUAL(s.nobjs,WINDOW_TEST_BARRED_PARTS);
+	ASSERT_TRUE(mesh_signed_volume(world_mesh(&s.objs[WINDOW_TEST_BARRED_PARTS-1]))>0);
+	scene_free(&s);
+	ASSERT_TRUE(window_test_load(&s,"<scene><sun/><wall length='400' height='300' thickness='60'/>"
+		"<window pos='0 150 0' bars='0 2'/><window pos='0 150 0' bars='3 4' barWidth='60'/>"
+		"<window pos='0 150 0' bars='2' barDepth='500'/></scene>"));
+	ASSERT_EQUAL(s.nnegativeProfiles,0);
+	ASSERT_EQUAL(s.nobjs,1);
+	scene_free(&s);
+	PASS();
+}
+
+static void test_scene_occlusion_attributes(void){
+	TEST("scene aoRadius, aoStrength and aoDirect: centimetres in, defaults kept, out-of-range values clamped");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene><sun/><box size='1 1 1'/></scene>"));
+	ASSERT_TRUE(s.aoRadius==SCENE_AO_RADIUS && s.aoStrength==1 && s.aoDirect==0);
+	scene_free(&s);
+	ASSERT_TRUE(window_test_load(&s,"<scene aoRadius='60' aoStrength='1.5' aoDirect='0.5'><sun/><box size='1 1 1'/></scene>"));
+	ASSERT_EQUAL(s.ignoredAttributes,0);
+	ASSERT_TRUE(fabsf(s.aoRadius-0.6f)<WINDOW_TEST_EPSILON && s.aoStrength==1.5f && s.aoDirect==0.5f);
+	scene_free(&s);
+	ASSERT_TRUE(window_test_load(&s,"<scene aoRadius='-5' aoStrength='-1' aoDirect='3'><sun/><box size='1 1 1'/></scene>"));
+	ASSERT_TRUE(s.aoRadius==SCENE_AO_RADIUS && s.aoStrength==0 && s.aoDirect==1);
 	scene_free(&s);
 	PASS();
 }
@@ -1635,6 +1683,8 @@ int main(void) {
   test_window_wall_cutting();
   test_window_cut_transforms_and_union();
   test_window_invalid_and_opt_out();
+  test_window_glazing_bars();
+  test_scene_occlusion_attributes();
   test_window_creation_persists();
   test_window_drag_recuts_wall();
   test_window_picking_through_wall();

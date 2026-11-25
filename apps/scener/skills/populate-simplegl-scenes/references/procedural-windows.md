@@ -47,6 +47,23 @@ Choose explicit width/height when fitting a story location. Presets do not infer
 sizes from a wall. `style="storybook"` changes the default thickness only; it
 works with Gothic and rectangular windows as well as round arches.
 
+## Glazing bars and patterned light
+
+`bars="columns rows"` divides the opening into panes. The lattice follows the
+arched head, belongs to the frame material and casts shadows, so a low sun
+behind it draws the window on the floor. Use `pane="0"` when the outside should
+stay visible or bright; the bars remain.
+
+```xml
+<scene up="z" ambient="0.25 0.24 0.26" background="dusk">
+  <sun dir="0.2 -1 -1" color="1 0.9 0.7" intensity="2.5"/>
+  <box pos="0 -200 -5" size="600 600 10" material="floor"/>
+  <wall pos="0 0 0" rot="90 0 0" length="600" height="300" thickness="30" material="wall"/>
+  <window preset="round-arch" pos="0 0 150" rot="90 0 0" width="140" height="220"
+          frameWidth="10" depth="30" bars="3 4" barWidth="4" pane="0"/>
+</scene>
+```
+
 ## Recessed cottage window
 
 Save as `window-recess.blks`. This gives a 140 × 160 cm outer opening in a
@@ -193,7 +210,7 @@ use automatic cutting for shaped openings.
 | No outside scene is visible | The pane is opaque; use `pane="0"` if an open aperture is intended |
 | Frame is luminous when only glass should be | `unlit` affects the whole window; separate pane-only lighting is not a window option |
 | Hiding the insert leaves a hole | `renderable` and `cutWalls` are independent |
-| Agent proposes `bars`, `grille`, `open`, `archRise`, `style="cartoon"` | These are not implemented window parameters; use the supported schema |
+| Agent proposes `grille`, `open`, `archRise`, `style="cartoon"` | These are not implemented window parameters; use the supported schema (`bars` is the glazing grid) |
 
 ## Validate and inspect
 

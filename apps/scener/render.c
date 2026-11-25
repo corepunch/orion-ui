@@ -799,13 +799,15 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     }
     shader_set_camera_pos(camPos);
 
+    int aoDirect = ssao && s->aoDirect > 0;
+    shader_set_occlusion_look(s->aoRadius > 0 ? s->aoRadius : SCENE_AO_RADIUS, s->aoStrength, s->aoDirect);
     if (ssao) shader_set_occlusion(s_ssao_depth, proj, view, w, h);
 
     /* the depth-filling pass: ambient light and the sky mirrored in glossy surfaces, in one draw per batch */
     if (flags & DBG_FLAT) shader_set_ambient(1, v3(1, 1, 1), 0, v3(0, 0, 0));
     else shader_set_ambient(1, ambient, s->skyReflection > 0, vscale(s->ambient, s->skyReflection));
     draw_batches(s, fillFirst, fillCount, 0);
-    if (ssao) shader_set_occlusion(0, proj, view, w, h);
+    if (ssao && !aoDirect) shader_set_occlusion(0, proj, view, w, h);
     shader_set_ambient(0, v3(0, 0, 0), 0, v3(0, 0, 0));
     for (int li = 0; li < s->nlights && !(flags & DBG_FLAT); li++) {
         light_work_t *wk = &s_work[li];
@@ -865,6 +867,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         glDisable(GL_SCISSOR_TEST);
         glFlush();   /* hand this light's work to the GPU: the driver otherwise queues every light's passes in memory */
     }
+    if (aoDirect) shader_set_occlusion(0, proj, view, w, h);
 
     shader_unbind();
     glActiveTexture(GL_TEXTURE3);

@@ -132,6 +132,14 @@ to enable it for output. Both perspective and orthographic cameras support
 SSAO in filled 3D views. The `-no-shadows` flag controls stencil shadows
 independently. Flat layouts and wireframe views skip SSAO.
 
+A scene tunes the effect on its root: `aoRadius` (cm, default 35) is the reach,
+`aoStrength` scales the darkening, and `aoDirect` (0..1, default 0) lets the
+occlusion dim point lights and suns as well as ambient light. The default only
+darkens ambient light, which is correct but nearly invisible in a brightly lit
+room; `<scene aoRadius="90" aoDirect="0.6">` gives the soft grounding a render
+made for overpainting needs. See the
+[scene format](skills/populate-simplegl-scenes/references/scene-format.md#aoradius-aostrength-aodirect-attributes-of-scene).
+
 Run both commands from the Orion repository root to reproduce the comparison.
 Each writes a `table-show-desk.png` in its own directory.
 [Attic scene comparison](docs/images/ssao-comparison.png).

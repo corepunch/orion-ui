@@ -13,6 +13,7 @@
 #define M_PIf 3.14159265358979323846f
 #define SCENER_NEAR 0.1f   /* perspective clip planes, renderer units */
 #define SCENER_FAR 1000.0f
+#define SCENE_AO_RADIUS 0.35f   /* default SSAO reach, renderer units */
 #define CM_PER_METRE 100.0f /* scene XML is authored in cm; the renderer works in metres */
 
 #define DA_PUSH(arr,count,cap,item) do{ \
@@ -297,6 +298,7 @@ typedef struct {
 	Camera *cameras; int ncameras,ccameras;
 	vec3 ambient,bg;
 	float skyReflection; /* scale of the sky (ambient colour) mirrored in glossy surfaces; 0 = off */
+	float aoRadius,aoStrength,aoDirect; /* SSAO: reach (m), darkening scale, and the share of it that also dims direct light (0..1) */
 	Light *lights; int nlights,clights;
 	Material *mats; int nmats,cmats;
 	MaterialRamp *ramps; int nramps,cramps;

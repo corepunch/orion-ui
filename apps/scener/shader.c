@@ -15,6 +15,7 @@ static GLint ulocInst, ulocInstBase, ulocViewProj, ulocViewPos, ulocLightPos, ul
 static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocRamp, ulocRampOn;
 static GLint vlocGrad, ulocMaps;
 static GLint ulocDepthOnly, ulocOcclusionOn, ulocOcclusionProj, ulocOcclusionView, ulocOcclusionViewport;
+static GLint ulocOcclusionRadius, ulocOcclusionStrength, ulocOcclusionDirect;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
 #endif
@@ -176,7 +177,6 @@ static const char *fs_src =
 "        if(abs(det)>1e-12) N=normalize(abs(det)*N-g);\n"
 "    }\n"
 "}\n"
-"#define AO_RADIUS 0.35\n"
 "#define AO_BIAS 0.006\n"
 "#define AO_SAMPLES 24\n"
 "#define AO_STRENGTH 4.0\n"
@@ -187,6 +187,9 @@ static const char *fs_src =
 "uniform mat4 uOcclusionProj;\n"
 "uniform mat3 uOcclusionView;\n"
 "uniform vec2 uOcclusionViewport;\n"
+"uniform float uOcclusionRadius;\n"
+"uniform float uOcclusionStrength;\n"
+"uniform float uOcclusionDirect;\n"
 "vec3 view_position(vec2 uv,float depth){\n"
 "    vec3 ndc=vec3(uv,depth)*2.0-1.0;\n"
 "    mat4 p=uOcclusionProj;\n"
@@ -199,7 +202,7 @@ static const char *fs_src =
 "    vec3 center=view_position(uv,gl_FragCoord.z);\n"
 "    vec3 n=uOcclusionView*normal;\n"
 "    mat4 p=uOcclusionProj;\n"
-"    vec2 radius=0.5*AO_RADIUS*vec2(p[0][0],p[1][1])/(p[2][3]*center.z+p[3][3]);\n"
+"    vec2 radius=0.5*uOcclusionRadius*vec2(p[0][0],p[1][1])/(p[2][3]*center.z+p[3][3]);\n"
 "    vec2 size=vec2(textureSize(uOcclusionDepth,0));\n"
 "    // A fixed golden-angle spiral keeps the taps stable during animation.\n"
 "    const mat2 turn=mat2(-0.737369,0.675490,-0.675490,-0.737369);\n"
@@ -214,10 +217,10 @@ static const char *fs_src =
 "        vec3 delta=view_position((vec2(pixel)+0.5)/size,depth)-center;\n"
 "        float dist2=dot(delta,delta);\n"
 "        float angle=max(dot(n,delta)-AO_BIAS,0.0)*inversesqrt(max(dist2,AO_BIAS*AO_BIAS));\n"
-"        float falloff=max(1.0-dist2/(AO_RADIUS*AO_RADIUS),0.0);\n"
+"        float falloff=max(1.0-dist2/(uOcclusionRadius*uOcclusionRadius),0.0);\n"
 "        sum+=angle*falloff*falloff;\n"
 "    }\n"
-"    return max(1.0-sum*(AO_STRENGTH/float(AO_SAMPLES)),AO_MIN_VISIBILITY);\n"
+"    return max(1.0-sum*(AO_STRENGTH*uOcclusionStrength/float(AO_SAMPLES)),AO_MIN_VISIBILITY);\n"
 "}\n"
 "uniform vec3 uSky;\n"
 "uniform vec3 uAmbient;\n"
@@ -294,6 +297,7 @@ static const char *fs_src =
 "        int step=int(clamp(floor(shade+0.5+noise*RAMP_DITHER),0.0,float(RAMP_SHADES-1)));\n"
 "        lit=uRamp[step]*texColor*(luma>0.0?uLightColor/luma:vec3(1.0));\n"
 "    } else lit=(diff+spec)*att;\n"
+"    if(uOcclusionOn && uOcclusionDirect>0.0) lit*=mix(1.0,ambient_visibility(normalize(vWorldNrm)),uOcclusionDirect);\n"
 "    vec3 encoded=clamp(lit + noise/NOISE_DIV,0.0,1.0);\n"
 "    fragColor=vec4(encoded,1.0);\n"
 "}\n";
@@ -324,6 +328,9 @@ void shader_init(void){
 	ulocOcclusionProj = glGetUniformLocation(prog, "uOcclusionProj");
 	ulocOcclusionView = glGetUniformLocation(prog, "uOcclusionView");
 	ulocOcclusionViewport = glGetUniformLocation(prog, "uOcclusionViewport");
+	ulocOcclusionRadius = glGetUniformLocation(prog, "uOcclusionRadius");
+	ulocOcclusionStrength = glGetUniformLocation(prog, "uOcclusionStrength");
+	ulocOcclusionDirect = glGetUniformLocation(prog, "uOcclusionDirect");
 	glUseProgram(prog);
 	glUniform1i(glGetUniformLocation(prog, "uOcclusionDepth"), 3);
 	glUseProgram(0);
@@ -385,6 +392,12 @@ void shader_set_occlusion(unsigned int depth, mat4 proj, mat4 view, int w, int h
 	glUniformMatrix4fv(ulocOcclusionProj, 1, GL_FALSE, proj.m);
 	glUniformMatrix3fv(ulocOcclusionView, 1, GL_FALSE, rotation);
 	glUniform2f(ulocOcclusionViewport, (float)w, (float)h);
+}
+
+void shader_set_occlusion_look(float radius, float strength, float direct){
+	glUniform1f(ulocOcclusionRadius, radius);
+	glUniform1f(ulocOcclusionStrength, strength);
+	glUniform1f(ulocOcclusionDirect, direct);
 }
 
 void shader_set_light(Light *L){
