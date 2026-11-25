@@ -163,7 +163,11 @@ static void market_worker(void *data) {
   market_job_t *job = data;
   job->deadline = axGetMilliseconds()+75000;
   job->fault = MARKET_RESPONSE;
+#if LUA_VERSION_NUM >= 505
+  lua_State *L = lua_newstate(market_lua_alloc,job,(unsigned)time(NULL)^(unsigned)(uintptr_t)job);
+#else
   lua_State *L = lua_newstate(market_lua_alloc,job);
+#endif
   if (L) {
     *(market_job_t **)lua_getextraspace(L)=job;
     lua_sethook(L,market_lua_watchdog,LUA_MASKCOUNT,10000);
