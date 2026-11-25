@@ -217,6 +217,79 @@ void mesh_flip_winding(Mesh *m){
     for(int i=0;i<m->nedges;i++){ int v=m->edges[i].v0; m->edges[i].v0=m->edges[i].v1; m->edges[i].v1=v; }
 }
 
+/* ------------------------------------------------------- group wrap */
+#define MESH_SLICE_EPSILON 0.00001f
+
+/* Wraps a point about the vertical (Y) axis through (0, y, radius): x is the arc length from the origin, and a
+   positive radius puts the axis in front (+Z), so a wall's front becomes the inside of a round room. */
+vec3 wrap_point(vec3 p,float radius){
+    float angle=p.x/radius,reach=radius-p.z;
+    return v3(reach*sinf(angle),p.y,radius-reach*cosf(angle));
+}
+
+/* The endpoints are taken in x order, so two triangles sharing an edge cut it at the very same point. */
+static Vertex mesh_vertex_at_x(const Mesh *m,int i,int j,float plane){
+    Vertex a=m->verts[i],b=m->verts[j];
+    if(a.pos.x>b.pos.x){ Vertex swap=a; a=b; b=swap; }
+    float t=(plane-a.pos.x)/(b.pos.x-a.pos.x);
+    Vertex v=a;
+    v.pos=lerp(a.pos,b.pos,t); v.pos.x=plane;
+    v.nrm=vnorm(lerp(a.nrm,b.nrm,t));
+    v.u=a.u+(b.u-a.u)*t; v.v=a.v+(b.v-a.v)*t; v.g=a.g+(b.g-a.g)*t;
+    return v;
+}
+
+/* Splits every triangle at the planes x = k * step, giving a bend about Y vertices to curve through. */
+static void mesh_slice_x(Mesh *m,float step){
+    if(!(step>MESH_SLICE_EPSILON)) return;
+    for(int t=0;t<m->ntris;t++){
+        Tri tri=m->tris[t];
+        int id[3]={tri.a,tri.b,tri.c},side[3],on=-1,lone=0;
+        float x[3],lo=INFINITY,hi=-INFINITY;
+        for(int k=0;k<3;k++){ x[k]=m->verts[id[k]].pos.x; lo=fminf(lo,x[k]); hi=fmaxf(hi,x[k]); }
+        float plane=(floorf(lo/step)+1)*step;
+        if(plane-lo<=MESH_SLICE_EPSILON) plane+=step;
+        if(hi-plane<=MESH_SLICE_EPSILON) continue;
+        for(int k=0;k<3;k++){
+            side[k]=x[k]<plane-MESH_SLICE_EPSILON?-1:x[k]>plane+MESH_SLICE_EPSILON?1:0;
+            if(!side[k]) on=k;
+        }
+        if(on>=0){
+            int a=id[on],b=id[(on+1)%3],c=id[(on+2)%3];
+            Vertex cut=mesh_vertex_at_x(m,b,c,plane);
+            int icut=m->nverts; DA_PUSH(m->verts,m->nverts,m->cverts,cut);
+            Tri rest={a,icut,c};
+            m->tris[t]=(Tri){a,b,icut}; DA_PUSH(m->tris,m->ntris,m->ctris,rest);
+        } else {
+            for(int k=0;k<3;k++) if(side[(k+1)%3]!=side[k]&&side[(k+2)%3]!=side[k]) lone=k;
+            int a=id[lone],b=id[(lone+1)%3],c=id[(lone+2)%3];
+            Vertex cutAB=mesh_vertex_at_x(m,a,b,plane),cutCA=mesh_vertex_at_x(m,c,a,plane);
+            int iab=m->nverts; DA_PUSH(m->verts,m->nverts,m->cverts,cutAB);
+            int ica=m->nverts; DA_PUSH(m->verts,m->nverts,m->cverts,cutCA);
+            Tri near={iab,b,c},far={iab,c,ica};
+            m->tris[t]=(Tri){a,iab,ica};
+            DA_PUSH(m->tris,m->ntris,m->ctris,near); DA_PUSH(m->tris,m->ntris,m->ctris,far);
+        }
+        t--;   /* the piece left in this slot may cross the next plane */
+    }
+}
+
+/* Moves a mesh into a wrapping group's frame (local), slices it every step along x, then wraps it. Normals turn
+   with the arc, so a flat wall face shades as one smooth curve. */
+void mesh_wrap(Mesh *m,mat4 local,float radius,float step){
+    float det=local.m[0]*(local.m[5]*local.m[10]-local.m[9]*local.m[6])-local.m[4]*(local.m[1]*local.m[10]-local.m[9]*local.m[2])+local.m[8]*(local.m[1]*local.m[6]-local.m[5]*local.m[2]);
+    mesh_transform(m,local,local);
+    if(det<0) mesh_flip_winding(m);
+    mesh_slice_x(m,step);
+    for(int i=0;i<m->nverts;i++){
+        Vertex *v=&m->verts[i];
+        float angle=v->pos.x/radius,c=cosf(angle),s=sinf(angle);
+        vec3 n=v->nrm;
+        v->pos=wrap_point(v->pos,radius);
+        v->nrm=v3(n.x*c-n.z*s,n.y,n.x*s+n.z*c);
+    }
+}
+
 /* ------------------------------------------------------- primitive gens */
 static void add_quad(Mesh *m, vec3 a,vec3 b,vec3 c,vec3 d, vec3 n){
     int ia=mesh_add_vert(m,a,n), ib=mesh_add_vert(m,b,n),

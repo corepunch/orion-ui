@@ -1640,6 +1640,43 @@ A container that applies its transform to all children. Groups do not render geo
 </group>
 ```
 
+#### Wrapped groups: round walls
+
+`wrapRadius` bends everything in a group around a vertical cylinder, so a round
+room is authored as a flat wall. Lay the contents out flat in the group's frame:
+local X runs along the wall, local Y is up and local Z is the wall's thickness.
+On load the group is wrapped about the axis parallel to local Y through
+`(0, y, wrapRadius)`; X becomes arc length, so 100 cm along X stays 100 cm along
+the surface at Z=0.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `wrapRadius` | float, cm | 0 (flat) | Radius of the surface at local Z=0. Positive puts the axis in front (+Z), so a wall's front is the concave inside of a round room; negative puts it behind, for a tower seen from outside |
+| `wrapSegment` | degrees | 5 | Arc between the slices cut through the contents, 0.5–45; smaller is smoother |
+
+```xml
+<!-- A quarter of a round room of radius 6 m: the origin sits on the wall's inner face, mid-arc. -->
+<group pos="0 600 0" rot="90 0 0" wrapRadius="600" wrapSegment="3">
+  <wall pos="0 0 -15" length="942" height="300" thickness="30" material="stone"/>
+  <window preset="round-arch" pos="-200 150 -15" width="120" height="200" bars="3 4" pane="0"/>
+  <window preset="round-arch" pos="200 150 -15" width="120" height="200" bars="3 4" pane="0"/>
+  <box pos="-200 46 8" size="140 8 16" material="stone"/>   <!-- a sill under the first window -->
+</group>
+```
+
+Walls, their trims, windows and doors (with the openings they cut), prefab
+instances, primitives and `<light>` positions all follow the curve; cutting
+happens while the group is still flat, so keep a window in the same wrapped
+group as its wall. Normals turn with the arc, so the wall shades as one smooth
+surface. The objects are baked into the group's frame and share no model with
+copies elsewhere. Limits: a `wrapRadius` group inside another is ignored with a
+warning; `<screen>` images and characters are not wrapped; procedural `<map>`
+patterns are laid over the bent shape, so bricks compress towards the ends of an
+arc longer than about 90°; `--query` reports the flat `origin` of a wrapped
+node beside its true wrapped `bounds`; and `--check` measures penetration
+against a curved slab's bounding volume, so mark a deliberate large backdrop
+inside the arc `sanityIgnore="1"`.
+
 ## Modifiers
 
 Modifiers are child elements of mesh-producing shapes: `<box>`, `<sphere>`,

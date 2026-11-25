@@ -832,6 +832,10 @@ static void test_explicit_scene_up_axis(void) {
 #define WINDOW_TEST_FRONT_POINTS 3
 #define WINDOW_TEST_MAX_PATH 1024
 #define WINDOW_TEST_BARRED_PARTS 3
+#define WRAP_TEST_OUTER 1.05f
+#define WRAP_TEST_HALF 0.05f
+#define WRAP_TEST_VOLUME 0.0314159265f
+#define WRAP_TEST_FACET_LOSS 0.005f
 #define WINDOW_TEST_BAR_COLS 3
 #define WINDOW_TEST_BAR_ROWS 4
 #define WINDOW_TEST_BAR 0.04f
@@ -1129,6 +1133,36 @@ static void test_window_glazing_bars(void){
 		"<window pos='0 150 0' bars='2' barDepth='500'/></scene>"));
 	ASSERT_EQUAL(s.nnegativeProfiles,0);
 	ASSERT_EQUAL(s.nobjs,1);
+	scene_free(&s);
+	PASS();
+}
+
+static void test_group_wrap(void){
+	TEST("group wrapRadius: a slab becomes a watertight half ring of the same volume; lights follow; nesting warns");
+	Scene s={0};
+	/* 100 cm radius, a slab pi metres long: it wraps half a turn about the axis one metre in front of it. */
+	ASSERT_TRUE(window_test_load(&s,"<scene><group wrapRadius='100'><box size='314.159265 10 10'/>"
+		"<light pos='157.079633 0 0'/></group></scene>"));
+	ASSERT_EQUAL(s.ignoredAttributes,0); ASSERT_EQUAL(s.nobjs,1); ASSERT_EQUAL(s.nlights,1);
+	Mesh *ring=world_mesh(&s.objs[0]);
+	vec3 lo,hi; scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(lo.x+WRAP_TEST_OUTER)<WINDOW_TEST_EPSILON && fabsf(hi.x-WRAP_TEST_OUTER)<WINDOW_TEST_EPSILON);
+	ASSERT_TRUE(fabsf(lo.z+WRAP_TEST_HALF)<WINDOW_TEST_EPSILON && fabsf(hi.z-1)<WINDOW_TEST_EPSILON);
+	ASSERT_TRUE(fabsf(mesh_signed_volume(ring)/WRAP_TEST_VOLUME-1)<WRAP_TEST_FACET_LOSS);
+	mesh_compute_face_normals(ring); mesh_build_edges(ring);
+	for(int i=0;i<ring->nedges;i++) ASSERT_TRUE(ring->edges[i].t1>=0);
+	ASSERT_TRUE(fabsf(s.lights[0].pos.x-1)<WINDOW_TEST_EPSILON && fabsf(s.lights[0].pos.z-1)<WINDOW_TEST_EPSILON);
+	scene_free(&s);
+	/* A negative radius puts the axis behind the slab; a window keeps cutting its wall inside a wrapped group. */
+	ASSERT_TRUE(window_test_load(&s,"<scene><sun/><group wrapRadius='-100'><box size='314.159265 10 10'/></group>"
+		"<group pos='0 0 500' wrapRadius='600'><wall length='400' height='300' thickness='20'/>"
+		"<window preset='cottage' pos='0 150 0' width='100' height='100' sill='0' pane='0'/>"
+		"<group wrapRadius='50'><box size='10 10 10'/></group></group></scene>"));
+	scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(lo.z+1)<WINDOW_TEST_EPSILON && fabsf(hi.z-WRAP_TEST_HALF)<WINDOW_TEST_EPSILON);
+	ASSERT_EQUAL(s.nnegativeProfiles,1);
+	int warned=0; for(int i=0;i<s.nissues;i++) if(strstr(s.issues[i].message,"wrapRadius")) warned=1;
+	ASSERT_TRUE(warned);
 	scene_free(&s);
 	PASS();
 }
@@ -1684,6 +1718,7 @@ int main(void) {
   test_window_cut_transforms_and_union();
   test_window_invalid_and_opt_out();
   test_window_glazing_bars();
+  test_group_wrap();
   test_scene_occlusion_attributes();
   test_window_creation_persists();
   test_window_drag_recuts_wall();

@@ -111,6 +111,7 @@ for the complete attribute classification and renderer data flow.
 
 - Treat `pos`, `rot`, and `scale` as transforms in the parent group's coordinate frame.
 - Treat a wall's local X as length, local Y as height, and local Z as thickness.
+- Build a round wall flat inside `<group wrapRadius="R">`: the wall, its windows, sills and wall lamps are placed along local X (arc length) and the group wraps them about a vertical axis, positive R making the wall's front the inside of the room. See the [group reference](references/scene-format.md#wrapped-groups-round-walls).
 - Express wall inserts in the same local frame as the wall. For an opening, calculate:
   - center X: `opening.x + opening.width / 2 - wall.length / 2`
   - center Y: `opening.sill + opening.height / 2`

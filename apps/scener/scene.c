@@ -54,6 +54,9 @@
 #define WINDOW_STORYBOOK_FRAME_RATIO 0.10f
 #define WINDOW_DEPTH_RATIO 1.5f
 #define WINDOW_PANE_DEPTH 0.02f
+#define GROUP_WRAP_SEGMENT 5.0f      /* degrees of arc between the slices of a wrapped group */
+#define GROUP_WRAP_SEGMENT_MIN 0.5f
+#define GROUP_WRAP_SEGMENT_MAX 45.0f
 #define WINDOW_BAR_WIDTH_RATIO 0.4f
 #define WINDOW_BAR_DEPTH_RATIO 0.5f
 #define WINDOW_MAX_BAR_DIVISIONS 12
@@ -730,6 +733,8 @@ static void scene_obj_set_matrix(SceneObj *o,mat4 M){
 void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)R;
 	if(s->activeGradient.on) mesh_gradient_param(&mesh, &s->activeGradient);
+	/* A wrapped group's objects are baked into its frame: a bend is not a matrix, so they share no model. */
+	if(s->wrapRadius!=0){ mesh_wrap(&mesh,mat4_mul(s->wrapInv,M),s->wrapRadius,s->wrapStep); M=s->wrapM; }
 	if(castsShadow && !mesh.twoSided && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);   /* a solid model winds outward; mirroring is the matrix's */
 	SceneObj o={0};
 	o.mesh=scene_share_mesh(s,&mesh,castsShadow);
@@ -1836,7 +1841,17 @@ static void parse_bone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 
 
 static void parse_group(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot; (void)color; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
+	float radius=xml_attr_f_cm(n,"wrapRadius",0.0f);
+	float segment=fminf(fmaxf(xml_attr_f(n,"wrapSegment",GROUP_WRAP_SEGMENT),GROUP_WRAP_SEGMENT_MIN),GROUP_WRAP_SEGMENT_MAX);
+	if(radius==0||!isfinite(radius)){ parse_nodes(s, n, M, R); return; }
+	if(s->wrapRadius!=0){
+		scene_issue(s,SCENE_ISSUE_WARNING,"element",node_file(s,n),n->line,"<group wrapRadius> inside a wrapped group is ignored; wrap the outer group only");
+		parse_nodes(s, n, M, R); return;
+	}
+	s->wrapRadius=radius; s->wrapStep=fabsf(radius)*segment*M_PIf/180.0f;
+	s->wrapM=M; s->wrapInv=mat4_affine_inverse(M);
 	parse_nodes(s, n, M, R);
+	s->wrapRadius=0;
 }
 
 #define OPENING_RECT     0
@@ -2631,6 +2646,7 @@ static void parse_light(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 	(void)R; (void)parentM; (void)pos; (void)rot; (void)color; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
 	Light L={0};
 	L.pos=mat4_xform_point(M,v3(0,0,0));
+	if(s->wrapRadius!=0) L.pos=mat4_xform_point(s->wrapM,wrap_point(mat4_xform_point(s->wrapInv,L.pos),s->wrapRadius));
 	L.color=xml_attr_v3(n,"color",v3(1,1,1));
 	L.intensity=xml_attr_f(n,"intensity",1.0f);
 	L.radius=xml_attr_f_cm(n,"radius",0.0f);

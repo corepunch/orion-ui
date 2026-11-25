@@ -179,6 +179,8 @@ void mesh_free(Mesh *m);
 int mesh_add_vert(Mesh *m,vec3 p,vec3 n);
 void mesh_add_tri(Mesh *m,int a,int b,int c);
 void mesh_transform(Mesh *m,mat4 posM,mat4 rotM);
+vec3 wrap_point(vec3 p,float radius);                         /* about the Y axis through (0, y, radius); x is arc length */
+void mesh_wrap(Mesh *m,mat4 local,float radius,float step);  /* bakes local, slices every step along x, wraps */
 /* A gradient colours a shape without vertex colours, as a 3ds Max map colours through its gizmo: the gizmo gives
    each vertex a coordinate g, and the fragment shader blends from..to by it, repeated, stepped at edge and
    curved by power. Gizmos: the local bounding box along x, y or z; a line or a radius between two local points
@@ -323,6 +325,7 @@ typedef struct {
 	vec3 prefabTint; int prefabTintActive;
 	int sanityIgnoreActive, sanityFloorActive, sanityCheckActive;
 	int hiddenActive;   /* inside an element with renderable="0": everything under it casts shadows unseen */
+	float wrapRadius,wrapStep; mat4 wrapM,wrapInv;   /* inside <group wrapRadius>: its radius (0 = none), slice spacing, frame and inverse */
 	OverlayLine *overlayLines; int noverlayLines, coverlayLines;
 	CharDef *charDefs; int ncharDefs, ccharDefs;
 	void *activeRigInstance, *activeRigPose, *activeRigRoot, *selectedRigInstance, *selectedRigJoint;
