@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- tests/scener_input_test.c test_decals: a multiply stain and an over dust patch sharing one image. -->
+<scene up="z">
+  <decal pos="0 0 0.1" size="80 40" image="decal.png"/>
+  <decal pos="100 0 0.1" size="40 40" image="decal.png" mode="over" opacity="0.5"/>
+</scene>

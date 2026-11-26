@@ -815,6 +815,25 @@ image is a load error. For a reusable prefab, give `<screen>` a default
 `<prefab>` tag. The override applies to descendant screens and is restored
 after that instance, so copies can display different app screenshots.
 
+### `<decal>`
+
+An image laid flat on whatever lies under it: a `size.x` by `size.y` quad facing
+local +Z, drawn after lighting, depth-tested against the scene without writing
+depth and pulled toward the camera so it never fights the surface it lies on.
+It casts no shadow and is left out of `--check`. Lay it just above the surface
+(a floor decal at Z=0.1, a wall decal on the wall face).
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `size` | vec2 | 1 1 | Width and height in cm |
+| `image` | path | (required) | PNG (with alpha), JPEG or BMP; paths as for `<screen>` |
+| `mode` | string | multiply | `multiply` darkens the lit surface toward the image colour by its alpha, so stains, grime, soot and cracks keep the scene's light and shadow; `over` lays the image colour over the surface by its alpha, unlit, for dust and pale scuffs |
+| `opacity` | float | 1 | Scales the image alpha |
+| `color`, `material` | | white | Tints the image |
+
+A decal tells a paint-over what is there: a stain reads as a stain in the
+render, and an artist or image model can paint it properly.
+
 ### `<sphere>`
 
 UV sphere centered at origin.
@@ -1541,6 +1560,8 @@ selection, `renderable`, `unlit` and `castShadow` apply to the whole floor.
 | `gap` | 0.2 | Joint width, cm; nonnegative and less than half the smaller element dimension |
 | `colorVariation` | 0.1 | Per-element brightness variation in 0..1; 0 gives uniform color |
 | `seed` | 1 | Integer seed for repeatable variation and stone sizing |
+| `missing` | 0 | Fraction of elements left out, 0..1: the backing (grout finish) shows where they were |
+| `heightVariation` | 0 | Each element raised or sunk by up to this many cm, less than thickness − tileDepth: warped or loose boards |
 | `material`, `color`, `shininess` | common shape defaults | Base element finish; a named material takes precedence over common color/shininess |
 | `groutMaterial`, `groutColor` | floor finish | Backing/grout finish; explicit groutColor overrides its material color |
 

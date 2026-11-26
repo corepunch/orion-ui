@@ -44,6 +44,8 @@ static GLuint s_image_prog,s_image_vao,s_image_vbo,s_image_ebo;
 static GLuint s_ssao_fbo, s_ssao_depth;
 static int s_ssao_width, s_ssao_height, s_ssao_ready;
 static GLint s_image_viewproj_loc,s_image_color_loc,s_image_sampler_loc;
+static GLuint s_decal_prog;
+static GLint s_decal_viewproj_loc,s_decal_color_loc,s_decal_sampler_loc,s_decal_opacity_loc,s_decal_mode_loc;
 static vec3 render_srgb_to_linear(vec3 color);
 static GLint s_shadow_finite_loc;
 static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc, s_shadow_verts_loc, s_shadow_stride_loc, s_shadow_light_loc, s_shadow_model_loc;
@@ -106,6 +108,29 @@ static const char *s_image_fs =
     "out vec4 frag;\n"
     "void main(){ vec4 pixel=texture(uImage,vUV); frag=vec4(pixel.rgb*uColor,pixel.a); }\n";
 
+/* A decal after lighting: multiply darkens the lit surface toward the image colour by its alpha (the blend
+   multiplies the framebuffer by the output), over blends the colour onto it. */
+static const char *s_decal_fs =
+    "#version 150\n"
+    "in vec2 vUV;\n"
+    "uniform sampler2D uImage;\n"
+    "uniform vec3 uColor;\n"
+    "uniform float uOpacity;\n"
+    "uniform int uMode;\n"
+    "out vec4 frag;\n"
+    "void main(){ vec4 pixel=texture(uImage,vUV); float a=clamp(pixel.a*uOpacity,0.0,1.0); vec3 c=pixel.rgb*uColor;\n"
+    "  if(uMode==0) frag=vec4(mix(vec3(1.0),c,a),1.0); else frag=vec4(c,a); }\n";
+
+static void ensure_decal_prog(void) {
+    if (s_decal_prog) return;
+    if (!ui_load_program_from_source(s_image_vs, s_decal_fs, "aPos", "aUV", NULL, &s_decal_prog)) return;
+    s_decal_viewproj_loc = glGetUniformLocation(s_decal_prog, "uViewProj");
+    s_decal_color_loc = glGetUniformLocation(s_decal_prog, "uColor");
+    s_decal_sampler_loc = glGetUniformLocation(s_decal_prog, "uImage");
+    s_decal_opacity_loc = glGetUniformLocation(s_decal_prog, "uOpacity");
+    s_decal_mode_loc = glGetUniformLocation(s_decal_prog, "uMode");
+}
+
 static void ensure_image_prog(void) {
     if (s_image_prog) return;
     if (!ui_load_program_from_source(s_image_vs, s_image_fs, "aPos", "aUV", NULL, &s_image_prog)) return;
@@ -164,6 +189,48 @@ static int draw_screen_image(SceneObj *obj,ScreenTexture *image,mat4 viewProj) {
     return 1;
 }
 
+/* Decals over the lit scene: depth-tested against it without writing depth, pulled forward so they never fight
+   the surface they lie on. */
+static void draw_decals(Scene *s, const int *decals, int ndecals, mat4 viewProj) {
+    if (!ndecals) return;
+    ensure_image_prog(); ensure_decal_prog();
+    if (!s_decal_prog || !s_image_vao) return;
+    glUseProgram(s_decal_prog);
+    glUniform1i(s_decal_sampler_loc, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glDepthMask(GL_FALSE); glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE); glDisable(GL_STENCIL_TEST);
+    glEnable(GL_POLYGON_OFFSET_FILL); glPolygonOffset(-2, -2);
+    glEnable(GL_BLEND);
+    glBindVertexArray(s_image_vao);
+    for (int k = 0; k < ndecals; k++) {
+        SceneObj *obj = &s->objs[decals[k]];
+        GLuint texture = screen_texture(&s->screenTextures[obj->decal - 1]);
+        if (!texture) continue;
+        vec3 color = render_srgb_to_linear(obj->color);
+        mat4 mvp = mat4_mul(viewProj, obj->model);
+        glUniformMatrix4fv(s_decal_viewproj_loc, 1, GL_FALSE, mvp.m);
+        glUniform3f(s_decal_color_loc, color.x, color.y, color.z);
+        glUniform1f(s_decal_opacity_loc, obj->decalOpacity);
+        glUniform1i(s_decal_mode_loc, obj->decalMode);
+        if (obj->decalMode == DECAL_MULTIPLY) glBlendFunc(GL_DST_COLOR, GL_ZERO);
+        else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindBuffer(GL_ARRAY_BUFFER, s_image_vbo);
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(obj->mesh->nverts * sizeof(Vertex)), obj->mesh->verts, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_image_ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(obj->mesh->ntris * sizeof(Tri)), obj->mesh->tris, GL_DYNAMIC_DRAW);
+        glEnableVertexAttribArray(0); glEnableVertexAttribArray(1);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, pos));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, u));
+        glDrawElements(GL_TRIANGLES, obj->mesh->ntris * 3, GL_UNSIGNED_INT, (void *)0);
+    }
+    glDisableVertexAttribArray(0); glDisableVertexAttribArray(1);
+    glDisable(GL_BLEND); glDisable(GL_POLYGON_OFFSET_FILL);
+    glDepthFunc(GL_LESS); glDepthMask(GL_TRUE);
+    glBindVertexArray(0); glBindTexture(GL_TEXTURE_2D, 0); glUseProgram(0);
+}
+
 void render_deinit(void) {
     if (s_ssao_fbo) glDeleteFramebuffers(1, &s_ssao_fbo);
     if (s_ssao_depth) glDeleteTextures(1, &s_ssao_depth);
@@ -173,6 +240,8 @@ void render_deinit(void) {
     if(s_image_vbo) glDeleteBuffers(1,&s_image_vbo);
     if(s_image_vao) glDeleteVertexArrays(1,&s_image_vao);
     if(s_image_prog) glDeleteProgram(s_image_prog);
+    if(s_decal_prog) glDeleteProgram(s_decal_prog);
+    s_decal_prog=0;
     s_image_ebo=s_image_vbo=s_image_vao=s_image_prog=0;
 }
 
@@ -700,15 +769,16 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
        between draws ends the driver's render pass (Doom 3 finishes its front end before the back end runs). ---- */
     vec3 ambient = render_srgb_to_linear(s->ambient);
     s_nbatch = s_ncast = s_ninst = 0;
-    static int *list, *screens; static int listCap;
+    static int *list, *screens, *decals; static int listCap;
     if (listCap < s->nobjs) {
-        free(list); free(screens);
-        list = malloc((size_t)s->nobjs * sizeof(int)); screens = malloc((size_t)s->nobjs * sizeof(int)); listCap = s->nobjs;
+        free(list); free(screens); free(decals);
+        list = malloc((size_t)s->nobjs * sizeof(int)); screens = malloc((size_t)s->nobjs * sizeof(int));
+        decals = malloc((size_t)s->nobjs * sizeof(int)); listCap = s->nobjs;
     }
     if (s_cwork < s->nlights) { free(s_work); s_work = malloc((size_t)s->nlights * sizeof(light_work_t)); s_cwork = s->nlights; }
 
     /* the depth-filling pass: everything in view; screens with an image draw as images */
-    int nlist = 0, nscreens = 0;
+    int nlist = 0, nscreens = 0, ndecals = 0;
     vec3 sceneLo = v3(INFINITY, INFINITY, INFINITY), sceneHi = v3(-INFINITY, -INFINITY, -INFINITY);
     for (int i = 0; i < s->nobjs; i++) {
         SceneObj *o = &s->objs[i];
@@ -716,6 +786,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         sceneLo = v3(fminf(sceneLo.x, o->bmin.x), fminf(sceneLo.y, o->bmin.y), fminf(sceneLo.z, o->bmin.z));
         sceneHi = v3(fmaxf(sceneHi.x, o->bmax.x), fmaxf(sceneHi.y, o->bmax.y), fmaxf(sceneHi.z, o->bmax.z));
         if (!o->renderable || rect_empty(box_screen_rect(viewProj, o->bmin, o->bmax, w, h))) continue;
+        if (o->decal) { if (!(flags & DBG_FLAT)) decals[ndecals++] = i; continue; }
         if (o->screenTexture >= 0 && !(flags & DBG_FLAT) && screen_image_ready(&s->screenTextures[o->screenTexture])) screens[nscreens++] = i;
         else list[nlist++] = i;
     }
@@ -875,6 +946,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     glActiveTexture(GL_TEXTURE0);
     if (flags & DBG_FLAT) return;
     glDepthMask(GL_TRUE);
+    draw_decals(s, decals, ndecals, viewProj);
 
     /* Overlay lines */
     glDisable(GL_DEPTH_TEST);

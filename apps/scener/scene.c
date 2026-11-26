@@ -42,6 +42,8 @@
 #define FLOOR_HASH_MIX 0x7feb352du
 #define FLOOR_HASH_SHIFT 16
 #define FLOOR_HASH_MASK 0x00ffffffu
+#define FLOOR_MISSING_SALT 0x5bd1e995u   /* floor_random stream for left-out elements */
+#define FLOOR_LIFT_SALT 0x27d4eb2fu      /* and for their height offsets */
 
 #define PICK_TRIANGLE_EPSILON 0.00000001f
 #define WINDOW_Z_UP_ROTATION "90 0 0"
@@ -1474,6 +1476,36 @@ static void parse_screen(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	s->activeScreenTexture=old;
 }
 
+/* <decal>: an image laid flat on whatever lies under it, a size.x by size.y quad facing +Z drawn after lighting.
+   mode="multiply" (default) darkens the lit surface by the image's colour where its alpha is, so stains, grime and
+   cracks keep the scene's light and shadow; mode="over" lays the colour over it, for dust and pale scuffs. */
+static void parse_decal(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)parentM; (void)pos; (void)rot; (void)castsShadow; (void)unlit;
+	if(!xml_attr(n,"material",NULL) && !xml_attr(n,"color",NULL)) color=v3(1,1,1);
+	vec3 size=xml_attr_v3_cm(n,"size",v3(1,1,0));
+	const char *image=xml_attr(n,"image",NULL),*mode=xml_attr(n,"mode","multiply");
+	if(size.x<=0 || size.y<=0){ fprintf(stderr,"[scener] decal: invalid size\n"); s->assetError=1; return; }
+	if(!image || !image[0]){ fprintf(stderr,"[scener] decal: no image\n"); s->assetError=1; return; }
+	if(strcmp(mode,"multiply") && strcmp(mode,"over")){ fprintf(stderr,"[scener] decal: unknown mode %s\n",mode); s->assetError=1; return; }
+	int texture=screen_texture_index(s,image);
+	if(texture<0) return;
+	Mesh mesh={0};
+	float x=size.x*0.5f,y=size.y*0.5f;
+	vec3 up=v3(0,0,1);
+	int a=mesh_add_vert(&mesh,v3(-x,-y,0),up),b=mesh_add_vert(&mesh,v3(x,-y,0),up),
+	    c=mesh_add_vert(&mesh,v3(x,y,0),up),d=mesh_add_vert(&mesh,v3(-x,y,0),up);
+	mesh.verts[a].u=0; mesh.verts[a].v=1; mesh.verts[b].u=1; mesh.verts[b].v=1;
+	mesh.verts[c].u=1; mesh.verts[c].v=0; mesh.verts[d].u=0; mesh.verts[d].v=0;
+	mesh_add_tri(&mesh,a,b,c); mesh_add_tri(&mesh,a,c,d);
+	mesh.twoSided=1;
+	int sanity=s->sanityIgnoreActive; s->sanityIgnoreActive=1;
+	scene_add_obj(s,mesh,M,R,color,shin,0,renderable,1);
+	s->sanityIgnoreActive=sanity;
+	SceneObj *o=&s->objs[s->nobjs-1];
+	o->decal=texture+1; o->decalMode=!strcmp(mode,"over")?DECAL_OVER:DECAL_MULTIPLY;
+	o->decalOpacity=xml_attr_f(n,"opacity",1);
+}
+
 static void parse_sphere(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	float r=xml_attr_f_cm(n,"radius",0.5f);
@@ -2137,7 +2169,11 @@ static void parse_floor(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	float tileLength=xml_attr_f_cm(n,"tileLength",style==FLOOR_BOARDS?FLOOR_DEFAULT_TILE_LENGTH:tileWidth);
 	float gap=xml_attr_f_cm(n,"gap",FLOOR_DEFAULT_GAP),variation=xml_attr_f(n,"colorVariation",FLOOR_DEFAULT_VARIATION);
 	unsigned seed=(unsigned)xml_attr_i(n,"seed",1);
+	/* missing: the fraction of elements left out, showing the backing; heightVariation: each element raised or
+	   sunk by up to this much. Each draws on its own stream, so neither moves the colours or the other. */
+	float missing=xml_attr_f(n,"missing",0),lift=xml_attr_f_cm(n,"heightVariation",0);
 	float values[]={width,depth,thickness,tileDepth,tileWidth,tileLength}; int valid=style>=0&&!n->nkids;
+	valid&=isfinite(missing)&&missing>=0&&missing<=1&&isfinite(lift)&&lift>=0&&lift<thickness-tileDepth;
 	for(int i=0;i<(int)(sizeof(values)/sizeof(values[0]));i++) valid&=isfinite(values[i])&&values[i]>SURFACE_EPSILON;
 	valid&=thickness-tileDepth>SURFACE_EPSILON&&isfinite(gap)&&gap>=0&&gap<fminf(tileWidth,tileLength)/2;
 	valid&=isfinite(variation)&&variation>=0&&variation<=1;
@@ -2146,7 +2182,7 @@ static void parse_floor(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	float across=style==FLOOR_HEXES?tileWidth:tileLength;
 	double rows=ceil((double)depth/step)+2,columns=ceil((double)width/across)+2;
 	valid&=isfinite(rows)&&isfinite(columns)&&rows*columns<=FLOOR_MAX_CELLS;
-	if(!valid){ fprintf(stderr,"[scener] floor: invalid style/dimensions, children, colorVariation or cell count (limit %d)\n",FLOOR_MAX_CELLS); return; }
+	if(!valid){ fprintf(stderr,"[scener] floor: invalid style/dimensions, children, colorVariation, missing, heightVariation or cell count (limit %d)\n",FLOOR_MAX_CELLS); return; }
 	surface_material_t base={color,shin,s->activeTexIndex,s->activeRamp};
 	surface_material_t grout=surface_material(s,n,"grout",base);
 	surface_add(s,gen_box(width,thickness-tileDepth,depth),mat4_mul(M,mat4_translate(v3(0,-(thickness+tileDepth)/2,0))),R,grout,castsShadow,renderable,unlit);
@@ -2155,6 +2191,7 @@ static void parse_floor(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	for(int row=-1;row<(int)rows-1;row++) for(int column=-1;column<(int)columns-1;column++){
 		float x=-width/2+(column+1)*across,y=-depth/2+(row+1)*step;
 		if(style!=FLOOR_SQUARES) x+=(row&1)*across/2;
+		if(missing>0 && floor_random(row,column,seed^FLOOR_MISSING_SALT)<missing) continue;
 		float cellWidth=across,cellLength=step;
 		if(style==FLOOR_STONES){
 			float left=(floor_random(row,column,seed)-1.0f/2)*across*FLOOR_STONE_JITTER;
@@ -2168,7 +2205,13 @@ static void parse_floor(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 		surface_material_t tile=base;
 		float factor=1+(2*floor_random(row,column,seed)-1)*variation;
 		tile.color=v3(fminf(1,fmaxf(0,color.x*factor)),fminf(1,fmaxf(0,color.y*factor)),fminf(1,fmaxf(0,color.z*factor)));
-		surface_add(s,mesh,tileM,tileR,tile,castsShadow,renderable,unlit);
+		mat4 cellM=tileM;
+		if(lift>0){
+			/* Along the floor's normal: the tile plane's local Z before the plane rotation is the floor's up. */
+			float offset=(2*floor_random(row,column,seed^FLOOR_LIFT_SALT)-1)*lift;
+			cellM=mat4_mul(M,mat4_mul(mat4_translate(v3(0,-tileDepth/2+offset,0)),plane));
+		}
+		surface_add(s,mesh,cellM,tileR,tile,castsShadow,renderable,unlit);
 		shape2d_free(&cell); shape2d_free(&inset); shape2d_free(&clipped);
 	}
 }
@@ -2668,6 +2711,7 @@ static const struct {
 	{ "mesh",     parse_mesh },
 	{ "surface",  parse_surface },
 	{ "screen",   parse_screen },
+	{ "decal",    parse_decal },
 	{ "sphere",   parse_sphere },
 	{ "cylinder", parse_cylinder },
 	{ "prism",    parse_prism },

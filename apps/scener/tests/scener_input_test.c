@@ -1517,6 +1517,54 @@ static void test_floor_coverage_and_limits(void){
 	scene_free(&s); PASS();
 }
 
+static void test_floor_missing_and_heights(void){
+	TEST("floors leave out a seeded share of elements and lift or sink each one within heightVariation");
+	Scene full={0},gappy={0},warped={0};
+	SURFACE_ASSERT(window_test_load(&full,"<scene><floor width='300' depth='300' tileWidth='20' tileLength='100' seed='3'/></scene>"));
+	SURFACE_ASSERT(window_test_load(&gappy,"<scene><floor width='300' depth='300' tileWidth='20' tileLength='100' seed='3' missing='0.25'/></scene>"));
+	int left=full.nobjs-gappy.nobjs;
+	SURFACE_ASSERT(left>(full.nobjs-1)/8 && left<(full.nobjs-1)*3/8);
+	/* The colours of the boards that stay are the same boards' colours as without gaps. */
+	SURFACE_ASSERT(vlen(vsub(full.objs[0].color,gappy.objs[0].color))==0);
+	SURFACE_ASSERT(window_test_load(&warped,"<scene><floor width='300' depth='300' tileWidth='20' tileLength='100' seed='3' heightVariation='1.5'/></scene>"));
+	ASSERT_EQUAL(warped.nobjs,full.nobjs);
+	int raised=0,sunk=0;
+	for(int o=1;o<warped.nobjs;o++){
+		vec3 lo,hi,flo,fhi; lo=warped.objs[o].bmin; hi=warped.objs[o].bmax; flo=full.objs[o].bmin; fhi=full.objs[o].bmax;
+		float dy=hi.y-fhi.y;
+		SURFACE_ASSERT(fabsf(dy)<=0.015f+SURFACE_TEST_EPSILON && fabsf((lo.y-flo.y)-dy)<SURFACE_TEST_EPSILON);
+		if(dy>0.001f) raised++; if(dy<-0.001f) sunk++;
+	}
+	SURFACE_ASSERT(raised>0 && sunk>0);
+	const char *invalid[]={"missing='-0.1'","missing='1.5'","heightVariation='-1'","heightVariation='20'"};
+	for(int i=0;i<(int)(sizeof(invalid)/sizeof(invalid[0]));i++){
+		char xml[SURFACE_TEST_CAPACITY]; snprintf(xml,sizeof(xml),"<scene><floor %s/></scene>",invalid[i]);
+		Scene bad={0}; SURFACE_ASSERT(window_test_load(&bad,xml)); ASSERT_EQUAL(bad.nobjs,0); scene_free(&bad);
+	}
+	scene_free(&full); scene_free(&gappy); scene_free(&warped); PASS();
+}
+
+static void test_decals(void){
+	TEST("decals load their image, lie flat with UVs, cast nothing, skip checks and validate their attributes");
+	Scene s={0};
+	SURFACE_ASSERT(load_scene("apps/scener/tests/data/decal.blks",&s));
+	ASSERT_EQUAL(s.nobjs,2);
+	SceneObj *stain=&s.objs[0],*dust=&s.objs[1];
+	SURFACE_ASSERT(stain->decal>0 && stain->decalMode==DECAL_MULTIPLY && stain->decalOpacity==1);
+	SURFACE_ASSERT(dust->decal==stain->decal && dust->decalMode==DECAL_OVER && fabsf(dust->decalOpacity-0.5f)<1e-6f);
+	ASSERT_EQUAL(s.nscreenTextures,1);
+	SURFACE_ASSERT(!stain->castsShadow && stain->sanityIgnore && stain->mesh->ntris==2);
+	SURFACE_ASSERT(fabsf(stain->bmax.x-stain->bmin.x-0.8f)<SURFACE_TEST_EPSILON && fabsf(stain->bmax.y-stain->bmin.y-0.4f)<SURFACE_TEST_EPSILON);
+	SURFACE_ASSERT(stain->mesh->verts[0].u==0 && stain->mesh->verts[2].u==1 && stain->mesh->verts[2].v==0);
+	scene_free(&s);
+	const char *invalid[]={"size='0 10' image='x.png'","size='10 10'","size='10 10' image='decal.png' mode='paint'"};
+	for(int i=0;i<(int)(sizeof(invalid)/sizeof(invalid[0]));i++){
+		char xml[SURFACE_TEST_CAPACITY]; snprintf(xml,sizeof(xml),"<scene><decal %s/></scene>",invalid[i]);
+		Scene bad={0}; window_test_load(&bad,xml); ASSERT_EQUAL(bad.nobjs,0); scene_free(&bad);
+	}
+	PASS();
+}
+
 static void test_surface_materials_and_roundtrip(void){
 	TEST("surface material precedence and save/reload retain all generated parts");
 	Scene s={0},restored={0};
@@ -1710,6 +1758,8 @@ int main(void) {
   test_wall_surface_transforms_and_invalid();
   test_procedural_floors();
   test_floor_coverage_and_limits();
+  test_floor_missing_and_heights();
+  test_decals();
   test_surface_materials_and_roundtrip();
   test_long_camera_names();
   test_door_fit_swing_and_pet_opening();
