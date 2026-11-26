@@ -42,6 +42,7 @@ typedef struct {
 	bool debug_flags_set;
 	char scene_path[512];
 	char output_path[1024];
+	char ui_shot_path[1024];   /* --ui-shot: the whole editor window after its first frame */
 	char camera_name[MAX_CAMERA_NAME];
 	int width, height, supersample;
 	bool transparent;   /* --transparent: the background is alpha 0 in PNG output */
@@ -77,6 +78,7 @@ static void cli_usage(void) {
 	     "scener --layout SCENE [--scale PIXELS_PER_CM] [--format jpg|png] [--output-dir DIR]\n"
 	     "scener --list-cameras SCENE\n"
 	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT] [--ssao]\n"
+	     "scener SCENE --ui-shot FILE.png|FILE.jpg [--cam NAME] [--size WIDTHxHEIGHT]   the editor window, menus and panels included\n"
 	     "scener --list-joints SCENE [--camera NAME] [--time SECONDS]\n"
 	     "scener --check SCENE [--camera NAME | --all-cameras] [--time SECONDS] [--json] [--strict]\n"
 	     "                                            load diagnostics plus floating, intersecting and z-fighting geometry in that camera's view\n"
@@ -132,10 +134,11 @@ static void cli_parse(int argc, char *argv[]) {
 		bool output_dir=!strcmp(arg,"--output-dir")||(!strcmp(arg,"-o")&&(g_cli.batch||g_cli.layout));
 		if(output_dir)output=false;
 		bool camera=!strcmp(arg,"--camera")||!strcmp(arg,"--cam")||!strcmp(arg,"-cam");
-		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--prefab-info")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames")||!strcmp(arg,"--export")||!strcmp(arg,"--exporter")||!strcmp(arg,"--opt");
+		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--prefab-info")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames")||!strcmp(arg,"--export")||!strcmp(arg,"--exporter")||!strcmp(arg,"--opt")||!strcmp(arg,"--ui-shot");
 		if(!known){fprintf(stderr,"unsupported option: %s\n",arg);g_cli.invalid=true;continue;}
 		if(i+1>=argc){fprintf(stderr,"missing value for %s\n",arg);g_cli.invalid=true;continue;}
 		value=argv[++i];
+		if(!strcmp(arg,"--ui-shot")){snprintf(g_cli.ui_shot_path,sizeof(g_cli.ui_shot_path),"%s",value);continue;}
 		if(!strcmp(arg,"--reel")){snprintf(g_cli.reel_path,sizeof(g_cli.reel_path),"%s",value);continue;}
 		if(!strcmp(arg,"--prefab-info")){snprintf(g_cli.prefab_source,sizeof(g_cli.prefab_source),"%s",value);continue;}
 		if(!strcmp(arg,"--export")){snprintf(g_cli.export_path,sizeof(g_cli.export_path),"%s",value);continue;}
@@ -666,6 +669,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (!g_cli.screenshot_mode) {
+    if (g_cli.ui_shot_path[0]) ui_request_screenshot(g_cli.ui_shot_path, 92, true);
     while (ui_is_running()) {
       ui_event_t e;
       while (get_message(&e)) {

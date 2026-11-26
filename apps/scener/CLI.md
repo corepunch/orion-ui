@@ -28,6 +28,7 @@ scener --render /absolute/path/room.blks --size 1536x1024 --format jpg --output-
 scener --render /absolute/path/room.blks --camera room-main --size 1536x1024 --format png --output-dir render/room --ssao
 scener --layout /absolute/path/room.blks --scale 2 --format jpg --output-dir render/room
 scener /absolute/path/room.blks --cam room-main --screenshot /tmp/preview.png
+scener /absolute/path/room.blks --cam room-main --ui-shot /tmp/editor.png
 scener --render /absolute/path/walk.blks --camera Track --frames 0:7.5:24 --output-dir render/walk
 scener --render /absolute/path/walk.blks --camera Side --time 2.2 --output-dir render/still
 scener --list-joints /absolute/path/walk.blks --camera Side --time 2.2
@@ -46,6 +47,10 @@ geometry (metres, Y up, posed at `--time`) to an exporter plugin chosen by the
 output extension, or by `--exporter ID`. Exporters are shared libraries; see
 [docs/exporters.md](docs/exporters.md) for the bundled OBJ and glB exporters,
 their options, and how to write another.
+
+`--screenshot` writes the viewport alone. `--ui-shot FILE.png|FILE.jpg` opens the
+whole editor (menus, toolbar, command panel, properties) and saves the window
+after its first painted frame, then exits; use it for documentation captures.
 
 `--check`, `--query` and `--prefab-info` load the scene without a graphical
 session. `--check` prints a summary line (or, with `--json`, every issue as
