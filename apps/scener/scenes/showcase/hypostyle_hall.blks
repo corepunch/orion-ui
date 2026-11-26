@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hypostyle hall: a stress scene for the Scener site. Z up, X along the processional way, centimetres.
+     Ninety-six papyrus columns stand on a 500 cm grid, twelve along the way and eight across.
+     Each row is one <lathe> with an <array>; the roof slabs leave a slit over every aisle,
+     so a single low sun throws shafts of light between the columns. -->
+<scene up="z" ambient="0.27 0.23 0.21" background="0.86 0.72 0.60" aoRadius="160" aoStrength="2.2" aoDirect="0.4">
+  <let name="NX" value="12"/>
+  <let name="NY" value="8"/>
+  <let name="S" value="600"/>          <!-- column spacing -->
+  <let name="CH" value="1200"/>        <!-- column height to the top of the abacus -->
+  <let name="X0" value="-S*(NX - 1)/2"/>
+  <let name="Y0" value="-S*(NY - 1)/2"/>
+  <let name="SLIT" value="70"/>        <!-- roof opening over each aisle -->
+
+  <camera name="processional" comment="Inside the gate, down the processional way" pos="{X0 - 360} -60 175" look="{X0 + 3000} 0 640" fov="60"/>
+  <camera name="aisle" comment="Across the hall between two rows, into the open middle" pos="{X0 + 2.5*S} {Y0 - 300} 260" look="{X0 + 4*S} 0 520" fov="64"/>
+  <camera name="ruin" comment="The ruin from the desert, roof open over the middle aisles" pos="{X0 - 3200} {Y0 - 3000} 3000" look="0 0 300" fov="42"/>
+  <camera name="capitals" comment="Looking up at the capitals against the sky" pos="{X0 + 4.5*S} {Y0 + 3.5*S} 260" look="{X0 + 5.6*S} {Y0 + 4.4*S} 1300" fov="72"/>
+
+  <material id="sandstone" color="0.80 0.66 0.48" shininess="4">
+    <map type="noise" size="22" from="0.90 0.88 0.86" to="1.08 1.06 1.02" bump="0.4"/>
+  </material>
+  <material id="sand" color="0.76 0.62 0.46" shininess="2"/>
+  <material id="paving" color="0.74 0.62 0.46" shininess="4"/>
+  <material id="block" color="0.76 0.63 0.47" shininess="4">
+    <map type="bricks" size="140 60" mortar="1.2" vary="0.07" to="0.84 0.72 0.56" bump="0.5"/>
+  </material>
+  <material id="ochre" color="0.70 0.36 0.16" shininess="6"/>
+  <material id="lapis" color="0.16 0.28 0.56" shininess="10"/>
+
+  <sun dir="0.42 0.30 -0.86" color="1.0 0.86 0.66" intensity="2.1" castShadows="1"/>
+  <sun dir="-0.3 -0.5 -1" color="0.50 0.52 0.62" intensity="0.30" castShadows="0"/>
+
+  <!-- Desert, then the paved floor of the hall. -->
+  <box pos="0 0 -22" size="30000 30000 40" material="sand"/>
+  <floor pos="0 0 2" rot="90 0 0" width="{S*NX + 200}" depth="{S*NY + 200}" thickness="4" style="stones"
+         tileWidth="90" tileLength="160" gap="1.2" tileDepth="1.5" material="paving" colorVariation="0.10" seed="5"
+         groutColor="0.55 0.45 0.33"/>
+
+  <!-- Papyrus column: torus base, tapering shaft with a binding band, a closed-bud capital and its abacus. -->
+  <shape id="papyrus" closed="0" v="0 0 150 0 150 36 124 44 120 60 110 860 114 880 114 920 108 930 126 980 136 1030 126 1080 96 1118 112 1118 112 {CH} 0 {CH}"/>
+  <define name="column-row" doc="One row of NX columns along X at a given Y">
+    <param name="y"/>
+    <param name="band" default="ochre" doc="material of the painted band under the capital"/>
+    <group>
+      <lathe shape="papyrus" segments="40" pos="{X0} ${y} 2" rot="90 0 0" material="sandstone"><array count="{NX}" translation="{S} 0 0"/></lathe>
+      <cylinder pos="{X0} ${y} 790" rot="90 0 0" radius="112" height="24" segments="40" material="${band}"><array count="{NX}" translation="{S} 0 0"/></cylinder>
+    </group>
+  </define>
+  <column-row y="{Y0 + 0*S}" band="lapis"/>
+  <column-row y="{Y0 + 1*S}"/>
+  <column-row y="{Y0 + 2*S}"/>
+  <column-row y="{Y0 + 3*S}"/>
+  <column-row y="{Y0 + 4*S}"/>
+  <column-row y="{Y0 + 5*S}"/>
+  <column-row y="{Y0 + 6*S}"/>
+  <column-row y="{Y0 + 7*S}" band="lapis"/>
+
+  <!-- Architraves along every row, then roof slabs between rows with a slit over each aisle. -->
+  <box pos="0 {Y0} {CH + 52}" size="{S*NX} 200 100" material="block"><array count="{NY}" translation="0 {S} 0"/></box>
+  <!-- Only the outer aisles keep their roof; the slabs over the middle fell long ago. -->
+  <box pos="0 {Y0 + S/2} {CH + 117}" size="{S*NX} {S - SLIT} 30" material="block"><array count="2" translation="0 {S} 0"/></box>
+  <box pos="0 {Y0 + 5.5*S} {CH + 117}" size="{S*NX} {S - SLIT} 30" material="block"><array count="2" translation="0 {S} 0"/></box>
+  <!-- Two fallen drums and a toppled abacus on the processional way. -->
+  <cylinder pos="{X0 + 3.5*S} {Y0 + 3.5*S - 120} 112" rot="0 0 74" radius="110" height="260" segments="40" material="sandstone"/>
+  <cylinder pos="{X0 + 3.5*S + 240} {Y0 + 3.5*S + 60} 110" rot="0 0 61" radius="108" height="200" segments="40" material="sandstone"/>
+  <box pos="{X0 + 6.5*S} {Y0 + 4.5*S + 60} 43" rot="0 0 18" size="224 224 82" material="sandstone"/>
+
+  <!-- Enclosure walls with a pylon gate on the processional way. -->
+  <let name="EX" value="S*NX/2 + 160"/>
+  <let name="H_WALL" value="820"/>
+  <let name="EY" value="S*NY/2 + 160"/>
+  <group pos="0 {-EY} 0" rot="90 0 0"><wall length="{2*EX + 80}" height="{H_WALL}" thickness="80" material="block"/></group>
+  <group pos="0 {EY} 0" rot="90 0 180"><wall length="{2*EX + 80}" height="{H_WALL}" thickness="80" material="block"/></group>
+  <group pos="{EX} 0 0" rot="90 0 -90"><wall length="{2*EY}" height="{H_WALL}" thickness="80" material="block"/></group>
+  <group pos="{-EX} 0 0" rot="90 0 90">
+    <wall length="{2*EY}" height="{H_WALL}" thickness="80" material="block"/>
+    <bool-negative-box pos="0 330 0" size="420 660 120"/>
+  </group>
+
+  <!-- A priest for scale, in the light of the first aisle. -->
+  <prefab source="characters/ellipsoid_actor" pos="{X0 + 420} 90 2" rot="0 0 -70"/>
+</scene>

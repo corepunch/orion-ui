@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The Great Library: a stress scene for the Scener site. Z up, X along the nave, centimetres.
+     Hall x -1300..1300, y -720..720, floor z=0, wall tops z=900.
+     Forty double-faced stacks, two tiers high, five bookcases long: 400 stocked bookcases,
+     each prefab instanced with one <array>. Ten pendant lamps and a low sun all cast shadows. -->
+<scene up="z" ambient="0.20 0.18 0.20" background="0.06 0.05 0.07" aoRadius="80" aoStrength="2.0" aoDirect="0.5">
+  <let name="L" value="2600"/>   <!-- nave length -->
+  <let name="W" value="1440"/>   <!-- hall width -->
+  <let name="H" value="900"/>    <!-- wall height -->
+  <let name="T" value="30"/>     <!-- wall thickness -->
+  <let name="AISLE" value="190"/> <!-- half-width of the central aisle -->
+  <let name="STEP" value="250"/>  <!-- spacing between stacks along the nave -->
+  <let name="FIRST" value="-1125"/>
+
+  <camera name="nave" comment="Down the central aisle, one-point perspective" pos="-1220 0 210" look="400 0 260" fov="56"/>
+  <camera name="gallery" comment="From high in the north-west corner across the stacks" pos="-1180 640 760" look="0 -120 120" fov="60"/>
+  <camera name="stacks" comment="Between two stacks, the books close up" pos="-760 330 150" look="-690 600 160" fov="62"/>
+
+  <material id="floorboards" color="0.46 0.30 0.19" shininess="10" specular="0.3"/>
+  <material id="stone" color="0.70 0.66 0.60" shininess="4">
+    <map type="bricks" size="80 40" mortar="1.5" vary="0.08" to="0.86 0.82 0.76" bump="0.5"/>
+  </material>
+  <material id="plaster" color="0.72 0.66 0.58" shininess="2"/>
+  <material id="ceiling" color="0.36 0.27 0.20" shininess="2"/>
+  <material id="dark_wood" color="0.30 0.19 0.12" shininess="14"/>
+  <material id="wood" color="0.52 0.34 0.20" shininess="12"/>
+  <material id="book_pages" color="0.84 0.77 0.62" shininess="2"/>
+  <material id="brass" color="0.78 0.56 0.22" shininess="50" metallic="0.5"/>
+  <material id="lamp_shade" color="0.22 0.36 0.26" shininess="30"/>
+  <material id="leather" color="0.36 0.12 0.10" shininess="10"/>
+  <material id="runner" color="0.50 0.10 0.12" shininess="2"/>
+  <material id="runner_trim" color="0.86 0.66 0.30" shininess="2"/>
+
+  <!-- Late sun through the south windows, a cool sky fill, then the lamps below. -->
+  <sun dir="0.30 0.85 -0.55" color="1.0 0.80 0.58" intensity="2.4" castShadows="1"/>
+  <sun dir="-0.4 -0.3 -1" color="0.40 0.46 0.62" intensity="0.35" castShadows="0"/>
+
+  <!-- ================= shell ================= -->
+  <floor pos="0 0 0" rot="90 0 0" width="{L}" depth="{W}" thickness="10" style="boards"
+         tileWidth="22" tileLength="300" gap="0.5" tileDepth="2" material="floorboards" colorVariation="0.12" seed="11"
+         groutColor="0.22 0.13 0.08"/>
+  <!-- Runner down the aisle, its gold border one millimetre proud of the red. -->
+  <box pos="0 0 0.4" size="{L - 200} 150 0.8" material="runner_trim"/>
+  <box pos="0 0 0.9" size="{L - 216} 134 0.2" material="runner"/>
+
+  <!-- South wall: five tall gothic windows the sun comes through. -->
+  <group pos="0 {-W/2 - T/2} 0" rot="90 0 0">
+    <wall length="{L + 2*T}" height="{H}" thickness="{T}" material="stone" bottomTrimHeight="24" topTrimHeight="30" trimMaterial="dark_wood" trimSide="back"/>
+    <window preset="gothic" pos="-1000 300 0" width="170" height="420" frameMaterial="dark_wood" bars="3 6" pane="0"/>
+    <window preset="gothic" pos="-500 300 0" width="170" height="420" frameMaterial="dark_wood" bars="3 6" pane="0"/>
+    <window preset="gothic" pos="0 300 0" width="170" height="420" frameMaterial="dark_wood" bars="3 6" pane="0"/>
+    <window preset="gothic" pos="500 300 0" width="170" height="420" frameMaterial="dark_wood" bars="3 6" pane="0"/>
+    <window preset="gothic" pos="1000 300 0" width="170" height="420" frameMaterial="dark_wood" bars="3 6" pane="0"/>
+  </group>
+  <group pos="0 {W/2 + T/2} 0" rot="90 0 180">
+    <wall length="{L + 2*T}" height="{H}" thickness="{T}" material="stone" bottomTrimHeight="24" topTrimHeight="30" trimMaterial="dark_wood" trimSide="back"/>
+  </group>
+  <group pos="{-L/2 - T/2} 0 0" rot="90 0 90">
+    <wall length="{W}" height="{H}" thickness="{T}" material="stone" bottomTrimHeight="24" trimMaterial="dark_wood" trimSide="back"/>
+    <window preset="round-arch" pos="0 520 0" width="260" height="300" frameMaterial="dark_wood"/>
+  </group>
+  <group pos="{L/2 + T/2} 0 0" rot="90 0 -90">
+    <wall length="{W}" height="{H}" thickness="{T}" material="stone" bottomTrimHeight="24" trimMaterial="dark_wood" trimSide="back"/>
+    <door preset="round-arch" pos="0 170 0" width="200" height="340" frameMaterial="dark_wood" leafMaterial="wood" hardwareMaterial="brass"/>
+    <window preset="round-arch" pos="0 640 0" width="200" height="200" frameMaterial="dark_wood"/>
+  </group>
+  <!-- Roof: a plaster vault stand-in, with dark beams every stack. -->
+  <box pos="0 0 {H + 15}" size="{L + 60} {W + 60} 30" material="ceiling"/>
+  <box pos="{FIRST} 0 {H - 20}" size="30 {W - 4} 40" material="dark_wood"><array count="10" translation="{STEP} 0 0"/></box>
+
+  <!-- ================= stacks ================= -->
+  <!-- A stack is two rows of bookcases back to back, running from the aisle to the wall.
+       rot 90 turns a bookcase's width along +Y and its open front to +X. -->
+  <define name="stack" doc="Double-faced stack, two tiers, five cases long, starting at the aisle">
+    <param name="x" doc="stack centre along the nave"/>
+    <param name="side" doc="+1 north of the aisle, -1 south"/>
+    <group>
+      <prefab source="study/bookshelf" pos="{${x} + 15.5} {${side}*(AISLE + 40)} 0" rot="0 0 90"><array count="5" translation="{${side}*80} 0 0"/></prefab>
+      <prefab source="study/bookshelf" pos="{${x} - 15.5} {${side}*(AISLE + 40)} 0" rot="0 0 -90"><array count="5" translation="{-${side}*80} 0 0"/></prefab>
+      <prefab source="study/bookshelf" pos="{${x} + 15.5} {${side}*(AISLE + 40)} 152" rot="0 0 90"><array count="5" translation="{${side}*80} 0 0"/></prefab>
+      <prefab source="study/bookshelf" pos="{${x} - 15.5} {${side}*(AISLE + 40)} 152" rot="0 0 -90"><array count="5" translation="{-${side}*80} 0 0"/></prefab>
+      <!-- Cornice and end panel facing the aisle. -->
+      <box pos="{${x}} {${side}*(AISLE + 200)} 308" size="70 404 8" material="dark_wood"/>
+      <box pos="{${x}} {${side}*(AISLE - 1)} 152" size="66 2 304" material="dark_wood"/>
+    </group>
+  </define>
+  <stack x="{FIRST + 0*STEP}" side="1"/>  <stack x="{FIRST + 0*STEP}" side="-1"/>
+  <stack x="{FIRST + 1*STEP}" side="1"/>  <stack x="{FIRST + 1*STEP}" side="-1"/>
+  <stack x="{FIRST + 2*STEP}" side="1"/>  <stack x="{FIRST + 2*STEP}" side="-1"/>
+  <stack x="{FIRST + 3*STEP}" side="1"/>  <stack x="{FIRST + 3*STEP}" side="-1"/>
+  <stack x="{FIRST + 4*STEP}" side="1"/>  <stack x="{FIRST + 4*STEP}" side="-1"/>
+  <stack x="{FIRST + 5*STEP}" side="1"/>  <stack x="{FIRST + 5*STEP}" side="-1"/>
+  <stack x="{FIRST + 6*STEP}" side="1"/>  <stack x="{FIRST + 6*STEP}" side="-1"/>
+  <stack x="{FIRST + 7*STEP}" side="1"/>  <stack x="{FIRST + 7*STEP}" side="-1"/>
+  <stack x="{FIRST + 8*STEP}" side="1"/>  <stack x="{FIRST + 8*STEP}" side="-1"/>
+  <stack x="{FIRST + 9*STEP}" side="1"/>  <stack x="{FIRST + 9*STEP}" side="-1"/>
+
+  <!-- ================= aisle ================= -->
+  <!-- Reading tables between the stack ends, each with a lamp and an open pile of books. -->
+  <define name="reading-table" doc="Long table with two chairs, a lamp and books">
+    <param name="x"/>
+    <group pos="${x} 0 1">
+      <box pos="0 0 74" size="200 80 6" material="dark_wood"/>
+      <box pos="-90 0 35.5" size="8 70 71" material="dark_wood"/>
+      <box pos="90 0 35.5" size="8 70 71" material="dark_wood"/>
+      <box pos="0 0 77.3" size="140 50 0.6" material="leather"/>
+      <prefab source="study/chair" pos="-45 -62 0" rot="0 0 8"/>
+      <prefab source="study/chair" pos="45 62 0" rot="0 0 184"/>
+      <prefab source="study/desk_lamp" pos="76 22 77" rot="0 0 210"/>
+      <prefab source="study/book" pos="-40 6 77.6" rot="0 0 12" color="0.45 0.16 0.14"/>
+      <prefab source="study/book" pos="-38 4 81.2" rot="0 0 -6" scale="0.9 0.9 1" color="0.15 0.26 0.42"/>
+      <prefab source="study/book" pos="-41 7 84.8" rot="0 0 20" scale="0.8 0.8 0.9" color="0.24 0.36 0.24"/>
+      <prefab source="study/book" pos="20 -8 77.6" rot="0 0 70" color="0.52 0.36 0.14"/>
+    </group>
+  </define>
+  <reading-table x="{FIRST + 0.5*STEP}"/>
+  <reading-table x="{FIRST + 2.5*STEP}"/>
+  <reading-table x="{FIRST + 4.5*STEP}"/>
+  <reading-table x="{FIRST + 6.5*STEP}"/>
+  <reading-table x="{FIRST + 8.5*STEP}"/>
+
+  <!-- Ten pendants on long cords down the aisle; every one casts shadows. -->
+  <prefab source="study/pendant_lamp" pos="{FIRST + 0.5*STEP} 0 560" scale="1.6 1.6 1.6"><array count="10" translation="{STEP/1.6} 0 0"/></prefab>
+  <cylinder pos="{FIRST + 0.5*STEP} 0 {(560 + H - 40)/2}" rot="90 0 0" radius="0.8" height="{H - 40 - 560}" material="dark_wood"><array count="10" translation="{STEP} 0 0"/></cylinder>
+</scene>

@@ -3,6 +3,10 @@
 Current Orion build, batch rendering and deployment instructions are in
 [CLI.md](CLI.md).
 
+The [Scener website](https://corepunch.github.io/orion-ui/scener/) (source in
+`docs/scener/`) shows renders, the agent workflow and a timed comparison with
+Blender on the [showcase scenes](scenes/showcase/README.md).
+
 Scener is a scene and animation editor evolving toward a **studio for 3D
 infographics**: editable 3D subjects, character motion, explanatory graphics,
 and reproducible still/video output. [Reels](docs/reels.md) are programmable
