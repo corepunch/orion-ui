@@ -596,7 +596,7 @@ INSTALL_BINS = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(TOOLS_BINS)
 INSTALL_RUNTIME_LIBS = $(KERNEL_LIB) $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(SCRIPT_LIB) $(PLATFORM_LIB)
 INSTALL_GEMS = $(if $(IS_WIN),,$(GEM_BINS) $(PHONY_APP_GEMS))
 
-install: all
+install: all exporters
 	@echo "INSTALL $(DESTDIR)$(PREFIX)"
 	@$(INSTALL) -d "$(DESTDIR)$(PREFIX)/bin" "$(DESTDIR)$(PREFIX)/lib" \
 	    "$(DESTDIR)$(PREFIX)/include/vendor/gl_shader" "$(DESTDIR)$(PREFIX)/include/orion" "$(DESTDIR)$(PREFIX)/include/platform" \
@@ -604,6 +604,8 @@ install: all
 	    "$(DESTDIR)$(PREFIX)/share/doc/orion"
 	@$(INSTALL) -m 755 $(INSTALL_BINS) "$(DESTDIR)$(PREFIX)/bin/"
 	@$(INSTALL) -m 755 $(INSTALL_RUNTIME_LIBS) $(COMPONENT_PLUGIN_BINS) "$(DESTDIR)$(PREFIX)/lib/"
+	@$(INSTALL) -d "$(DESTDIR)$(PREFIX)/lib/scener/exporters"
+	@$(INSTALL) -m 755 $(SCENER_EXPORTER_LIBS) "$(DESTDIR)$(PREFIX)/lib/scener/exporters/"
 	@find orion -type f -name '*.h' | while IFS= read -r file; do \
 	  dest="$(DESTDIR)$(PREFIX)/include/$$file"; \
 	  $(INSTALL) -d "$$(dirname "$$dest")"; \
@@ -745,7 +747,7 @@ help:
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp|ledger|comics (winamp is an iPhone app)"
 	@echo "android / android-all - Debug APKs in build/android/apk; APP=imageeditor|penciltest|groove|winamp, ABIS=\"arm64-v8a x86_64\""
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
-	@echo "mac-notarize - Cloud-sign and notarize both Mac release ZIPs (MAC_RELEASE_RUN=<GitHub Actions run ID>)"
+	@echo "mac-notarize - Cloud-sign and notarize the Mac release ZIPs (MAC_RELEASE_RUN=<GitHub Actions run ID>)"
 	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"

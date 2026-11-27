@@ -73,6 +73,10 @@ stage_tree() {
     mkdir -p "$dir/lib/orion/gems"
     cp "$prefix/lib/orion/gems/$d.gem" "$dir/lib/orion/gems/"
   done
+  if [ "$app" = scener ]; then
+    mkdir -p "$dir/lib/scener"
+    cp -R "$prefix/lib/scener/exporters" "$dir/lib/scener/"
+  fi
 }
 
 bundle_linux() {
@@ -116,9 +120,13 @@ bundle_macos() {
   [ -f "$icon" ] || icon=images/logo.png
   name=$(python3 -c 'import sys; sys.path.insert(0, "packaging/macos"); import bundle; print(bundle.display_name(sys.argv[1]))' "$app")
   bundle="$stage/out/$name.app"
+  set --
+  if [ "$app" = scener ]; then
+    set -- --plugins "$prefix/lib/scener/exporters"
+  fi
   python3 packaging/macos/bundle.py --app "$app" --source "$src" --bundle "$bundle" \
     --binary "$prefix/bin/$app" --runtime-libs "$prefix/lib" --share "$share" \
-    --icon "$icon" --bundle-id "com.orion.$app" --version "$version" >/dev/null
+    --icon "$icon" --bundle-id "com.orion.$app" --version "$version" "$@" >/dev/null
   asset="$app-$platform.zip"
   ditto -c -k --sequesterRsrc --keepParent "$bundle" "$output/$asset"
 }

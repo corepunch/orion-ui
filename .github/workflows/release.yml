@@ -78,7 +78,7 @@ jobs:
       - name: Verify desktop release assets
         working-directory: release
         run: |
-          for app in gitclient ledger; do
+          for app in gitclient ledger scener; do
             test -s "$app-linux-x86_64.tar.gz"
             test -s "$app-macos-arm64.zip"
             test -s "$app-windows-x86_64.zip"

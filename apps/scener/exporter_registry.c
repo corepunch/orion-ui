@@ -1,4 +1,5 @@
 #include "exporter_registry.h"
+#include <orion/kernel/kernel.h>
 #include <platform/platform.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -74,7 +75,7 @@ static void exporter_scan_dir(const char *dir) {
   axListDir(dir, exporter_scan_entry, &scan);
 }
 
-/* Search order: SCENER_EXPORTER_PATH, the installed library directory, then the user's settings. */
+/* Search the environment, installed exporters, then the user's settings. */
 void exporter_registry_load(void) {
   if (g_exporters_loaded) return;
   g_exporters_loaded = true;
@@ -87,7 +88,11 @@ void exporter_registry_load(void) {
     env = end ? end + 1 : NULL;
   }
   char dir[1024];
-  const char *lib = axLibDirectory(), *settings = axSettingsDirectory();
+  const char *exe = ui_get_exe_dir(), *lib = axLibDirectory(), *settings = axSettingsDirectory();
+#ifdef __APPLE__
+  if (*exe && snprintf(dir, sizeof(dir), "%s/../PlugIns", exe) < (int)sizeof(dir)) exporter_scan_dir(dir);
+#endif
+  if (*exe && snprintf(dir, sizeof(dir), "%s/../lib/scener/exporters", exe) < (int)sizeof(dir)) exporter_scan_dir(dir);
   if (lib && snprintf(dir, sizeof(dir), "%s/exporters", lib) < (int)sizeof(dir)) exporter_scan_dir(dir);
   if (settings && snprintf(dir, sizeof(dir), "%s/exporters", settings) < (int)sizeof(dir)) exporter_scan_dir(dir);
 }

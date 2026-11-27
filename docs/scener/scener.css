@@ -98,6 +98,11 @@ h3.sub { font: 600 22px/1.2 var(--serif); margin: 48px 0 6px; }
 
 /* terminals and source */
 .term-pair, .src-pair, .compare { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.downloads { display: flex; flex-wrap: wrap; gap: 12px; }
+.download { display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border: 1px solid var(--rule); background: var(--sheet); font-weight: 600; text-decoration: none; }
+.download svg { flex: none; fill: currentColor; }
+.download:hover, .download:focus-visible { color: var(--accent); border-color: var(--accent); }
+.download-notes { max-width: 70ch; color: var(--ink-2); margin: 14px 0 0; }
 @media (min-width: 960px) { .term-pair, .compare { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 @media (min-width: 1240px) { .src-pair { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } .src-pair.flip { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); } }
 .src-pair + .src-pair { margin-top: 48px; }

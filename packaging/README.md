@@ -183,42 +183,57 @@ it takes precedence over `ORION_RELEASE` and `ORION_REPOSITORY`.
 
 ## Building Release Packages
 
-Linux, macOS and Windows builds are defined once, in
-`.github/workflows/platform-builds.yml`. The Release Packages workflow
-(`.github/workflows/release.yml`) runs it for a `v*` tag or a manual dispatch
-with a version matching `VERSION`. It builds the package-manager archives,
-runs release tests, and prepares a draft release. The Git Client and Ledger Mac
-ZIPs wait for cloud signing before they are attached to the draft.
+Git Client and Ledger use the shared [Orion release](https://github.com/corepunch/orion-ui/releases/tag/v1.0.11).
+Scener follows the same process. The [Platform Builds workflow](https://github.com/corepunch/orion-ui/blob/main/.github/workflows/platform-builds.yml)
+builds the desktop matrix and runs package checks. The [Release Packages workflow](https://github.com/corepunch/orion-ui/blob/main/.github/workflows/release.yml)
+calls it with the version in `VERSION`, collects the artifacts and stages a draft.
 
 | Asset | For |
 |---|---|
 | `orion-<package>-<version>-<platform>.tar.gz`, `packages-<platform>.tsv` | the `orion` package manager |
 | `<app>-<platform>.zip` / `.tar.gz`, `SHA256SUMS-<platform>.txt` | people downloading one app |
 
-For a Git Client or Ledger release, the manual workflow can run the app,
-database and scripting checks on Linux instead of the full suite.
+### Prepare an app for release
+
+1. Register the app slug in `packaging/packages.tsv` and declare any Orion app
+   dependencies there. For example, Git Client depends on Terminal. Check that
+   `make install` stages the resources needed in the extracted archive.
+2. Provide a square 1024 × 1024 PNG at `apps/<app>/share/icon.png` for macOS.
+   The bundler converts it to `.icns` and uses `com.orion.<app>` as the bundle ID.
+3. If the Mac ZIP will be advertised as notarized, add the slug to `APPS` in
+   `packaging/macos/notarize.py` and to the three-platform asset check in
+   `.github/workflows/release.yml`. Add checks to the platform workflow for
+   any app-specific files or runtime behavior. Scener checks that the OBJ and
+   GLB exporter plugins load from each extracted archive, and captures the
+   editor opening a packaged scene on Linux.
+4. Run Platform Builds manually on the candidate branch to check all three
+   targets before cutting the release.
 
 ### Sign and publish a release
 
-1. Run Release Packages with the version in `VERSION`, or push its matching
-   `v*` tag. Wait for the run that prepares the draft to succeed.
-2. On the Mac with the Apple Developer team configured in Xcode, run
-   `make mac-notarize MAC_RELEASE_RUN=<build-run-id>`. The GitHub CLI must be
-   signed in with access to the release. The target downloads the exact two
-   build artifacts, uses Xcode's Developer ID cloud signing, waits for Apple's
-   tickets, and attaches the verified ZIPs to the draft. It also keeps the ZIPs
-   in `build/macos-notarized/<build-run-id>/` and reuses completed submissions
-   when retried. Set `MAC_NOTARY_TEAM` in the environment and in the matching
-   GitHub Actions repository variable to use a different Apple team.
+1. Commit the new `VERSION` and release changes. Manually run Release Packages
+   on the release branch with the version without the `v` prefix, or push a matching
+   `v*` tag. Wait for the draft workflow run to succeed and record its run ID.
+   Use the full Linux test suite for Scener. The `desktop_checks_only` input
+   limits Linux tests to the Git Client, Ledger and related framework suites.
+2. On the Mac with the Apple Developer team configured in Xcode and `gh`
+   authenticated for the repository, run `make mac-notarize MAC_RELEASE_RUN=<build-run-id>`
+   from the release checkout. It downloads the signing inputs from that exact
+   run, uses Xcode's Developer ID cloud signing, waits for Apple's tickets and
+   uploads the verified ZIPs to the draft. It keeps its output under
+   `build/macos-notarized/<build-run-id>/` and reuses completed submissions on retry.
+   Set `MAC_NOTARY_TEAM` both locally and in the Actions repository variables
+   to use a different Apple team.
 3. Run Release Packages again with the same version and set `publish_run` to
-   the original build run ID. The macOS runner downloads both ZIPs from the
-   draft and checks their bundle IDs, version, architecture, Developer ID
-   signatures, stapled tickets, and Gatekeeper status. It updates the macOS
-   checksums and compares the draft's full asset inventory to the original
-   build and the newly verified ZIPs before publishing.
-
-`docs.yml` publishes `docs/` to GitHub Pages for the same tags; it can also be
-started by hand from the Actions tab.
+   the original build run ID. The macOS runner verifies the uploaded ZIPs'
+   bundle IDs, version, architecture, Developer ID signatures, stapled tickets
+   and Gatekeeper status. It regenerates the macOS checksums and verifies the
+   complete set of assets before publishing the draft.
+4. Confirm the three files and SHA-256 manifests are public on the release.
+   Deploy `docs/` from the release checkout with the **Deploy Docs to GitHub
+   Pages** workflow and open the app's public page to verify each download.
+   For a new download page, use manual release dispatch and deploy Pages after
+   publication. Pushing a tag starts both workflows independently.
 
 Release archives can be generated locally after building the repository:
 
@@ -241,11 +256,8 @@ portable archive that runs without installation:
 | macOS | `<app>-macos-arm64.zip` | `<Name>.app`, built like `make mac-deploy` |
 | Linux | `<app>-linux-x86_64.tar.gz` | `<app>/bin`, `<app>/lib` (Orion libraries, Lua), `<app>/share` |
 
-The names carry no version, so a page can link to
-`https://github.com/corepunch/orion-ui/releases/latest/download/ledger-windows-x86_64.zip`
-and always get the newest release. Local macOS bundles use ad-hoc signing.
-The Git Client and Ledger release ZIPs use Developer ID signing and
-[Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+Local macOS bundles use ad-hoc signing. The Mac ZIPs listed in the notarization
+script use Developer ID signing and Apple notarization in the public release.
 Windows SmartScreen may ask for confirmation.
 
 Build them locally for the current platform after `make`:
@@ -255,9 +267,28 @@ make bundles                           # every app, into build/bundles
 make bundles BUNDLE_APPS="ledger terminal"
 ```
 
-A new app gets a download by adding a row to `packages.tsv`; developer tools
-without `apps/<name>/main.c` (such as `orionc`) are skipped. Put a 1024×1024
-`share/icon.png` in the app for its macOS icon.
+A new app gets a download by adding a row to `packages.tsv`. The portable
+bundler skips developer tools such as `orionc` that lack an app entry point.
+
+### Download links and icons on the app page
+
+- Add a download section to `docs/<app>/index.html` with three visible links
+  for Windows x64, macOS on Apple silicon and Linux x86-64. Keep short launch
+  instructions and a link to the release notes and checksums below the buttons.
+- Git Client and Ledger use `/releases/latest/download/<asset>` to follow the
+  newest Orion release. For a page that should point to a specific verified
+  build, use `/releases/download/v<version>/<asset>` and link to that tag's
+  release notes. Scener uses this form.
+- Copy the inline platform SVGs from `docs/gitclient/index.html` or
+  `docs/ledger/index.html`. These are Phosphor `windows-logo-fill`,
+  `apple-logo-fill` and `linux-logo-fill` from revision `2b75f3a`. Preserve the
+  paths and `viewBox`, use `fill: currentColor` with a 24 px display size, and
+  set `aria-hidden="true"` because the link already has a visible label.
+  Keep the revision comment and the [Phosphor license](https://github.com/corepunch/orion-ui/blob/main/docs/ledger/PHOSPHOR-LICENSE).
+- The product icon can also serve as the favicon and page brand. Git Client
+  uses `shots/icon.png` in the tab, header and download section. Ledger uses
+  a debit mark for the header, and the same Phosphor platform logos for its
+  Russian and German downloads.
 
 ## Installing The Complete Suite From Source
 

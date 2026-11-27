@@ -50,6 +50,10 @@ while IFS="$(printf '\t')" read -r app description dependencies || [ -n "$app" ]
   for plugin in "$prefix/lib/${app}_components."*; do
     [ -f "$plugin" ] && { mkdir -p "$payload/lib"; cp "$plugin" "$payload/lib/"; }
   done
+  if [ "$app" = scener ]; then
+    mkdir -p "$payload/lib/scener"
+    cp -R "$prefix/lib/scener/exporters" "$payload/lib/scener/"
+  fi
   [ -d "$prefix/share/$app" ] && { mkdir -p "$payload/share"; cp -R "$prefix/share/$app" "$payload/share/"; }
   [ -d "$prefix/share/doc/orion/apps/$app" ] && cp -R "$prefix/share/doc/orion/apps/$app" "$payload/share/doc/orion/apps/"
   archive_package "$app" "$payload" "$description" "$dependencies"

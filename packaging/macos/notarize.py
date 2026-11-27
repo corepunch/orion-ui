@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage and notarize the two macOS desktop release downloads through Xcode."""
+"""Stage and notarize the macOS desktop release downloads through Xcode."""
 
 import argparse
 from datetime import datetime, timezone
@@ -16,7 +16,7 @@ import time
 
 from bundle import display_name
 
-APPS = ('gitclient', 'ledger')
+APPS = ('gitclient', 'ledger', 'scener')
 ZIP_NAMES = {app: f'{app}-macos-arm64.zip' for app in APPS}
 CHECKSUMS = 'SHA256SUMS-macos-arm64.txt'
 INPUTS = 'macos-notarization-inputs'
@@ -180,6 +180,11 @@ def verify_app(app, slug, version, team):
             f'{app} needs a timestamped Developer ID Application signature from team {team} with Hardened Runtime.')
     command('xcrun', 'stapler', 'validate', str(app))
     command('syspolicy_check', 'distribution', str(app))
+    if slug == 'scener':
+        exporters = command(str(app / 'Contents' / 'MacOS' / slug), '--list-exporters',
+                            cwd=app.parent, capture=True)
+        require({'glb', 'obj'} <= {line.split('\t', 1)[0] for line in exporters.splitlines()},
+                f'{app} cannot load its signed GLB and OBJ plugins.')
 
 
 def verify_zips(directory, version, team):

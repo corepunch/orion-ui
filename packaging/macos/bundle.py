@@ -93,12 +93,18 @@ def set_rpath(path, wanted):
         run(['install_name_tool', '-add_rpath', wanted, str(path)], capture=True)
 
 
-def external_dependencies(executable, frameworks, runtime_libs):
+def external_dependencies(executable, frameworks, runtime_libs, plugins):
     origins = {executable: executable}
     queue = [executable]
     queue.extend(path for path in frameworks.iterdir() if is_macho(path))
     for path in queue[1:]:
         origins[path] = runtime_libs / path.name
+    if plugins:
+        for origin in plugins.iterdir():
+            path = executable.parent.parent / 'PlugIns' / origin.name
+            run(['install_name_tool', '-id', f'@rpath/{path.name}', str(path)], capture=True)
+            origins[path] = origin
+            queue.append(path)
 
     processed = set()
     while queue:
@@ -107,8 +113,13 @@ def external_dependencies(executable, frameworks, runtime_libs):
             continue
         processed.add(loader)
         origin = origins.get(loader, loader)
-        set_rpath(loader, '@executable_path/../lib' if loader == executable else '@loader_path')
+        if loader == executable or loader.parent.name == 'PlugIns':
+            set_rpath(loader, '@executable_path/../lib')
+        else:
+            set_rpath(loader, '@loader_path')
         for dep in dependencies(loader):
+            if loader != executable and dep == f'@rpath/{loader.name}':
+                continue
             if dep.startswith(SYSTEM_PREFIXES):
                 continue
             dep_path = Path(dep)
@@ -174,6 +185,7 @@ def main():
     parser.add_argument('--runtime-libs', type=Path, required=True)
     parser.add_argument('--share', type=Path, required=True)
     parser.add_argument('--icon', type=Path, required=True)
+    parser.add_argument('--plugins', type=Path)
     parser.add_argument('--bundle-id', required=True)
     parser.add_argument('--version', default='1.0')
     args = parser.parse_args()
@@ -211,7 +223,9 @@ def main():
     for library in args.runtime_libs.iterdir():
         if is_macho(library):
             shutil.copy2(library, frameworks / library.name)
-    external_dependencies(executable, frameworks, args.runtime_libs)
+    if args.plugins:
+        shutil.copytree(args.plugins, contents / 'PlugIns')
+    external_dependencies(executable, frameworks, args.runtime_libs, args.plugins)
     make_icon(args.icon, resources, args.app)
 
     name = display_name(args.app)
