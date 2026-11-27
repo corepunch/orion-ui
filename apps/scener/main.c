@@ -389,15 +389,15 @@ static void create_app_windows(hinstance_t hinstance) {
 #ifdef BUILD_AS_GEM
   g_app->menubar_win = set_app_menu(scener_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
-  create_main_toolbar_window();
+  g_app->chrome_win = create_application_chrome("SimpleSketch3D Chrome", NULL, NULL, 0,
+      scener_toolbar_proc, &scener_application_toolbar, hinstance);
 #else
-  g_app->chrome_win = create_ribbon_chrome("SimpleSketch3D Chrome", scener_ribbon_proc,
-                                          &scener_ribbon, scener_toolbar_proc, hinstance);
-  g_app->menubar_win = app_chrome_ribbon(g_app->chrome_win);
-  if (g_app->menubar_win)
-    send_message(g_app->menubar_win, kMenuBarMessageSetMenus, kNumMenus, (void *)kMenus);
+  g_app->chrome_win = create_application_chrome("SimpleSketch3D Chrome", scener_menubar_proc,
+      kMenus, kNumMenus, scener_toolbar_proc, &scener_application_toolbar, hinstance);
+  g_app->menubar_win = app_chrome_menubar(g_app->chrome_win);
 #endif
 
+  g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
   g_app->command_panel_win = create_command_panel_window();
   property_browser_refresh();
   scener_sync_command_state();

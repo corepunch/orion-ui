@@ -38,9 +38,9 @@ static void test_tool_commands_share_document_state(void) {
   handle_menu_command(ID_TOOL_ROTATE); ASSERT_EQUAL(doc.scene.editMode, EDIT_E_ROTATE); ASSERT_EQUAL(scener_active_tool(), ID_TOOL_ROTATE);
   handle_menu_command(ID_TOOL_SCALE);  ASSERT_EQUAL(doc.scene.editMode, EDIT_R_SCALE);  ASSERT_EQUAL(scener_active_tool(), ID_TOOL_SCALE);
 
-  ASSERT_TRUE(scener_ribbon_proc(NULL, evCommand, MAKEDWORD(ID_CREATE_BOX, btnClicked), NULL));
+  ASSERT_TRUE(scener_menubar_proc(NULL, evCommand, MAKEDWORD(ID_CREATE_BOX, btnClicked), NULL));
   ASSERT_EQUAL(doc.scene.createMode, ID_CREATE_BOX);
-  ASSERT_TRUE(scener_ribbon_proc(NULL, evCommand, MAKEDWORD(ID_TOOL_ROTATE, kAcceleratorNotification), NULL));
+  ASSERT_TRUE(scener_menubar_proc(NULL, evCommand, MAKEDWORD(ID_TOOL_ROTATE, kAcceleratorNotification), NULL));
   ASSERT_EQUAL(doc.scene.createMode, 0);
   ASSERT_EQUAL(scener_active_tool(), ID_TOOL_ROTATE);
 
@@ -55,8 +55,19 @@ static void test_command_panel_properties_follow_editor_state(void) {
   scene_doc_t doc = {0};
   app_state_t app = { .docs = &doc, .active_doc = &doc };
   g_app = &app;
-  app.chrome_win = create_ribbon_chrome("Scener Test", scener_ribbon_proc, &scener_ribbon, scener_toolbar_proc, 0);
+  app.chrome_win = create_application_chrome("Scener Test", scener_menubar_proc,
+      kMenus, kNumMenus, scener_toolbar_proc, &scener_application_toolbar, 0);
   ASSERT_NOT_NULL(app.chrome_win);
+  ASSERT_TRUE(app_chrome_ribbon(app.chrome_win) == NULL);
+  app.main_toolbar_win = app_chrome_toolbar(app.chrome_win);
+  ASSERT_NOT_NULL(app.main_toolbar_win);
+  scener_sync_command_state();
+  ASSERT_EQUAL(send_message(app.main_toolbar_win, tbGetState, ID_CREATE_BOX, NULL), -1);
+  ASSERT_TRUE(send_message(app.main_toolbar_win, evCommand, MAKEDWORD(ID_TOOL_MOVE, btnClicked), NULL));
+  ASSERT_EQUAL(send_message(app.main_toolbar_win, tbGetState, ID_TOOL_MOVE, NULL), TBSTATE_CHECKED);
+  ASSERT_TRUE(send_message(app.main_toolbar_win, evCommand, MAKEDWORD(ID_TOOL_GRID_SNAP, btnClicked), NULL));
+  ASSERT_TRUE(app.snap_grid);
+  ASSERT_EQUAL(send_message(app.main_toolbar_win, tbGetState, ID_TOOL_GRID_SNAP, NULL), TBSTATE_CHECKED);
   app.command_panel_win = create_command_panel_window();
   ASSERT_NOT_NULL(app.command_panel_win);
   ASSERT_TRUE(app.command_panel_win->parent == app.chrome_win);
@@ -88,7 +99,7 @@ static void test_command_panel_properties_follow_editor_state(void) {
   ASSERT_STR_EQUAL(row.text, "Width (cm)");
   ASSERT_STR_EQUAL(row.subitems[0], "100");
 
-  ASSERT_TRUE(scener_ribbon_proc(NULL, evCommand, MAKEDWORD(ID_TOOL_SELECT, kAcceleratorNotification), NULL));
+  ASSERT_TRUE(scener_menubar_proc(NULL, evCommand, MAKEDWORD(ID_TOOL_SELECT, kAcceleratorNotification), NULL));
   ASSERT_EQUAL(doc.scene.createMode, 0);
   ASSERT_FALSE(window_has_state(draft, WINDOW_STATE_VISIBLE));
   ASSERT_FALSE(window_has_state(selection, WINDOW_STATE_VISIBLE));

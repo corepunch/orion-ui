@@ -4129,8 +4129,30 @@ static void scene_apply_drag_transform(Scene *s,XmlNode *n){
 	scene_rebuild_node_shadow_volumes(s,s->selectedNode);
 }
 
-void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
-	vec3 camPos,vec3 camRight,vec3 camUp,vec3 camLook,float camFov){
+static float snap_increment(float value, float increment) {
+	return floorf(value / increment + 0.5f) * increment;
+}
+
+static vec3 snap_move_delta(vec3 delta, int handle) {
+	if (handle == GIZMO_AXIS_X) {
+		delta.x = snap_increment(delta.x, 0.1f); delta.y = delta.z = 0;
+	} else if (handle == GIZMO_AXIS_Y) {
+		delta.y = snap_increment(delta.y, 0.1f); delta.x = delta.z = 0;
+	} else if (handle == GIZMO_AXIS_Z) {
+		delta.z = snap_increment(delta.z, 0.1f); delta.x = delta.y = 0;
+	} else if (handle == GIZMO_PLANE_XY) {
+		delta.x = snap_increment(delta.x, 0.1f); delta.y = snap_increment(delta.y, 0.1f); delta.z = 0;
+	} else if (handle == GIZMO_PLANE_XZ) {
+		delta.x = snap_increment(delta.x, 0.1f); delta.z = snap_increment(delta.z, 0.1f); delta.y = 0;
+	} else if (handle == GIZMO_PLANE_YZ) {
+		delta.y = snap_increment(delta.y, 0.1f); delta.z = snap_increment(delta.z, 0.1f); delta.x = 0;
+	}
+	return delta;
+}
+
+void gizmo_apply_drag_snap(Scene *s,int mX,int mY,int W,int H,
+	vec3 camPos,vec3 camRight,vec3 camUp,vec3 camLook,float camFov,
+	bool snapGrid,bool snapAngle){
 	XmlNode *n=(XmlNode*)s->selectedNode;
 	if(!n || s->draggingHandle==GIZMO_NONE) return;
 	if(s->selectedRigJoint){
@@ -4150,6 +4172,7 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 				if(vlen(pn)<0.5f || !ray_plane_hit(camPos,startRay,center,pn,&a) || !ray_plane_hit(camPos,curRay,center,pn,&b)) return;
 				delta=vsub(b,a);
 			}
+			if(snapGrid) delta=snap_move_delta(delta,h);
 			delta=mat4_xform_dir(mat4_affine_inverse(s->dragParentMatrix),delta);
 			vec3 value=vadd(s->dragStartPos,delta);
 			if(s->dragRigTarget) scene_rig_set_target(s,s->selectedRigInstance,s->selectedRigJoint,"target",value);
@@ -4159,6 +4182,7 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 			if(vlen(axis)<0.5f || !ray_plane_hit(camPos,startRay,center,axis,&a) || !ray_plane_hit(camPos,curRay,center,axis,&b)) return;
 			vec3 va=vnorm(vsub(a,center)),vb=vnorm(vsub(b,center));
 			float angle=atan2f(vdot(axis,vcross(va,vb)),vdot(va,vb))*180.0f/M_PIf;
+			if(snapAngle) angle=snap_increment(angle,15.0f);
 			vec3 rot=s->dragStartRot;
 			if(h==GIZMO_AXIS_X) rot.x+=angle; else if(h==GIZMO_AXIS_Y) rot.y+=angle; else rot.z+=angle;
 			scene_rig_set_joint(s,s->selectedRigInstance,s->selectedRigJoint,"rot",rot);
@@ -4177,11 +4201,14 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 			vec3 pn=vnorm(vsub(camLook,vscale(axis,vdot(camLook,axis))));
 			if(!ray_plane_hit(camPos,startRay,center,pn,&a) || !ray_plane_hit(camPos,curRay,center,pn,&b)) return;
 			vec3 delta=vscale(axis,vdot(vsub(b,a),axis));
+			if(snapGrid) delta=snap_move_delta(delta,h);
 			xml_set_attr_v3_cm(n,"pos",vadd(s->dragStartPos,mat4_xform_dir(mat4_affine_inverse(s->dragParentMatrix),delta)));
 		} else {
 			vec3 pn=h==GIZMO_PLANE_XY?sz:h==GIZMO_PLANE_XZ?sy:h==GIZMO_PLANE_YZ?sx:v3(0,0,0);
 			if(vlen(pn)<0.5f || !ray_plane_hit(camPos,startRay,center,pn,&a) || !ray_plane_hit(camPos,curRay,center,pn,&b)) return;
-			vec3 delta=mat4_xform_dir(mat4_affine_inverse(s->dragParentMatrix),vsub(b,a));
+			vec3 delta=vsub(b,a);
+			if(snapGrid) delta=snap_move_delta(delta,h);
+			delta=mat4_xform_dir(mat4_affine_inverse(s->dragParentMatrix),delta);
 			xml_set_attr_v3_cm(n,"pos",vadd(s->dragStartPos,delta));
 		}
 	} else if(s->editMode==EDIT_E_ROTATE){
@@ -4192,6 +4219,7 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 		float angle=acosf(d)*180.0f/M_PIf;
 		if(vdot(axis,vcross(va,vb))<0) angle=-angle;
 		vec3 rot=s->dragStartRot;
+		if(snapAngle) angle=snap_increment(angle,15.0f);
 		if(h==GIZMO_AXIS_X) rot.x+=angle;
 		else if(h==GIZMO_AXIS_Y) rot.y+=angle;
 		else rot.z+=angle;
@@ -4217,6 +4245,11 @@ void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
 		scene_rebuild_view(s);
 		s->camPos=eye; s->camLook=look; s->camFov=fov;
 	} else scene_apply_drag_transform(s,n);
+}
+
+void gizmo_apply_drag(Scene *s,int mX,int mY,int W,int H,
+	vec3 camPos,vec3 camRight,vec3 camUp,vec3 camLook,float camFov){
+	gizmo_apply_drag_snap(s,mX,mY,W,H,camPos,camRight,camUp,camLook,camFov,false,false);
 }
 
 #ifdef SCENER_USE_TEXTURES

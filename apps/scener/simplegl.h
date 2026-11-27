@@ -429,6 +429,9 @@ void gizmo_draw(Scene *s,vec3 camPos,vec3 camLook,float camFov,int vpW,int vpH);
 void gizmo_begin_drag(Scene *s,int handle,int mouseX,int mouseY);
 void gizmo_apply_drag(Scene *s, int mX, int mY, int W, int H,
 	vec3 camPos, vec3 camRight, vec3 camUp, vec3 camLook, float camFov);
+void gizmo_apply_drag_snap(Scene *s, int mX, int mY, int W, int H,
+	vec3 camPos, vec3 camRight, vec3 camUp, vec3 camLook, float camFov,
+	bool snap_grid, bool snap_angle);
 
 
 void shadow_volume_release(ShadowVolume *sv);

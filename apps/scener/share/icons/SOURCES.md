@@ -1,4 +1,4 @@
-The `scener-*.svg` ribbon and command panel icons are from [Phosphor core](https://github.com/phosphor-icons/core)
+The `scener-*.svg` toolbar and command panel icons are from [Phosphor core](https://github.com/phosphor-icons/core)
 at revision `2b75f3ad12b420c9504ef05df8d2564a28f8500e`. Strip the `scener-`
 prefix to obtain the upstream filename. Files with the `-fill` suffix come
 from `assets/fill/`. All other files come from `assets/regular/`.
@@ -10,3 +10,7 @@ Additional creation-tool assets use the upstream `traffic-cone`, `pill`, `egg`,
 `egg` artwork represents ellipses and `vinyl-record` represents torus shapes;
 the other symbols cover cone, capsule, arch, and window styles. No paths were
 redrawn or altered.
+
+Classic toolbar assets use the upstream regular `magnet`, `angle`, and
+`crosshair` artwork for grid snap, angle snap, and frame selected. Select by Name
+uses the regular `list-magnifying-glass` asset also shipped in Ledger.

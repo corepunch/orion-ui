@@ -72,6 +72,16 @@ static vec3 vp_ground_point(const Scene *scene, vec3 ray) {
 	return vadd(scene->camPos, vscale(ray, CREATE_FALLBACK_DEPTH));
 }
 
+static vec3 vp_snap_ground_point(vec3 point, vec3 up) {
+	up = vnorm(up);
+	vec3 reference = fabsf(up.x) < 0.9f ? v3(1, 0, 0) : v3(0, 1, 0);
+	vec3 right = vnorm(vcross(reference, up));
+	vec3 forward = vnorm(vcross(up, right));
+	float x = floorf(vdot(point, right) / 0.1f + 0.5f) * 0.1f;
+	float z = floorf(vdot(point, forward) / 0.1f + 0.5f) * 0.1f;
+	return vadd(vadd(vscale(right, x), vscale(forward, z)), vscale(up, vdot(point, up)));
+}
+
 static void vp_stop_navigation(window_t *win, viewport_state_t *vp, bool restore_focus) {
 	if (!vp) return;
 	vp->orbiting = 0;
@@ -298,6 +308,7 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 					vp->left_down = 1;
 					if (doc->scene.createMode) {
 						vec3 point = vp_ground_point(&doc->scene, ray);
+						if (g_app && g_app->snap_grid) point = vp_snap_ground_point(point, doc->scene.worldUp);
 						scener_create_primitive(doc, (uint16_t)doc->scene.createMode, point);
 						vp->left_down = 0;
 						set_capture(NULL);
@@ -386,7 +397,8 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 				vec3 fwd = vp_camera_dir(vp), right = vnorm(vcross(fwd, vp->world_up)), up = vnorm(vcross(right, fwd));
 				vec3 ray = vp_mouse_ray(vp, &doc->scene, mx, my, cr.w, cr.h);
 				if (vp->left_down && doc->scene.draggingHandle != GIZMO_NONE) {
-					gizmo_apply_drag(&doc->scene, mx, my, cr.w, cr.h, doc->scene.camPos, right, up, fwd, doc->scene.camFov);
+					gizmo_apply_drag_snap(&doc->scene, mx, my, cr.w, cr.h, doc->scene.camPos, right, up, fwd, doc->scene.camFov,
+						g_app && g_app->snap_grid, g_app && g_app->snap_angle);
 					if(!doc->modified){ doc->modified=true; doc_update_title(doc); }
 					property_browser_refresh();
 				} else {

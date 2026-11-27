@@ -41,6 +41,7 @@ typedef struct {
   accel_table_t  *accel;
   accel_table_t  *navigation_accel;
   bool            viewport_navigating;
+  bool            snap_grid, snap_angle;
   int             debug_flags;
 } app_state_t;
 
@@ -49,6 +50,9 @@ extern app_state_t *g_app;
 void scener_sync_command_state(void);
 void scener_sync_tool_ui(void);
 void scener_sync_viewport_camera(scene_doc_t *doc);
+void scener_frame_selection(scene_doc_t *doc);
+void scener_zoom_view(scene_doc_t *doc, bool zoom_in);
+void scener_select_by_name(scene_doc_t *doc);
 uint16_t scener_active_tool(void);
 void handle_menu_command(uint16_t id);
 bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos);
@@ -56,8 +60,6 @@ accel_table_t *scener_active_accelerators(void);
 
 result_t scener_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t scener_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t scener_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-window_t *create_main_toolbar_window(void);
 
 window_t *create_command_panel_window(void);
 void scener_select_panel_tab(int tab);
