@@ -54,3 +54,11 @@ stock via this API. Re-importing a historical infobase after live allocation
 requires reconciliation. Provider and work-order integrations must explicitly
 adopt the native commands; a read-only marketplace preview cannot reserve
 or change physical stock.
+
+A native sale after 1CD import uses pooled cost only from posted, exact native
+entries and 1CD entries whose source amount parsed exactly into minor units.
+Imported quantities come from the goods side of each movement, not the
+legacy shared quantity. Older imports without the exact-source marker and
+source amounts that do not fit cents are not silently rounded for posting.
+Reconcile opening valuation in a disposable infobase before cutover; do not
+re-import over active warehouse operations without reconciling them.

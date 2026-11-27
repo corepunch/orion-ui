@@ -817,6 +817,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `source_line` | `integer` |  |
 | `source_inactive` | `boolean` |  |
 | `source_period` | `string` |  |
+| `source_amount_exact` | `boolean` |  |
 | `debit_quantity_set` | `boolean` |  |
 | `credit_quantity_set` | `boolean` |  |
 | `debit_quantity_milli` | `int64` |  |
