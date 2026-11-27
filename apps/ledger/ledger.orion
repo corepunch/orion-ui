@@ -889,6 +889,7 @@
         <field name="source_line" type="integer" />
         <field name="source_inactive" type="boolean" />
         <field name="source_period" type="string" length="24" />
+        <field name="source_amount_exact" type="boolean" />
         <field name="debit_quantity_set" type="boolean" />
         <field name="credit_quantity_set" type="boolean" />
         <field name="debit_quantity_milli" type="int64" />

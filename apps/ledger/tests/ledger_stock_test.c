@@ -197,6 +197,55 @@ static void test_manual_side_rejects_use_of_held_stock(void) {
   PASS();
 }
 
+static void test_sell_imported_stock(void) {
+  TEST("1CD goods stock supports first exact native sale, with asymmetric source quantities");
+  database_t *ib = stock_ledger.ib, *cfg = stock_ledger.cfg;
+  ledger_stage_import_t report = {0};
+  ASSERT(ledger_import_stage(ib, cfg, "apps/ledger/tests/fixtures/onecd/stage_stock_cutover.xml", &report), report.error);
+  const db_item_t *item = (void *)send_db_message(ib, dbFind,
+    MAKEDWORD(TABLE_ITEMS, ledger_field(ib, TABLE_ITEMS, "sku")), "CUTOVER");
+  const db_warehouse_t *warehouse = (void *)send_db_message(ib, dbFind,
+    MAKEDWORD(TABLE_WAREHOUSES, ledger_field(ib, TABLE_WAREHOUSES, "name")), "Migration cutover warehouse");
+  ASSERT(item && warehouse, "1CD catalogs applied");
+  int sku = item->id, wh = warehouse->id;
+  ASSERT_TRUE(stock_equals(ib, cfg, sku, wh, 8000, 0));
+  int hold = ledger_stock_reserve(ib, cfg, "cutover/hold", sku, wh, 2500);
+  ASSERT(hold > 0, "reserve imported units");
+  int sale = stock_trade(ib, 2, wh, sku, 2.5, "2027-05-03");
+  ASSERT(sale > 0, "native draft exists");
+  int done = ledger_stock_fulfill(ib, cfg, "cutover/ship", hold, sale);
+  ASSERT(done > 0, "native exact fulfillment posts on imported valuation");
+  ASSERT_TRUE(stock_equals(ib, cfg, sku, wh, 5500, 0));
+  const db_doc_type_t *type = (void *)send_db_message(cfg, dbFind, TABLE_DOC_TYPES, (void *)(intptr_t)2);
+  result_node_t *entries = (void *)send_db_message(ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)sale);
+  int cogs = 0;
+  for (const result_node_t *n = entries; n; n = n->next) {
+    const db_entry_t *e = *(db_entry_t **)n->data;
+    if (e->credit_id == type->cost_credit_id && e->exact_money &&
+        e->amount_minor == 3125 && e->quantity_milli == 2500) cogs++;
+  }
+  free_result_list(entries);
+  ASSERT_EQUAL(cogs, 1);  // 100.00 / 8 × 2.5, not the debit-preferred quantity.
+  ASSERT_TRUE(send_db_message(ib, dbSave, 0, NULL));
+  ASSERT_TRUE(send_db_message(ib, dbLoad, 0, NULL));
+  ASSERT_EQUAL(ledger_stock_fulfill(ib, cfg, "cutover/ship", hold, sale), done);
+  ASSERT_TRUE(stock_equals(ib, cfg, sku, wh, 5500, 0));
+  ASSERT(ledger_reverse_posting(ib, cfg, sale, "2027-05-04", "Cutover return") > 0, "reversal uses the same exact history");
+  ASSERT_TRUE(stock_equals(ib, cfg, sku, wh, 8000, 0));
+  const db_item_t *uncosted = (void *)send_db_message(ib, dbFind,
+    MAKEDWORD(TABLE_ITEMS, ledger_field(ib, TABLE_ITEMS, "sku")), "UNVERIFIABLE");
+  ASSERT_NOT_NULL(uncosted);
+  int uncosted_id = uncosted->id;
+  int uncosted_hold = ledger_stock_reserve(ib, cfg, "cutover/uncosted/hold", uncosted_id, wh, 500);
+  ASSERT(uncosted_hold > 0, "quantity is known even though cost does not fit cents");
+  int uncosted_sale = stock_trade(ib, 2, wh, uncosted_id, 0.5, "2027-05-05");
+  ASSERT(uncosted_sale > 0, "uncosted draft exists");
+  ASSERT_FALSE(ledger_stock_fulfill(ib, cfg, "cutover/uncosted/ship", uncosted_hold, uncosted_sale));
+  ASSERT_TRUE(stock_equals(ib, cfg, uncosted_id, wh, 1000, 500));
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger warehouse stock");
   stock_setup();
@@ -204,6 +253,7 @@ int main(void) {
   test_received_transfer_can_sell();
   test_imported_warehouse_quantities();
   test_manual_side_rejects_use_of_held_stock();
+  test_sell_imported_stock();
   ledger_script_close();
   TEST_END();
 }

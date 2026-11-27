@@ -1069,7 +1069,7 @@ static bool import_movement(stage_t *st, int doc_id, xmlNodePtr mv) {
   ledger_copy_text(e.date, sizeof(e.date), text[0] ? (text[10] = '\0', text) : "");
   v_text(mv, "Сумма", text, sizeof(text));
   e.amount = strtod(text, NULL);
-  money_parse_decimal(text, 2, &e.amount_minor);
+  e.source_amount_exact = money_parse_decimal(text, 2, &e.amount_minor);
   v_text(mv, "Содержание", text, sizeof(text));
   ledger_copy_text(e.content, sizeof(e.content), text);
   const side_t *q = d.has_quantity ? &d : &c;

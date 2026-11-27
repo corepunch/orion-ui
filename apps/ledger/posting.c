@@ -492,6 +492,26 @@ void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
 
 // ── Posting by form ────────────────────────────────────────────────────────
 
+static int stock_entry_item(database_t *cfg, const db_entry_t *entry, int goods, bool credit) {
+  int account = credit ? entry->credit_id : entry->debit_id;
+  if (!ledger_account_within(cfg, account, goods)) return 0;
+  for (int slot = 1; slot <= 3; slot++)
+    if (!strcmp(ledger_subconto_slot_table(cfg, account, slot), "items"))
+      return entry_subconto(entry, credit, slot);
+  return 0;
+}
+
+static bool add_exact_stock(const db_entry_t *entry, const db_document_t *origin, bool debit, bool credit,
+                            int64_t *quantity, int64_t *value) {
+  bool imported = ledger_document_imported(origin);
+  if ((!entry->exact_money && !(imported && entry->source_amount_exact)) || entry->amount_minor < 0)
+    return false;
+  int64_t dq = imported ? (entry->debit_quantity_set ? entry->debit_quantity_milli : 0) : entry->quantity_milli;
+  int64_t cq = imported ? (entry->credit_quantity_set ? entry->credit_quantity_milli : 0) : entry->quantity_milli;
+  return (!debit || (dq >= 0 && money_add(*quantity, dq, quantity) && money_add(*value, entry->amount_minor, value))) &&
+         (!credit || (cq >= 0 && money_add(*quantity, -cq, quantity) && money_add(*value, -entry->amount_minor, value)));
+}
+
 // Goods leave stock at their average cost, as desktop suites of the time wrote
 // them off when the sale was posted.
 static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
@@ -501,16 +521,15 @@ static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
     result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
     EACH_RECORD(db_entry_t, e, entries) {
       if (e->source_inactive) continue;
-      bool debit = e->debit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->debit_id, p->type->cost_credit_id);
-      bool credit = e->credit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->credit_id, p->type->cost_credit_id);
+      bool debit = stock_entry_item(p->cfg, e, p->type->cost_credit_id, false) == line->item_id;
+      bool credit = stock_entry_item(p->cfg, e, p->type->cost_credit_id, true) == line->item_id;
       if (!debit && !credit) continue;
+      const db_document_t *origin = p->doc;
       if (e->document_id != p->doc->id) {
-        const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
-        if (!d || !d->posted || doc_order(p->cfg, d, p->doc) >= 0) continue;
+        origin = find(p->ib, TABLE_DOCUMENTS, e->document_id);
+        if (!origin || !origin->posted || doc_order(p->cfg, origin, p->doc) >= 0) continue;
       }
-      if (!e->exact_money || e->amount_minor < 0 || e->quantity_milli < 0) { ok = false; break; }
-      if (debit && (!money_add(qty, e->quantity_milli, &qty) || !money_add(value, e->amount_minor, &value))) { ok = false; break; }
-      if (credit && (!money_add(qty, -e->quantity_milli, &qty) || !money_add(value, -e->amount_minor, &value))) { ok = false; break; }
+      if (!add_exact_stock(e, origin, debit, credit, &qty, &value)) { ok = false; break; }
     }
     free_result_list(entries);
     if (!ok || qty <= 0 || value < 0 || line->quantity_milli <= 0 || line->quantity_milli > qty ||
@@ -767,8 +786,8 @@ static bool exact_stock_order_valid(const post_t *p) {
     if (!type->cost_credit_id) continue;
     EACH_RECORD(db_entry_t, own, current) {
       int own_items[] = {
-        ledger_account_within(p->cfg, own->debit_id, type->cost_credit_id) ? own->debit_subconto_id : 0,
-        ledger_account_within(p->cfg, own->credit_id, type->cost_credit_id) ? own->credit_subconto_id : 0
+        stock_entry_item(p->cfg, own, type->cost_credit_id, false),
+        stock_entry_item(p->cfg, own, type->cost_credit_id, true)
       };
       if (p->doc->correction_of) for (int i = 0; i < 2; i++) {
         int item = own_items[i];
@@ -776,16 +795,15 @@ static bool exact_stock_order_valid(const post_t *p) {
         int64_t quantity = 0, value = 0;
         EACH_RECORD(db_entry_t, movement, all) {
           if (movement->source_inactive) continue;
-          bool debit = movement->debit_subconto_id == item && ledger_account_within(p->cfg, movement->debit_id, type->cost_credit_id);
-          bool credit = movement->credit_subconto_id == item && ledger_account_within(p->cfg, movement->credit_id, type->cost_credit_id);
+          bool debit = stock_entry_item(p->cfg, movement, type->cost_credit_id, false) == item;
+          bool credit = stock_entry_item(p->cfg, movement, type->cost_credit_id, true) == item;
           if (!debit && !credit) continue;
+          const db_document_t *origin = p->doc;
           if (movement->document_id != p->doc->id) {
-            const db_document_t *doc = find(p->ib, TABLE_DOCUMENTS, movement->document_id);
-            if (!doc || !doc->posted || doc_order(p->cfg, doc, p->doc) >= 0) continue;
+            origin = find(p->ib, TABLE_DOCUMENTS, movement->document_id);
+            if (!origin || !origin->posted || doc_order(p->cfg, origin, p->doc) >= 0) continue;
           }
-          if (!movement->exact_money || movement->quantity_milli < 0 || movement->amount_minor < 0 ||
-              (debit && (!money_add(quantity, movement->quantity_milli, &quantity) || !money_add(value, movement->amount_minor, &value))) ||
-              (credit && (!money_add(quantity, -movement->quantity_milli, &quantity) || !money_add(value, -movement->amount_minor, &value)))) {
+          if (!add_exact_stock(movement, origin, debit, credit, &quantity, &value)) {
             valid = false; break;
           }
         }
@@ -799,8 +817,8 @@ static bool exact_stock_order_valid(const post_t *p) {
         const db_document_t *doc = find(p->ib, TABLE_DOCUMENTS, other->document_id);
         if (!doc || !doc->posted || doc_order(p->cfg, doc, p->doc) <= 0) continue;
         int other_items[] = {
-          ledger_account_within(p->cfg, other->debit_id, type->cost_credit_id) ? other->debit_subconto_id : 0,
-          ledger_account_within(p->cfg, other->credit_id, type->cost_credit_id) ? other->credit_subconto_id : 0
+          stock_entry_item(p->cfg, other, type->cost_credit_id, false),
+          stock_entry_item(p->cfg, other, type->cost_credit_id, true)
         };
         for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++)
           if (own_items[i] && own_items[i] == other_items[j]) valid = false;
