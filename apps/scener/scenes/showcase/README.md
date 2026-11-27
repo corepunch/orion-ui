@@ -13,7 +13,8 @@ Run the commands from the Orion UI root after `make scener`.
 ./build/bin/scener --check apps/scener/scenes/showcase/great_library.blks
 ./build/bin/scener --render apps/scener/scenes/showcase/great_library.blks --size 1600x1000 --format png --ssao --output-dir render/library
 ./build/bin/scener --render apps/scener/scenes/showcase/hypostyle_hall.blks --size 1600x1000 --format png --ssao --output-dir render/hypostyle
-./build/bin/scener apps/scener/scenes/christmas_market_buildings.blks --cam Overview --ui-shot docs/scener/shots/editor-market.png
+./build/bin/scener apps/scener/scenes/christmas_market_buildings.blks --cam Overview --ui-shot /tmp/editor-market.png --size 1440x900 -no-shadows --ssao
+cwebp -q 90 -sharp_yuv /tmp/editor-market.png -o docs/scener/shots/editor-market.webp
 ```
 
 Measured on an Apple M1 (November 2026): the library checks in 0.53 s at 63 MB and renders

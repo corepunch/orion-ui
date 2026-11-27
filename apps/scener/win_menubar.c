@@ -1,17 +1,19 @@
 #include "scener.h"
 #include <orion/user/draw.h>
 
+static scene_doc_t *current_doc(void);
+
 result_t scener_toolbar_proc(window_t *win, uint32_t msg,
                              uint32_t wparam, void *lparam) {
   (void)lparam;
   switch (msg) {
     case evCreate:
-      scener_sync_main_toolbar();
+      scener_sync_command_state();
       return true;
     case evCommand:
       if (HIWORD(wparam) != btnClicked) return false;
       handle_menu_command(LOWORD(wparam));
-      scener_sync_main_toolbar();
+      scener_sync_command_state();
       return true;
     case evDestroy:
       if (g_app && g_app->main_toolbar_win == win) g_app->main_toolbar_win = NULL;
@@ -30,27 +32,53 @@ window_t *create_main_toolbar_window(void) {
   if (!win) return NULL;
   show_window(win, true);
   g_app->main_toolbar_win = win;
-  scener_sync_main_toolbar();
+  scener_sync_command_state();
   return win;
 }
 
-void scener_sync_main_toolbar(void) {
-  if (!g_app || !g_app->main_toolbar_win) return;
-  window_t *toolbar = g_app->main_toolbar_win;
-  int active = scener_active_tool();
-  send_message(toolbar, tbCheckButton, (uint32_t)active, (void *)(intptr_t)1);
+void scener_sync_command_state(void) {
+  if (!g_app) return;
+  uint16_t active = scener_active_tool();
+  if (g_app->main_toolbar_win)
+    send_message(g_app->main_toolbar_win, tbCheckButton, active, (void *)(intptr_t)1);
+#ifndef BUILD_AS_GEM
+  window_t *ribbon = app_chrome_ribbon(g_app->chrome_win);
+  if (!ribbon) return;
+  scene_doc_t *doc = current_doc();
+  uint16_t create = doc ? doc->scene.createMode : 0;
+  for (uint16_t id = ID_TOOL_SELECT; id <= ID_TOOL_SCALE; id++) {
+    uintptr_t state = !doc ? TBSTATE_DISABLED : !create && id == active ? TBSTATE_CHECKED : 0;
+    send_message(ribbon, rbSetState, id, (void *)state);
+  }
+  for (uint16_t id = ID_CREATE_BOX; id <= ID_CREATE_DOOR_GOTHIC; id++) {
+    uintptr_t state = !doc ? TBSTATE_DISABLED : id == create ? TBSTATE_CHECKED : 0;
+    send_message(ribbon, rbSetState, id, (void *)state);
+  }
+  const uint16_t document_commands[] = {
+    ID_CREATE_POINT_LIGHT, ID_CREATE_DIRECTIONAL_LIGHT, ID_CREATE_CAMERA,
+    ID_ANIMATION_PLAY, ID_ANIMATION_REWIND,
+  };
+  for (size_t i = 0; i < ARRAY_LEN(document_commands); i++)
+    send_message(ribbon, rbSetState, document_commands[i], (void *)(uintptr_t)(doc ? 0 : TBSTATE_DISABLED));
+  uintptr_t cameras = doc && doc->scene.ncameras > 1 ? 0 : TBSTATE_DISABLED;
+  send_message(ribbon, rbSetState, ID_VIEW_PREV_CAMERA, (void *)cameras);
+  send_message(ribbon, rbSetState, ID_VIEW_NEXT_CAMERA, (void *)cameras);
+  send_message(ribbon, rbSetState, ID_VIEW_SHOW_SHADOWS,
+               (void *)(uintptr_t)((g_app->debug_flags & DBG_NO_SHADOWS) ? 0 : TBSTATE_CHECKED));
+  send_message(ribbon, rbSetState, ID_VIEW_TOGGLE_SSAO,
+               (void *)(uintptr_t)((g_app->debug_flags & DBG_SSAO) ? TBSTATE_CHECKED : 0));
+#endif
 }
 
 void scener_sync_tool_ui(void) {
   if (!g_app) return;
-  scener_sync_main_toolbar();
+  scener_sync_command_state();
   if (g_app->command_panel_win) invalidate_window(g_app->command_panel_win);
   for (scene_doc_t *doc = g_app->docs; doc; doc = doc->next)
     if (doc->viewport_win) invalidate_window(doc->viewport_win);
 }
 
-result_t scener_menubar_proc(window_t *win, uint32_t msg,
-                             uint32_t wparam, void *lparam) {
+static bool dispatch_command(uint32_t msg, uint32_t wparam) {
   if (msg == evCommand) {
     uint16_t notif = HIWORD(wparam);
     if (notif == kMenuBarNotificationItemClick ||
@@ -60,7 +88,16 @@ result_t scener_menubar_proc(window_t *win, uint32_t msg,
       return true;
     }
   }
-  return win_menubar(win, msg, wparam, lparam);
+  return false;
+}
+
+result_t scener_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  return dispatch_command(msg, wparam) || win_menubar(win, msg, wparam, lparam);
+}
+
+result_t scener_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (dispatch_command(msg, wparam)) return true;
+  return win_ribbon(win, msg, wparam, lparam);
 }
 
 static scene_doc_t *current_doc(void) {
@@ -233,12 +270,12 @@ void handle_menu_command(uint16_t id) {
 
     case ID_VIEW_SHOW_SHADOWS:
       g_app->debug_flags ^= DBG_NO_SHADOWS;
+      scener_sync_tool_ui();
       break;
 
     case ID_VIEW_TOGGLE_SSAO:
       g_app->debug_flags ^= DBG_SSAO;
-      for (scene_doc_t *view = g_app->docs; view; view = view->next)
-        if (view->viewport_win) invalidate_window(view->viewport_win);
+      scener_sync_tool_ui();
       break;
 
     case ID_VIEW_SHOW_WIREFRAME:
@@ -322,14 +359,19 @@ void handle_menu_command(uint16_t id) {
         cam.fov = doc->scene.camFov > 0 ? doc->scene.camFov : 60;
         DA_PUSH(doc->scene.cameras, doc->scene.ncameras, doc->scene.ccameras, cam);
         doc->modified = true;
+        scener_sync_command_state();
       }
       break;
 
     case ID_WINDOW_COMMAND_PANEL:
+      if (!g_app->command_panel_win)
+        g_app->command_panel_win = create_command_panel_window();
       if (g_app->command_panel_win) {
         show_window(g_app->command_panel_win, true);
-      } else {
-        g_app->command_panel_win = create_command_panel_window();
+#ifdef BUILD_AS_GEM
+        send_message(g_app->command_panel_win, evCommand, MAKEDWORD(ID_CP_TAB_HIERARCHY, btnClicked), NULL);
+#endif
+        property_browser_refresh();
       }
       break;
 

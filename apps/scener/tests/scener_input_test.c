@@ -37,6 +37,12 @@ static void test_tool_commands_share_document_state(void) {
   handle_menu_command(ID_TOOL_ROTATE); ASSERT_EQUAL(doc.scene.editMode, EDIT_E_ROTATE); ASSERT_EQUAL(scener_active_tool(), ID_TOOL_ROTATE);
   handle_menu_command(ID_TOOL_SCALE);  ASSERT_EQUAL(doc.scene.editMode, EDIT_R_SCALE);  ASSERT_EQUAL(scener_active_tool(), ID_TOOL_SCALE);
 
+  ASSERT_TRUE(scener_ribbon_proc(NULL, evCommand, MAKEDWORD(ID_CREATE_BOX, btnClicked), NULL));
+  ASSERT_EQUAL(doc.scene.createMode, ID_CREATE_BOX);
+  ASSERT_TRUE(scener_ribbon_proc(NULL, evCommand, MAKEDWORD(ID_TOOL_ROTATE, kAcceleratorNotification), NULL));
+  ASSERT_EQUAL(doc.scene.createMode, 0);
+  ASSERT_EQUAL(scener_active_tool(), ID_TOOL_ROTATE);
+
   g_app = NULL;
   PASS();
 }

@@ -107,7 +107,7 @@
       </menu>
 
       <menu name="window" label="Window" dynamic="true">
-        <item name="command_panel" label="Command Panel" />
+        <item name="command_panel" label="Rig Hierarchy" />
         <Separator />
       </menu>
 
@@ -115,6 +115,73 @@
         <item name="about" label="About..." />
       </menu>
     </menus>
+
+    <ribbon if="!defined(BUILD_AS_GEM)">
+      <ApplicationMenu menu="file" />
+      <QuickAccessToolbar>
+        <Button command="file.open" icon="scener-folder-open" tooltip="Open scene" />
+        <Button command="file.save" icon="scener-floppy-disk" tooltip="Save scene" />
+      </QuickAccessToolbar>
+      <Tab label="Modeling">
+        <Group label="Transform">
+          <Button command="tool.select" text="Select" icon="scener-cursor" checked-icon="scener-cursor-fill" size="large" />
+          <Button command="tool.move" text="Move" icon="scener-arrows-out-cardinal" checked-icon="scener-arrows-out-cardinal-fill" size="large" />
+          <Button command="tool.rotate" text="Rotate" icon="scener-arrows-clockwise" checked-icon="scener-arrows-clockwise-fill" size="large" />
+          <Button command="tool.scale" text="Scale" icon="scener-corners-out" checked-icon="scener-corners-out-fill" size="large" />
+        </Group>
+        <Group label="Solids">
+          <Button command="create.box" icon="scener-cube" checked-icon="scener-cube-fill" size="large" />
+          <Button command="create.sphere" icon="scener-globe" checked-icon="scener-globe-fill" size="large" />
+          <Button command="create.cylinder" icon="scener-cylinder" checked-icon="scener-cylinder-fill" size="large" />
+          <Button command="create.cone" />
+          <Button command="create.torus" />
+          <Button command="create.prism" icon="scener-pentagon" checked-icon="scener-pentagon-fill" />
+          <Button command="create.capsule" />
+        </Group>
+      </Tab>
+      <Tab label="Create">
+        <Group label="Profiles">
+          <Button command="create.rect" text="Rectangle" icon="scener-rectangle" checked-icon="scener-rectangle-fill" />
+          <Button command="create.circle" icon="scener-circle" checked-icon="scener-circle-fill" />
+          <Button command="create.ellipse" />
+          <Button command="create.star" icon="scener-star" checked-icon="scener-star-fill" />
+          <Button command="create.screen" icon="scener-monitor" checked-icon="scener-monitor-fill" />
+        </Group>
+        <Group label="Architecture">
+          <Button command="create.arch" />
+          <Button command="create.window_round" text="Round Window" />
+          <Button command="create.window_cottage" />
+          <Button command="create.window_gothic" />
+          <Button command="create.door_rectangular" icon="scener-door" checked-icon="scener-door-fill" />
+          <Button command="create.door_round" text="Round Door" />
+          <Button command="create.door_gothic" />
+        </Group>
+        <Group label="Lights and Cameras">
+          <Button command="create.point_light" icon="scener-lightbulb" />
+          <Button command="create.directional_light" icon="scener-sun" />
+          <Button command="create.camera" icon="scener-camera" />
+        </Group>
+      </Tab>
+      <Tab label="View">
+        <Group label="Cameras">
+          <Button command="view.prev_camera" icon="scener-caret-left" />
+          <Button command="view.next_camera" icon="scener-caret-right" />
+        </Group>
+        <Group label="Lighting">
+          <Button command="view.show_shadows" text="Shadows" icon="scener-sun" checked-icon="scener-sun-fill" />
+          <Button command="view.toggle_ssao" text="Ambient Occlusion" />
+        </Group>
+      </Tab>
+      <Tab label="Animation">
+        <Group label="Playback">
+          <Button command="animation.play" icon="scener-play-pause" size="large" />
+          <Button command="animation.rewind" icon="scener-skip-back" />
+        </Group>
+        <Group label="Rigging">
+          <Button command="window.command_panel" icon="scener-tree-structure" size="large" />
+        </Group>
+      </Tab>
+    </ribbon>
 
     <toolbar presentation="normal">
           <Button name="undo" command="edit.undo" icon="toolbar/undo" text="Undo" tooltip="Undo" />

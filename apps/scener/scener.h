@@ -59,7 +59,7 @@ typedef struct {
 
 extern app_state_t *g_app;
 
-void scener_sync_main_toolbar(void);
+void scener_sync_command_state(void);
 void scener_sync_tool_ui(void);
 void scener_sync_viewport_camera(scene_doc_t *doc);
 uint16_t scener_active_tool(void);
@@ -69,6 +69,7 @@ accel_table_t *scener_active_accelerators(void);
 
 result_t scener_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t scener_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t scener_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 window_t *create_main_toolbar_window(void);
 
 window_t *create_command_panel_window(void);

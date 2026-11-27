@@ -48,9 +48,9 @@ output extension, or by `--exporter ID`. Exporters are shared libraries; see
 [docs/exporters.md](docs/exporters.md) for the bundled OBJ and glB exporters,
 their options, and how to write another.
 
-`--screenshot` writes the viewport alone. `--ui-shot FILE.png|FILE.jpg` opens the
-whole editor (menus, toolbar, command panel, properties) and saves the window
-after its first painted frame, then exits; use it for documentation captures.
+`--screenshot` writes the viewport alone. `--ui-shot FILE.png|FILE.jpg` captures the
+editor's first painted frame, including the ribbon and Properties pane, then
+exits. It uses an offscreen surface when the platform supports one.
 
 `--check`, `--query` and `--prefab-info` load the scene without a graphical
 session. `--check` prints a summary line (or, with `--json`, every issue as

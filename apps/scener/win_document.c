@@ -16,16 +16,13 @@ static void doc_frame_prefab(Scene *scene) {
 }
 
 static irect16_t document_workspace_rect(void) {
-	int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-	int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-	int margin = 6;
-	int left = margin;
-	int top = MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT + margin;
-	int right=sw-SIDE_PANEL_WIDTH-margin;
-	int bottom = sh - margin;
-	if (right <= left) right = left + 1;
-	if (bottom <= top) bottom = top + 1;
-	return (irect16_t){ left, top, right - left, bottom - top };
+	irect16_t area = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
+		ui_get_system_metrics(kSystemMetricScreenHeight));
+	get_application_workspace(g_app->hinstance, &area);
+#ifdef BUILD_AS_GEM
+	area = rect_trim_right(area, SIDE_PANEL_WIDTH);
+#endif
+	return rect_inset(area, 6);
 }
 
 static void doc_win_resize_children(scene_doc_t *doc) {
@@ -135,6 +132,7 @@ scene_doc_t *create_document_ex(const char *path, bool show_windows) {
   g_app->docs = doc;
   g_app->active_doc = doc;
   property_browser_refresh();
+  scener_sync_command_state();
 
   doc_update_title(doc);
   return doc;
@@ -147,10 +145,6 @@ scene_doc_t *create_document(const char *path) {
 void close_document(scene_doc_t *doc) {
   if (!doc) return;
 
-  if (g_app->active_doc == doc)
-    g_app->active_doc = NULL;
-  property_browser_refresh();
-
   if (g_app->docs == doc) {
     g_app->docs = doc->next;
   } else {
@@ -159,10 +153,13 @@ void close_document(scene_doc_t *doc) {
     }
   }
 
+  if (g_app->active_doc == doc) g_app->active_doc = g_app->docs;
   if (doc->win) destroy_window(doc->win);
   scene_free_textures(&doc->scene);
   scene_free(&doc->scene);
   free(doc);
+  property_browser_refresh();
+  scener_sync_command_state();
 }
 
 bool scener_open_file_path(const char *path) {

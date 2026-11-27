@@ -1,4 +1,5 @@
 #include "scener.h"
+#include <orion/user/dock.h>
 #include <orion/commctl/commctl.h>
 
 enum { PROP_NAME_WIDTH = 104 };
@@ -182,7 +183,7 @@ void property_browser_refresh(void){
 			snprintf(value,sizeof(value),doc->scene.rigTargets[i].reachable?"Reachable":"Out of reach by %.2f cm",doc->scene.rigTargets[i].error*100);
 			prop_add_row(st->list_win,"IK target",value);
 		}
-		prop_add_row(st->list_win,"Edit","Hierarchy tab controls");
+		prop_add_row(st->list_win,ui_tr("Edit"),ui_tr("Rig Hierarchy"));
 		prop_add_row(st->list_win,"Guide","Pivot at articulation; inspect bent seams");
 		return;
 	}
@@ -203,12 +204,22 @@ void property_browser_refresh(void){
 
 window_t *create_property_browser_window(void){
 	if(!g_app) return NULL;
+#ifdef BUILD_AS_GEM
 	int sw=ui_get_system_metrics(kSystemMetricScreenWidth),sh=ui_get_system_metrics(kSystemMetricScreenHeight);
 	int total_h=sh-MENUBAR_HEIGHT-TOOLBAR_BAND_HEIGHT-40;
 	int cmd_h=(int)(total_h*0.60f);
 	window_t *win=create_window("Properties",WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON|WINDOW_NORESIZE,
 		MAKERECT(sw-SIDE_PANEL_WIDTH,MENUBAR_HEIGHT+TOOLBAR_BAND_HEIGHT+cmd_h,SIDE_PANEL_WIDTH,total_h-cmd_h),
 		NULL,win_property_browser,g_app->hinstance,NULL);
+#else
+	if (!g_app->chrome_win) return NULL;
+	window_t *win = create_window(ui_tr("Properties"), WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE | WINDOW_NORESIZE,
+		MAKERECT(0, 0, SIDE_PANEL_WIDTH, 1), g_app->chrome_win, win_property_browser, g_app->hinstance, NULL);
+	if (win && !dock_window(win, DOCK_RIGHT, DOCK_EDGE(DOCK_RIGHT), DOCK_NOFLOAT, SIDE_PANEL_WIDTH, SIDE_PANEL_WIDTH)) {
+		destroy_window(win);
+		return NULL;
+	}
+#endif
 	if(win) show_window(win,true);
 	return win;
 }
@@ -227,9 +238,11 @@ result_t win_property_browser(window_t *win,uint32_t msg,uint32_t wparam,void *l
 				send_message(st->list_win,RVM_ADDCOLUMN,0,&name); send_message(st->list_win,RVM_ADDCOLUMN,0,&value);
 			}
 			return true;
-		case evResize:
-			if(st&&st->list_win) resize_window(st->list_win,win->frame.w,win->frame.h);
+		case evResize: {
+			irect16_t client = get_client_rect(win);
+			if(st&&st->list_win) resize_window(st->list_win,client.w,client.h);
 			return true;
+		}
 		case evDestroy:
 			if(g_app) g_app->property_browser_win=NULL;
 			return false;

@@ -383,18 +383,18 @@ static void create_app_windows(hinstance_t hinstance) {
                                     handle_menu_command, hinstance);
   create_main_toolbar_window();
 #else
-  g_app->chrome_win = create_application_chrome("SimpleSketch3D Chrome",
-                                        scener_menubar_proc,
-                                        kMenus, kNumMenus,
-                                        scener_toolbar_proc,
-                                        &scener_application_toolbar, hinstance);
-  g_app->menubar_win      = app_chrome_menubar(g_app->chrome_win);
-  g_app->main_toolbar_win = app_chrome_toolbar(g_app->chrome_win);
-  scener_sync_main_toolbar();
+  g_app->chrome_win = create_ribbon_chrome("SimpleSketch3D Chrome", scener_ribbon_proc,
+                                          &scener_ribbon, scener_toolbar_proc, hinstance);
+  g_app->menubar_win = app_chrome_ribbon(g_app->chrome_win);
+  if (g_app->menubar_win)
+    send_message(g_app->menubar_win, kMenuBarMessageSetMenus, kNumMenus, (void *)kMenus);
 #endif
 
+#ifdef BUILD_AS_GEM
   g_app->command_panel_win = create_command_panel_window();
+#endif
   g_app->property_browser_win = create_property_browser_window();
+  scener_sync_command_state();
 }
 
 static const char *scener_file_types[] = { ".blks", NULL };
@@ -563,7 +563,10 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
                                         !g_cli.screenshot_mode);
   if (!doc) return false;
 
-  if(g_cli.camera_name[0]&&!cli_select_camera(&doc->scene,g_cli.camera_name))return false;
+  if (g_cli.camera_name[0]) {
+    if (!cli_select_camera(&doc->scene, g_cli.camera_name)) return false;
+    if (doc->viewport_win) scener_sync_viewport_camera(doc);
+  }
   if(g_cli.time!=0)scene_set_time(&doc->scene,g_cli.time);
   if(g_cli.screenshot_mode){
     if(g_cli.batch||g_cli.layout){
@@ -659,7 +662,9 @@ int main(int argc, char *argv[]) {
     scene_print_joints(&scene,stdout);
     scene_free(&scene);return 0;
   }
+  bool capture_ui = g_cli.ui_shot_path[0] != '\0';
   int flags = g_cli.screenshot_mode ? UI_INIT_HIDDEN : UI_INIT_DESKTOP;
+  if (capture_ui) flags |= UI_INIT_HIDDEN;
   int sample=g_cli.screenshot_mode?g_cli.supersample:1;
   if(g_cli.width>CLI_MAX_SIZE/sample||g_cli.height>CLI_MAX_SIZE/sample){fprintf(stderr,"supersampled dimensions exceed %d\n",CLI_MAX_SIZE);return 2;}
   // The platform drawable and screenshot target must share the working raster size.
@@ -669,10 +674,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (!g_cli.screenshot_mode) {
-    if (g_cli.ui_shot_path[0]) ui_request_screenshot(g_cli.ui_shot_path, 92, true);
+    if (capture_ui && !ui_request_screenshot(g_cli.ui_shot_path, 92, true)) {
+      fprintf(stderr, "Invalid editor screenshot path: %s\n", g_cli.ui_shot_path);
+      gem_shutdown();
+      ui_shutdown_graphics();
+      return 2;
+    }
     while (ui_is_running()) {
       ui_event_t e;
-      while (get_message(&e)) {
+      while (!capture_ui && get_message(&e)) {
         if (!translate_accelerator(g_app ? g_app->menubar_win : NULL, &e, scener_active_accelerators()))
           dispatch_message(&e);
       }

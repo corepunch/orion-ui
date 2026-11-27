@@ -94,8 +94,11 @@ static result_t rig_name_proc(window_t *win,uint32_t msg,uint32_t wparam,void *l
 }
 
 void scener_rig_panel_refresh(void){
-	window_t *panel=g_app&&g_app->command_panel_win?
-		((cp_state_t*)g_app->command_panel_win->userdata)->rig_panel:NULL;
+	window_t *panel = g_app ? g_app->command_panel_win : NULL;
+#ifdef BUILD_AS_GEM
+	cp_state_t *command_panel = panel ? panel->userdata : NULL;
+	panel = command_panel ? command_panel->rig_panel : NULL;
+#endif
 	rig_panel_state_t *st=panel?(rig_panel_state_t*)panel->userdata:NULL;
 	if(!st || !st->list) return;
 	send_message(st->list,RVM_CLEAR,0,NULL); st->instance=NULL;
@@ -133,7 +136,8 @@ static result_t rig_panel_proc(window_t *win,uint32_t msg,uint32_t wparam,void *
 		return true;
 	}
 	if((msg==evResize || msg==evArrange) && st){
-		int w=win->frame.w,h=win->frame.h,listH=h-165;
+		irect16_t client = get_client_rect(win);
+		int w=client.w,listH=client.h-165;
 		if(listH<40) listH=40;
 		if(st->list){ move_window(st->list,4,4); resize_window(st->list,w-8,listH); }
 		for(int i=0;i<10;i++){
@@ -146,6 +150,10 @@ static result_t rig_panel_proc(window_t *win,uint32_t msg,uint32_t wparam,void *
 		fill_rect(get_sys_color(brControlBg),get_client_rect(win));
 		for(window_t *child=win->children;child;child=child->next) send_message(child,evPaint,0,NULL);
 		return true;
+	}
+	if (msg == evDestroy) {
+		if (g_app && g_app->command_panel_win == win) g_app->command_panel_win = NULL;
+		return false;
 	}
 	if(msg==evCommand && st && g_app && g_app->active_doc){
 		scene_doc_t *doc=g_app->active_doc; Scene *s=&doc->scene;
@@ -424,6 +432,7 @@ result_t win_command_panel(window_t *win, uint32_t msg, uint32_t wparam, void *l
 
 window_t *create_command_panel_window(void) {
 	if (!g_app) return NULL;
+#ifdef BUILD_AS_GEM
 	int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
 	int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
 	int win_h = (int)((sh - MENUBAR_HEIGHT - TOOLBAR_BAND_HEIGHT - 40) * 0.60f);
@@ -431,6 +440,13 @@ window_t *create_command_panel_window(void) {
 		WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
 		MAKERECT(sw - CP_WIDTH, MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT, CP_WIDTH, win_h),
 		NULL, win_command_panel, g_app->hinstance, NULL);
+#else
+	irect16_t workspace = get_client_rect(g_app->chrome_win);
+	get_application_workspace(g_app->hinstance, &workspace);
+	irect16_t frame = rect_split_right(workspace, CP_WIDTH);
+	window_t *win = create_window(ui_tr("Rig Hierarchy"), WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON,
+		&frame, NULL, rig_panel_proc, g_app->hinstance, NULL);
+#endif
 	if (win) show_window(win, true);
 	return win;
 }
