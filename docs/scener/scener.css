@@ -151,3 +151,4 @@ pre code { background: none; padding: 0; font: inherit; }
 .lightbox img { max-width: 96vw; max-height: 94vh; width: auto; }
 .lightbox form { position: fixed; top: 12px; right: 16px; }
 .lightbox button { background: none; border: 0; color: #eee; font: 32px/1 var(--sans); cursor: pointer; }
+.grid img { aspect-ratio: 16 / 10; object-fit: cover; }

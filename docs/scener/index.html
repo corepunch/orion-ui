@@ -255,44 +255,16 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="plates" class="sec wrap">
   <header class="sec-head">
     <span class="num">04</span>
-    <h2>Renders</h2>
-    <p>Straight out of <code>scener --render</code>, no paint-over. The times are wall-clock for the whole run on an M1, loading included.</p>
+    <h2>What it draws</h2>
+    <p>One render per feature, straight out of <code>scener --render</code> with no paint-over. Times are wall-clock on an M1, loading included.</p>
   </header>
-
-  <h3 class="sub">One room, ten settings · Among the Heavens</h3>
-  <p class="sub-lede">One layout file included by ten scenes. Each changes the floor, materials, decorations and light. Every frame is about 1,700 objects and renders in under a second.</p>
   <div class="grid three">
-    <figure><a href="shots/kitchen-home.webp" class="zoom"><img src="shots/kitchen-home.webp" width="1024" height="768" loading="lazy" alt="A round stone hall at sunrise with petals and bunting, warm light pooling through arched windows."></a><figcaption>Homecoming · 0.86 s</figcaption></figure>
-    <figure><a href="shots/kitchen-night.webp" class="zoom"><img src="shots/kitchen-night.webp" width="1024" height="768" loading="lazy" alt="The same hall at night in blue and gold, moonlight through the windows."></a><figcaption>Night · 0.90 s</figcaption></figure>
-    <figure><a href="shots/kitchen-garden.webp" class="zoom"><img src="shots/kitchen-garden.webp" width="1024" height="768" loading="lazy" alt="The hall overgrown: grass floor, cracked paving and ivy on the windows."></a><figcaption>Garden · 1.01 s</figcaption></figure>
-    <figure><a href="shots/kitchen-frost.webp" class="zoom"><img src="shots/kitchen-frost.webp" width="1024" height="768" loading="lazy" alt="The hall in winter: pale stone floor and frosted windows."></a><figcaption>Frost · 0.88 s</figcaption></figure>
-    <figure><a href="shots/kitchen-royal.webp" class="zoom"><img src="shots/kitchen-royal.webp" width="1024" height="768" loading="lazy" alt="The hall in purple and white checks with a long carpet."></a><figcaption>Royal · 0.73 s</figcaption></figure>
-    <figure><a href="shots/kitchen-storm.webp" class="zoom"><img src="shots/kitchen-storm.webp" width="1024" height="768" loading="lazy" alt="The hall boarded up against a storm, dim and grey."></a><figcaption>Storm · 0.87 s</figcaption></figure>
-  </div>
-
-  <h3 class="sub">Game buildings · Nile Archive, Relic Rush, Christmas Market</h3>
-  <p class="sub-lede">The city sprites for these games are rendered by Scener from the same Python generator that once fed Blender, one orthographic camera per building.</p>
-  <div class="grid two">
-    <figure class="span2"><a href="shots/christmas-market.webp" class="zoom"><img src="shots/christmas-market.webp" width="1600" height="1000" loading="lazy" alt="Snowy market stalls with red and white roofs around a decorated Christmas tree."></a><figcaption>Christmas market stalls · 2.26 s</figcaption></figure>
-    <figure><a href="shots/nile-buildings.webp" class="zoom"><img src="shots/nile-buildings.webp" width="1600" height="1000" loading="lazy" alt="Small Egyptian buildings on a green board: a stepped pyramid, a mud-brick house, a watchtower and a painted temple."></a><figcaption>Nile buildings · 0.73 s</figcaption></figure>
-    <figure><a href="shots/forest-buildings.webp" class="zoom"><img src="shots/forest-buildings.webp" width="1600" height="1000" loading="lazy" alt="Ten cottages and towers on grass tiles against a pale blue sky."></a><figcaption>Forest buildings · 0.58 s</figcaption></figure>
-  </div>
-
-  <h3 class="sub">Rooms and props</h3>
-  <div class="grid three">
-    <figure><a href="shots/workshop.webp" class="zoom"><img src="shots/workshop.webp" width="1600" height="1000" loading="lazy" alt="A toymaker's workshop: workbenches, shelves of tools, a cuckoo clock and a round window."></a><figcaption>Toymaker's workshop · 10 cameras, 11.3 s</figcaption></figure>
-    <figure><a href="shots/workshop-plan.webp" class="zoom"><img src="shots/workshop-plan.webp" width="1600" height="1000" loading="lazy" alt="The workshop seen straight down as an orthographic plan."></a><figcaption>Its orthographic plan camera</figcaption></figure>
-    <figure><a href="shots/attic.webp" class="zoom"><img src="shots/attic.webp" width="1600" height="1000" loading="lazy" alt="An attic study at night: a desk under a window, a grey kitten on the desk, letters and a lamp."></a><figcaption>Attic study with an IK-posed kitten · 0.73 s</figcaption></figure>
-    <figure><a href="shots/round-table.webp" class="zoom"><img src="shots/round-table.webp" width="1600" height="1000" loading="lazy" alt="A round table with four chairs placed by trigonometry, mugs and a hanging lamp."></a><figcaption>Chairs placed by <code>cos</code> and <code>sin</code> · 0.75 s</figcaption></figure>
-    <figure><a href="shots/chess.webp" class="zoom"><img src="shots/chess.webp" width="1600" height="1000" loading="lazy" alt="A chess set mid-game, Staunton pieces turned on a lathe, a red mug beside the board."></a><figcaption>Lathed Staunton pieces · 0.85 s</figcaption></figure>
-    <figure><a href="shots/lighthouse.webp" class="zoom"><img src="shots/lighthouse.webp" width="1600" height="1000" loading="lazy" alt="A red-banded lighthouse on a rocky island at dusk, its lamp lit."></a><figcaption>Lighthouse at dusk · 0.50 s</figcaption></figure>
-  </div>
-
-  <h3 class="sub">Stress scenes for this page</h3>
-  <div class="grid three">
-    <figure><a href="shots/library-stacks.webp" class="zoom"><img src="shots/library-stacks.webp" width="1600" height="1000" loading="lazy" alt="Between two library stacks, books close up, a lit stone wall at the end."></a><figcaption>Library, between the stacks</figcaption></figure>
-    <figure><a href="shots/hypostyle-processional.webp" class="zoom"><img src="shots/hypostyle-processional.webp" width="1600" height="1000" loading="lazy" alt="Inside the hypostyle hall: a small figure on the paved processional way between rows of huge columns, sunlight striping the floor."></a><figcaption>Hypostyle hall, processional way</figcaption></figure>
-    <figure><a href="shots/hypostyle-capitals.webp" class="zoom"><img src="shots/hypostyle-capitals.webp" width="1600" height="1000" loading="lazy" alt="Looking up at papyrus capitals and stone architraves against the sky."></a><figcaption>Hypostyle hall, capitals</figcaption></figure>
+    <figure><a href="shots/kitchen-night.webp" class="zoom"><img src="shots/kitchen-night.webp" width="1024" height="768" loading="lazy" alt="A round stone hall at night in blue and gold, moonlight falling through arched windows onto a tiled floor."></a><figcaption><b>Includes</b> One room layout shared by ten scenes that swap floor, decor and light. Among the Heavens, 0.90 s.</figcaption></figure>
+    <figure><a href="shots/christmas-market.webp" class="zoom"><img src="shots/christmas-market.webp" width="1600" height="1000" loading="lazy" alt="Snowy market stalls with red and white roofs around a decorated Christmas tree."></a><figcaption><b>Game art</b> City sprites for Christmas Market, one orthographic camera per building. 2.26 s.</figcaption></figure>
+    <figure><a href="shots/attic.webp" class="zoom"><img src="shots/attic.webp" width="1600" height="1000" loading="lazy" alt="An attic study at night: a desk under a window, a grey kitten on the desk among letters and a lamp."></a><figcaption><b>Characters</b> A rigged kitten posed with IK, per camera, in a moonlit attic. 0.73 s.</figcaption></figure>
+    <figure><a href="shots/chess.webp" class="zoom"><img src="shots/chess.webp" width="1600" height="1000" loading="lazy" alt="A chess set mid-game, Staunton pieces turned on a lathe, a red mug beside the board."></a><figcaption><b>Lathes</b> Staunton pieces from 2D profiles, placed by file and rank expressions. 0.85 s.</figcaption></figure>
+    <figure><a href="shots/devices.webp" class="zoom"><img src="shots/devices.webp" width="1600" height="1000" loading="lazy" alt="A phone and a tablet showing an app screen."></a><figcaption><b>Profiles</b> Devices extruded and filleted from 2D outlines, with an image on the screen. 0.43 s.</figcaption></figure>
+    <figure><a href="shots/hypostyle-processional.webp" class="zoom"><img src="shots/hypostyle-processional.webp" width="1600" height="1000" loading="lazy" alt="Inside the hypostyle hall: a small figure on the processional way between huge columns, sunlight striping the floor."></a><figcaption><b>Shadows</b> Sun through a broken roof, stencil shadows and SSAO across 96 columns. 1.1 s.</figcaption></figure>
   </div>
 </section>
 
@@ -300,15 +272,10 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="motion" class="sec wrap">
   <header class="sec-head">
     <span class="num">05</span>
-    <h2>Characters and reels</h2>
-    <p>Characters carry skeletons with FK, two-bone IK, procedural gaits and BVH motion capture. A <code>.reel</code> file lays type, callouts and live measurements over 3D scene layers and renders straight to MP4.</p>
+    <h2>Reels</h2>
+    <p>A <code>.reel</code> file lays type, callouts and live measurements over 3D scene layers and renders straight to MP4. Characters carry skeletons with FK, two-bone IK, procedural gaits and BVH motion capture.</p>
   </header>
-  <div class="grid two">
-    <figure class="span2"><a href="shots/reel-ik-fk.webp" class="zoom"><img src="shots/reel-ik-fk.webp" width="1600" height="1000" loading="lazy" alt="An infographic frame titled Same motion, different control: two identical characters, one posed by forward kinematics and one by inverse kinematics, with callouts and measured hand distances."></a><figcaption><b>Fig. 4</b> One frame of the IK vs FK reel. The callouts follow the joints and the figures are measured from the rig every frame.</figcaption></figure>
-    <figure><a href="shots/cast.webp" class="zoom"><img src="shots/cast.webp" width="1600" height="1000" loading="lazy" alt="Four ellipsoid characters standing in a row: a young man, a woman, an older woman and an old man."></a><figcaption>Volume character lineup · 0.77 s</figcaption></figure>
-    <figure><a href="shots/devices.webp" class="zoom"><img src="shots/devices.webp" width="1600" height="1000" loading="lazy" alt="A phone and a tablet showing an app screen, modelled from extruded and filleted 2D profiles."></a><figcaption>Device promo from 2D profiles · 0.43 s</figcaption></figure>
-    <figure class="span2"><a href="shots/reel-sheet.webp" class="zoom"><img src="shots/reel-sheet.webp" width="1600" height="450" loading="lazy" alt="A contact sheet of thumbnails, one per shot of a reel about a government office."></a><figcaption><code>--sheet</code> writes one thumbnail per shot, so a whole reel can be reviewed in one image.</figcaption></figure>
-  </div>
+  <figure class="plate wide"><a href="shots/reel-ik-fk.webp" class="zoom"><img src="shots/reel-ik-fk.webp" width="1600" height="1000" loading="lazy" alt="An infographic frame titled Same motion, different control: two identical characters, one posed by forward kinematics and one by inverse kinematics, with callouts and measured hand distances."></a><figcaption><b>Fig. 4</b> One frame of the IK vs FK reel. The callouts follow the joints and the figures are measured from the rig on every frame.</figcaption></figure>
 </section>
 
 <!-- ============================================================ -->
@@ -321,10 +288,6 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
   <figure class="plate wide">
     <a href="shots/editor-market.webp" class="zoom"><img src="shots/editor-market.webp" width="2000" height="1250" loading="lazy" alt="The Scener editor: menu bar and toolbar, a viewport showing snowy Christmas market stalls, and a command panel of shape buttons beside a property browser."></a>
     <figcaption><b>Fig. 5</b> <code>scener christmas_market_buildings.blks --cam Overview</code></figcaption>
-  </figure>
-  <figure class="plate wide">
-    <a href="shots/editor-kitchen.webp" class="zoom"><img src="shots/editor-kitchen.webp" width="2000" height="1250" loading="lazy" alt="The Scener editor showing the overgrown garden hall from Among the Heavens."></a>
-    <figcaption><b>Fig. 6</b> The garden setting from Among the Heavens, open for editing.</figcaption>
   </figure>
 </section>
 
