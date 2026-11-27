@@ -1,6 +1,14 @@
 name: Deploy Docs to GitHub Pages
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'packaging/README.md'
+      - 'ARCHITECTURE.md'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -26,7 +34,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_ref || github.ref }}
+          ref: ${{ inputs.source_ref || github.sha }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
