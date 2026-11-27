@@ -340,7 +340,7 @@ static void check_drafts(home_t *h) {
   char detail[256] = "", one[96];
   result_node_t *docs = home_fetch(h->ib, TABLE_DOCUMENTS);
   HOME_EACH(db_document_t, d, docs) {
-    if (d->posted) continue;
+    if (d->posted || ledger_document_imported(d)) continue;
     if (++count > 2) continue;
     home_describe(d, one, sizeof(one));
     size_t used = strlen(detail);

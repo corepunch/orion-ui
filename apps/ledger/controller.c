@@ -6,6 +6,12 @@
 #include "marketplace_host.h"
 #include <orion/commdlg/commdlg.h>
 #include <orion/user/file.h>
+#include <orion/user/process.h>
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include <time.h>
 #include <ctype.h>
 #include <orion/script/script_internal.h>
@@ -370,6 +376,30 @@ static size_t document_form(const db_doc_type_t *type) {
   return 0;
 }
 
+static result_t imported_document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg != evCreate) return false;
+  const db_document_t *doc = db_dialog_record(win);
+  if (!doc) return false;
+  char caption[256];
+  if (document_caption(doc, caption, sizeof(caption)))
+    set_window_title(get_window_item(win, ID_IMPORTED_DOCUMENT_CAPTION), caption);
+  const char *state = !strcmp(doc->source_posted_state, "posted") ? ui_tr("Posted in 1C") :
+    !strcmp(doc->source_posted_state, "unposted") ? ui_tr("Unposted in 1C") : ui_tr("Imported from 1C");
+  set_window_title(get_window_item(win, ID_IMPORTED_DOCUMENT_SOURCE_STATE), state);
+  static const struct { uint32_t id; const char *field; } values[] = {
+    { ID_IMPORTED_DOCUMENT_COUNTERPARTY, "counterparty.name" },
+    { ID_IMPORTED_DOCUMENT_CONTRACT, "contract.name" },
+    { ID_IMPORTED_DOCUMENT_WAREHOUSE, "warehouse.name" },
+    { ID_IMPORTED_DOCUMENT_BANK_ACCOUNT, "bank_account.number" },
+  };
+  for (size_t i = 0; i < ARRAY_LEN(values); i++) {
+    char value[256] = "";
+    db_get_field_text(db_dialog_database(win), TABLE_DOCUMENTS, doc, values[i].field, value, sizeof(value));
+    set_window_title(get_window_item(win, values[i].id), value);
+  }
+  return true;
+}
+
 // OK in a document dialog saves and posts it.
 static void after_save(int doc_id) {
   if (doc_id && !ledger_post(g_ledger->ib, g_ledger->cfg, doc_id))
@@ -397,8 +427,10 @@ static void edit_document(int doc_id) {
   size_t f = document_form(document_type(doc));
   char title[256];
   if (!doc || !document_caption(doc, title, sizeof(title))) snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
-  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
-  db_form_open(kDocumentForms[f].def, title, view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), doc_id, &opts, document_saved, NULL);
+  bool imported = ledger_document_imported(doc);
+  db_dialog_opts_t opts = { .hook = imported ? imported_document_hook : kDocumentForms[f].hook };
+  db_form_open(imported ? &ledger_imported_document_form : kDocumentForms[f].def, title,
+              view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), doc_id, &opts, imported ? NULL : document_saved, NULL);
 }
 
 // A named record, for trusted Lua add-ons. Opening never creates a record.
@@ -470,7 +502,7 @@ static void post_drafts(void) {
   result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *n = docs; n; n = n->next) {
     const db_document_t *d = *(db_document_t **)n->data;
-    if (d->posted) continue;
+    if (d->posted || ledger_document_imported(d)) continue;
     ui_format_date(d->date, date, sizeof(date));
     snprintf(line, sizeof(line), "%s %s, %s\n", d->number, date, ui_format_number(d->total, 2, total, sizeof(total)));
     if (++count <= 12) { size_t used = strlen(list); snprintf(list + used, sizeof(list) - used, "%s", line); }
@@ -481,7 +513,7 @@ static void post_drafts(void) {
     int failed = 0;
     for (result_node_t *n = docs; n; n = n->next) {
       const db_document_t *d = *(db_document_t **)n->data;
-      if (!d->posted && !ledger_post(g_ledger->ib, g_ledger->cfg, d->id)) failed++;
+      if (!d->posted && !ledger_document_imported(d) && !ledger_post(g_ledger->ib, g_ledger->cfg, d->id)) failed++;
     }
     after_save(0);
     if (failed) {
@@ -596,8 +628,25 @@ static bool save_stage_report(const ledger_stage_import_t *r, char *path, size_t
   return ok;
 }
 
-// A 1CD staging file (inspect_1cd.py export-stage): accounts, catalogs, documents and postings.
+// A 1CD staging file (inspect_1cd.py export-stage): preview, then import.
 static void import_stage_file(const char *path) {
+  ledger_stage_header_t hdr;
+  if (!ledger_stage_header(path, &hdr)) {
+    message_box(g_ledger->main_win, ui_tr("Unable to read the 1C import preview."), ui_tr("Import from 1C"), MB_OK);
+    return;
+  }
+  char preview[1024];
+  char accounts[32], records[32], documents[32], movements[32], skipped[32];
+  snprintf(preview, sizeof(preview),
+    ui_tr("Configuration: %s %s\nSource: %s\n\nExtracted from 1C: %s accounts, %s catalog records, %s documents and %s movements.\nTables outside the export: %s.\n\nImport into the infobase?"),
+    hdr.config_name[0] ? hdr.config_name : ui_tr("(unknown)"), hdr.config_version,
+    hdr.source_file[0] ? hdr.source_file : path,
+    ui_format_number(hdr.accounts, 0, accounts, sizeof(accounts)),
+    ui_format_number(hdr.records, 0, records, sizeof(records)),
+    ui_format_number(hdr.documents, 0, documents, sizeof(documents)),
+    ui_format_number(hdr.movements, 0, movements, sizeof(movements)),
+    ui_format_number(hdr.skipped, 0, skipped, sizeof(skipped)));
+  if (message_box(g_ledger->main_win, preview, ui_tr("Import from 1C"), MB_YESNO) != IDYES) return;
   ledger_stage_import_t *r = calloc(1, sizeof(*r));
   char text[1024], report[LEDGER_PATH_MAX + 16];
   if (!r) return;
@@ -614,13 +663,132 @@ static void import_stage_file(const char *path) {
   free(r);
 }
 
+typedef struct {
+  ui_process_t *child;
+  uint32_t timer;
+  int exit_code;
+} ledger_1cd_reader_t;
+
+static result_t ledger_read_1cd_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  ledger_1cd_reader_t *reader = win->userdata;
+  switch (msg) {
+    case evCreate:
+      reader = win->userdata = lparam;
+      reader->timer = axSetTimer(win, 100, NULL, true);
+      return reader->timer != 0;
+    case evTimer:
+      if (reader && wparam == reader->timer && ui_process_poll(reader->child, &reader->exit_code))
+        end_dialog(win, 1);
+      return true;
+    case evCommand:
+      if (LOWORD(wparam) != ID_READ_1CD_CANCEL || HIWORD(wparam) != btnClicked) return false;
+      end_dialog(win, 0);
+      return true;
+    case evClose:
+      end_dialog(win, 0);
+      return true;
+    case evDestroy:
+      if (reader && reader->timer) axCancelTimer(reader->timer);
+      return false;
+    case evPaint: default: return false;
+  }
+}
+
+static bool convert_1cd_to_stage(const char *path_1cd, const char *manifest, char *stage_path, size_t stage_sz) {
+  char script[LEDGER_PATH_MAX * 2];
+  snprintf(script, sizeof(script), "%s/tools/inspect_1cd.py", g_ledger->share_dir);
+  if (!axPathExists(script)) snprintf(script, sizeof(script), "%s/../tools/inspect_1cd.py", g_ledger->share_dir);
+  if (!axPathExists(script)) {
+    message_box(g_ledger->main_win, ui_tr("The 1CD conversion tool (inspect_1cd.py) could not be found."), ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  static unsigned sequence;
+#ifdef _WIN32
+  const char *python = "python.exe";
+  int pid = _getpid();
+#else
+  const char *python = "python3";
+  int pid = (int)getpid();
+#endif
+  int length = snprintf(stage_path, stage_sz, "%s/.import-1cd-%d-%lld-%u.xml",
+                        g_ledger->data_dir, pid, (long long)time(NULL), ++sequence);
+  if (length < 0 || (size_t)length >= stage_sz) {
+    message_box(g_ledger->main_win, ui_tr("The import folder path is too long."), ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  char log[LEDGER_PATH_MAX + 8], partial[LEDGER_PATH_MAX + 8];
+  snprintf(log, sizeof(log), "%s.log", stage_path);
+  snprintf(partial, sizeof(partial), "%s.tmp", stage_path);
+  const char *argv[] = { python, "-I", "-B", script, "--diagnostics", log,
+                         "--", path_1cd, "export-stage", "--output", stage_path,
+                         manifest ? "--attachment-manifest" : NULL, manifest, NULL };
+  ledger_1cd_reader_t reader = { .child = ui_process_start(argv), .exit_code = -1 };
+  if (!reader.child) {
+    message_box(g_ledger->main_win, ui_tr("Python 3 could not be started. Install Python 3 or import a prepared staging XML."),
+                ui_tr("Import from 1C"), MB_OK);
+    return false;
+  }
+  bool finished = show_dialog_from_form(&ledger_read_1cd_form, NULL, g_ledger->main_win, ledger_read_1cd_proc, &reader) != 0;
+  ui_process_close(reader.child);
+  bool converted = finished && reader.exit_code == 0;
+  if (finished && !converted) {
+    char error_text[2048] = "";
+    FILE *fp = fopen(log, "rb");
+    if (fp) {
+      error_text[fread(error_text, 1, sizeof(error_text) - 1, fp)] = '\0';
+      fclose(fp);
+    }
+    char msg[2560];
+    snprintf(msg, sizeof(msg), "%s%s%s", ui_tr("The 1CD conversion failed."), error_text[0] ? "\n\n" : "", error_text);
+    message_box(g_ledger->main_win, msg, ui_tr("Import from 1C"), MB_OK);
+  }
+  remove(log);
+  remove(partial);
+  if (!converted) remove(stage_path);
+  return converted;
+}
+
+static bool pick_attachment_manifest(const char *stage_path, char *path, size_t size) {
+  ledger_stage_header_t hdr;
+  if (!ledger_stage_header(stage_path, &hdr) || !hdr.external_attachments) return false;
+  char text[512], count[32], filters[256];
+  snprintf(text, sizeof(text),
+    ui_tr("External attachment records found: %s. Select a manifest for the copied files?"),
+    ui_format_number(hdr.external_attachments, 0, count, sizeof(count)));
+  if (message_box(g_ledger->main_win, text, ui_tr("Import from 1C"), MB_YESNO) != IDYES) return false;
+  snprintf(filters, sizeof(filters), "%s%c*.json%c", ui_tr("Attachment manifests (*.json)"), 0, 0);
+  openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win,
+    .lpstrFile = path, .nMaxFile = (uint32_t)size, .lpstrFilter = filters, .Flags = OFN_FILEMUSTEXIST };
+  return get_open_filename(&ofn);
+}
+
 // Catalogs and opening balances from a 1C:Enterprise 8 exchange file, with a
-// summary of what was added, found, and left out; or a 1CD staging file.
+// summary of what was added, found, and left out; a 1CD staging file; or a
+// raw 1CD database converted to staging by inspect_1cd.py export-stage.
 static void import_from_1c(void) {
-  char path[LEDGER_PATH_MAX] = "", money_dr[32], money_cr[32], text[1024];
+  char path[LEDGER_PATH_MAX] = "", money_dr[32], money_cr[32], text[1024], filters[512];
+  snprintf(filters, sizeof(filters), "%s%c*.1cd%c%s%c*.xml%c%s%c*.*%c",
+           ui_tr("1C infobases (*.1CD)"), 0, 0, ui_tr("1C XML files (*.xml)"), 0, 0,
+           ui_tr("All Files"), 0, 0);
   openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win, .lpstrFile = path, .nMaxFile = sizeof(path),
-                         .lpstrFilter = "1C files (*.xml)\0*.xml\0All Files\0*.*\0", .Flags = OFN_FILEMUSTEXIST };
+                         .lpstrFilter = filters, .Flags = OFN_FILEMUSTEXIST };
   if (!get_open_filename(&ofn)) return;
+  // .1CD database: convert to staging XML first, then import the XML.
+  size_t plen = strlen(path);
+  bool is_1cd = plen > 4 && path[plen-4] == '.' &&
+    (path[plen-3] == '1') && (path[plen-2] == 'C' || path[plen-2] == 'c') &&
+    (path[plen-1] == 'D' || path[plen-1] == 'd');
+  if (is_1cd) {
+    char stage_path[LEDGER_PATH_MAX], manifest[LEDGER_PATH_MAX] = "";
+    if (!convert_1cd_to_stage(path, NULL, stage_path, sizeof(stage_path))) return;
+    if (pick_attachment_manifest(stage_path, manifest, sizeof(manifest))) {
+      remove(stage_path);
+      if (!convert_1cd_to_stage(path, manifest, stage_path, sizeof(stage_path))) return;
+    }
+    import_stage_file(stage_path);
+    remove(stage_path);
+    return;
+  }
   if (ledger_file_is_stage(path)) { import_stage_file(path); return; }
   ledger_import_t r;
   if (!ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, path, &r)) {
@@ -704,10 +872,75 @@ static bool ledger_ui_confirm(lua_State *L, const char *text, const char *title)
 static void ledger_ui_message(lua_State *L, const char *text, const char *title) { message_box(g_ledger->main_win, text, title, MB_OK); }
 static void ledger_ui_save(lua_State *L) {
   window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
-  if (document) db_form_save(document, false);
+  if (document) {
+    if (!ledger_document_imported(db_dialog_record(document))) db_form_save(document, false);
+  }
   else { send_db_message(g_ledger->ib, dbSave, 0, NULL); ledger_update_status(); }
 }
+static result_t reference_catalogs_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate: case evPaint: case evDestroy: return false;
+    case evCommand:
+      if (LOWORD(wparam) != ID_REFERENCE_CATALOGS_CLOSE || HIWORD(wparam) != btnClicked) return false;
+      end_dialog(win, 0);
+      return true;
+    case evClose: end_dialog(win, 0); return true;
+    default: return false;
+  }
+}
+
+static void save_imported_attachment(window_t *win, const db_import_attachment_t *file) {
+  char path[LEDGER_PATH_MAX], filters[256];
+  const char *name = file->name[0] && strcmp(file->name, ".") && strcmp(file->name, "..") ? file->name : "attachment";
+  const char *extension = strrchr(name, '.');
+  bool append_extension = file->extension[0] && (!extension || strcmp(extension + 1, file->extension));
+  snprintf(path, sizeof(path), "%s%s%s", name, append_extension ? "." : "", append_extension ? file->extension : "");
+  for (char *p = path; *p; p++)
+    if ((unsigned char)*p < 32 || strchr("/\\:\"<>|?*", *p)) *p = '_';
+  snprintf(filters, sizeof(filters), "%s%c*.*%c", ui_tr("All Files"), 0, 0);
+  openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = win, .lpstrFile = path,
+    .nMaxFile = sizeof(path), .lpstrFilter = filters, .Flags = OFN_PATHMUSTEXIST };
+  if (get_save_filename(&ofn) && !ledger_attachment_export(g_ledger->ib, file->id, path))
+    message_box(win, ui_tr("The attachment could not be saved. Check that the selected file does not already exist."),
+      ui_tr("Save Attachment"), MB_OK);
+}
+
+static result_t imported_attachments_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate:
+    case evCommand: {
+      uint32_t id = LOWORD(wparam), code = HIWORD(wparam);
+      if (msg == evCommand && id == ID_IMPORTED_ATTACHMENTS_CLOSE && code == btnClicked) {
+        end_dialog(win, 0);
+        return true;
+      }
+      window_t *files = get_window_item(win, ID_IMPORTED_ATTACHMENTS_FILES);
+      if (msg == evCommand && !(lparam == files && code == RVN_SELCHANGE) &&
+          !(id == ID_IMPORTED_ATTACHMENTS_SAVE_AS && code == btnClicked)) return false;
+      window_t *save = get_window_item(win, ID_IMPORTED_ATTACHMENTS_SAVE_AS);
+      const db_import_attachment_t *file = files ? (const db_import_attachment_t *)
+        send_message(files, tvGetSelectedRecord, 0, NULL) : NULL;
+      bool available = file && !file->unavailable[0];
+      if (save) enable_window(save, available);
+      if (msg == evCommand && id == ID_IMPORTED_ATTACHMENTS_SAVE_AS && available)
+        save_imported_attachment(win, file);
+      return msg == evCommand;
+    }
+    case evClose: end_dialog(win, 0); return true;
+    case evPaint: case evDestroy: return false;
+    default: return false;
+  }
+}
+
 static void ledger_ui_form(lua_State *L, const char *name) {
+  if (!strcmp(name, "reference_catalogs")) {
+    show_dialog_from_form(&ledger_reference_catalogs_form, NULL, g_ledger->main_win, reference_catalogs_proc, NULL);
+    return;
+  }
+  if (!strcmp(name, "imported_attachments")) {
+    show_dialog_from_form(&ledger_imported_attachments_form, NULL, g_ledger->main_win, imported_attachments_proc, NULL);
+    return;
+  }
   const form_def_t *form = !strcmp(name, "organization") ? &ledger_organization_form
                          : !strcmp(name, "report_settings") ? &ledger_report_settings_form : NULL;
   if (!form) { luaL_error(L, "unknown form '%s'", name); return; }
@@ -813,37 +1046,43 @@ static bool ledger_ui_market_supported(lua_State *L) { (void)L; return ledger_ma
 static int ledger_ui_market_preview(lua_State *L) { return ledger_market_preview(L); }
 static bool ledger_ui_market_cancel(lua_State *L) { return ledger_market_cancel(L); }
 static bool ledger_ui_market_paste(lua_State *L) { return ledger_market_paste(L); }
-static bool ledger_ui_save_print_html_as(lua_State *L, const char *html, const char *basename, const char *title) {
-  const size_t size = strlen(html);
-  if (size > 8 * 1024 * 1024 || strncmp(html, "<!doctype html>", 15))
-    return luaL_error(L, "invalid printable HTML");
+static bool ledger_ui_save_workflow_export(lua_State *L, const char *bytes, size_t size,
+    const char *basename, const char *extension, const char *description, const char *title) {
   char path[LEDGER_PATH_MAX * 2], filter[128];
   snprintf(path,sizeof(path),"%s",basename);
-  const char *description = ui_tr("Printable HTML (*.html)");
-  size_t desc_size = strlen(description);
-  if (desc_size + sizeof("*.html") + 2 > sizeof(filter)) return luaL_error(L, "print filter too long");
-  memcpy(filter, description, desc_size + 1);
-  memcpy(filter + desc_size + 1, "*.html\0", sizeof("*.html\0"));
+  size_t desc_size = strlen(ui_tr(description)), pattern_size = strlen(extension) + 1;
+  if (desc_size + pattern_size + 3 > sizeof(filter)) return luaL_error(L, "export filter too long");
+  memcpy(filter,ui_tr(description),desc_size+1);
+  snprintf(filter+desc_size+1,pattern_size+1,"*%s",extension);
+  filter[desc_size+pattern_size+2] = 0;
   openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win,
     .lpstrFile = path, .nMaxFile = sizeof(path), .lpstrFilter = filter, .Flags = OFN_PATHMUSTEXIST };
   if (!get_save_filename(&ofn)) return false;
-  const char *extension = strrchr(path, '.');
-  if (!extension || strcmp(extension, ".html"))
-    return luaL_error(L, "%s", ui_tr("Use the .html extension for the printable file."));
+  const bool html = !strcmp(extension,".html");
+  const char *actual = strrchr(path,'.');
+  if (!actual || strcmp(actual,extension))
+    return luaL_error(L,"%s",ui_tr(html ? "Use the .html extension for the printable file." :
+      "Use the .json extension for the orders snapshot."));
   if (axPathExists(path) &&
-      message_box(g_ledger->main_win, ui_tr("Replace the existing printable file?"), ui_tr(title), MB_YESNO) != IDYES)
+      message_box(g_ledger->main_win,ui_tr(html ? "Replace the existing printable file?" : "Replace the existing orders snapshot?"),ui_tr(title),MB_YESNO) != IDYES)
     return false;
-  char temporary[sizeof(path) + 8];
-  snprintf(temporary, sizeof(temporary), "%s.tmp", path);
-  FILE *file = fopen(temporary, "wbx");
-  if (!file) return luaL_error(L, "%s", ui_tr("The printable file could not be created."));
-  const bool written = fwrite(html, 1, size, file) == size;
+  char temporary[sizeof(path)+8];
+  snprintf(temporary,sizeof(temporary),"%s.tmp",path);
+  FILE *file = fopen(temporary,"wbx");
+  if (!file) return luaL_error(L,"%s",ui_tr(html ? "The printable file could not be created." : "The orders snapshot could not be created."));
+  const bool written = fwrite(bytes,1,size,file) == size;
   const bool closed = fclose(file) == 0;
-  if (!written || !closed || !file_replace(temporary, path)) {
+  if (!written || !closed || !file_replace(temporary,path)) {
     remove(temporary);
-    return luaL_error(L, "%s", ui_tr("The printable file could not be saved."));
+    return luaL_error(L,"%s",ui_tr(html ? "The printable file could not be saved." : "The orders snapshot could not be saved."));
   }
   return true;
+}
+static bool ledger_ui_save_print_html_as(lua_State *L, const char *html, const char *basename, const char *title) {
+  const size_t size = strlen(html);
+  if (size > 8 * 1024 * 1024 || strncmp(html,"<!doctype html>",15))
+    return luaL_error(L,"invalid printable HTML");
+  return ledger_ui_save_workflow_export(L,html,size,basename,".html","Printable HTML (*.html)",title);
 }
 static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
   return ledger_ui_save_print_html_as(L,html,"item-labels.html","Print Item Labels");
@@ -851,6 +1090,11 @@ static bool ledger_ui_save_print_html(lua_State *L, const char *html) {
 static bool ledger_ui_market_save(lua_State *L) {
   const char *html = ledger_market_printable(L);
   return html && ledger_ui_save_print_html_as(L,html,"marketplace-pick-list.html","Marketplaces");
+}
+static bool ledger_ui_market_export(lua_State *L) {
+  const char *snapshot = ledger_market_snapshot(L);
+  return snapshot && ledger_ui_save_workflow_export(L,snapshot,strlen(snapshot),
+    "marketplace-orders.json",".json","Marketplace orders (*.json)","Marketplaces");
 }
 static void ledger_ui_assistant(lua_State *L) { ledger_open_assistant(); }
 static void ledger_ui_help(lua_State *L) {

@@ -51,4 +51,6 @@
   <string source="Paste" where="marketplace">Вставить</string>
   <string source="Clipboard paste is unavailable. Enter the credential in the masked field." where="marketplace">Вставка из буфера недоступна. Введите ключ или токен в скрытое поле.</string>
   <string source="Marketplace connections are unavailable in this build." where="marketplace">Подключение к маркетплейсам недоступно в этой сборке.</string>
+  <string source="Save Orders Snapshot..." where="marketplace">Сохранить выгрузку заказов…</string>
+  <string source="Orders snapshot saved." where="marketplace">Выгрузка заказов сохранена.</string>
 </strings>

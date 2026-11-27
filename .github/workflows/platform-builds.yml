@@ -170,6 +170,7 @@ jobs:
           ./scener/bin/scener.exe --list-exporters > exporters.txt
           grep -q '^obj[[:space:]]' exporters.txt
           grep -q '^glb[[:space:]]' exporters.txt
+          python -I -B ledger/share/ledger/tools/inspect_1cd.py --help
       - name: Verify the macOS downloads
         if: runner.os == 'macOS'
         run: |
@@ -183,6 +184,7 @@ jobs:
           Scener.app/Contents/MacOS/scener --list-exporters > exporters.txt
           grep -q '^obj[[:space:]]' exporters.txt
           grep -q '^glb[[:space:]]' exporters.txt
+          python3 -I -B "$RUNNER_TEMP/try-macos/Ledger.app/Contents/Resources/share/ledger/tools/inspect_1cd.py" --help
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version != '' && 'packages' || 'downloads' }}-${{ matrix.platform }}

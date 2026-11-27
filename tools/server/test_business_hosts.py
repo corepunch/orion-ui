@@ -113,6 +113,17 @@ class LedgerHostTests(unittest.TestCase):
                         self.assertTrue(result['ok'], result)
                         return result['result']
                     self.assertTrue(call('maintenance.upgrade', role='admin')['validated'])
+                    revision_before = company.status()['revision']
+                    for role in ('admin', 'accountant', 'auditor'):
+                        profile = call('capabilities.list', role=role)
+                        self.assertEqual(profile['profile'], 'ledger.accounting')
+                        self.assertEqual(
+                            {c['id']: c['mode'] for c in profile['commands']},
+                            {command: 'read' if command in server.READS else 'write'
+                             for command, roles in server.POLICIES['ledger'].items()
+                             if role in roles and command not in ('maintenance.upgrade', 'capabilities.list')},
+                        )
+                    self.assertEqual(company.status()['revision'], revision_before)
                     party = call('counterparties.save', {'fields': {'name': 'Small trade test', 'country_code': country}})
                     vat_rates = call('catalogs.list', {'table': 'vat_rates'})
                     types = call('catalogs.list', {'table': 'doc_types'})
@@ -121,6 +132,11 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertTrue(types)
                     self.assertTrue(party)
                     item = call('items.save', {'fields': {'name': 'Test product', 'sku': 'TEST-1', 'unit_id': 1, 'vat_rate_id': vat_rates[0]['id']}})
+                    revision_before = company.status()['revision']
+                    balance = call('stock.balance', {'item_id': item['id'], 'warehouse_id': 0}, role='auditor')
+                    self.assertEqual(balance, {'item_id': item['id'], 'warehouse_id': 0, 'on_hand_milli': '0',
+                                               'reserved_milli': '0', 'available_milli': '0'})
+                    self.assertEqual(company.status()['revision'], revision_before)
                     call('counterparties.save', {'id': party['id'], 'fields': {'name': 'Updated party', 'tax_id': 'TEST'}})
                     call('items.save', {'id': item['id'], 'fields': {'name': 'Updated product', 'sku': 'TEST-2', 'unit_id': 1, 'vat_rate_id': vat_rates[0]['id']}})
                     updated_party = next(row for row in call('catalogs.list', {'table': 'counterparties'}) if row['id'] == party['id'])

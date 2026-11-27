@@ -4,6 +4,8 @@
 #include "apps/ledger/marketplace_host.h"
 #include "apps/ledger/tests/test_databases.h"
 #include <stdatomic.h>
+#include <lauxlib.h>
+#include <lualib.h>
 
 #define MARKET_SHARE "apps/ledger/share"
 static ledger_t market_fixture;
@@ -61,6 +63,24 @@ static bool market_result_has(script_page_t *page,const char *needle) {
   send_message(script_page_control(page,"results"),edGetText,sizeof(text),text);
   return strstr(text,needle)!=NULL;
 }
+static bool market_workbench_accepts(const char *snapshot) {
+  lua_State *L=luaL_newstate();
+  if (!L) return false;
+  luaL_openlibs(L);
+  lua_pushstring(L,snapshot);
+  lua_setglobal(L,"snapshot");
+  const int result=luaL_dostring(L,
+    "local json=dofile('share/lua/orion/json.lua');"
+    "local workbench=dofile('apps/ledger/share/addons/marketplaces/reconciliation.lua');"
+    "local state=workbench.new();"
+    "local data=json.decode(snapshot);"
+    "assert(workbench.sync(state,data,nil,json).inserted==1);"
+    "assert(workbench.sync(state,data,nil,json).unchanged==1);"
+    "assert(workbench.report(state,json).orders[1].lines[1].issue=='unresolved_sku');");
+  if (result!=LUA_OK) fprintf(stderr,"[ledger/workbench] %s\n",lua_tostring(L,-1));
+  lua_close(L);
+  return result==LUA_OK;
+}
 static void test_market_dialog(void) {
   TEST("marketplace native menu route and packaged form: fetch, isolated key, preview, change provider, cancel");
   bool routed=false;
@@ -69,7 +89,7 @@ static void test_market_dialog(void) {
   ASSERT_TRUE(routed);
   ASSERT_TRUE(ledger_ui_open(MARKET_SHARE));
   script_page_t *page=ledger_market_test_open(MARKET_SHARE,"share/lua/orion/json.lua",market_fake);
-  ASSERT_TRUE(page && script_page_control(page,"secret") && script_page_control(page,"fetch"));
+  ASSERT_TRUE(page && script_page_control(page,"secret") && script_page_control(page,"fetch") && script_page_control(page,"export"));
   market_set(page,"account","test-shop");
   market_set(page,"client_id","123");
   market_enter_key(page);
@@ -79,11 +99,17 @@ static void test_market_dialog(void) {
   ASSERT(!secret[0] && !strstr(edit->title,market_key),"generic edit read and title do not expose the key");
   ASSERT_TRUE(script_page_perform(page,"fetch"));
   ASSERT_NULL(ledger_market_test_html(page));
+  ASSERT_NULL(ledger_market_test_snapshot(page));
   ASSERT_TRUE(ledger_market_test_wait(page));
   ASSERT_EQUAL(atomic_load(&market_calls),3);
   ASSERT(!atomic_load(&market_bad),"worker used only the expected authenticated endpoints");
   ASSERT_TRUE(market_result_has(page,"ORDER-01"));
   ASSERT_TRUE(market_result_has(page,"available=4"));
+  const char *snapshot=ledger_market_test_snapshot(page);
+  ASSERT(snapshot && strstr(snapshot,"\"observed_at\"") && strstr(snapshot,"\"id\":\"ORDER-01\"")
+      && strstr(snapshot,"\"availability\":[]") && strstr(snapshot,"\"mode\":\"orders\"") &&
+      !strstr(snapshot,market_key),"snapshot contains sanitized, timestamped orders only");
+  ASSERT_TRUE(market_workbench_accepts(snapshot));
   ASSERT_NULL(ledger_market_test_html(page));
   ASSERT_TRUE(script_page_perform(page,"preview"));
   ASSERT_TRUE(market_result_has(page,"ozon/production/test-shop/ORDER-01"));
@@ -98,7 +124,11 @@ static void test_market_dialog(void) {
   ASSERT_TRUE(script_page_perform(page,"preview"));
   ASSERT_TRUE(market_result_has(page,"ebay/sandbox/test-shop/EBAY-1"));
   ASSERT(!market_result_has(page,"SECRET BUYER"),"buyer data is omitted");
+  snapshot=ledger_market_test_snapshot(page);
+  ASSERT(snapshot && strstr(snapshot,"EBAY-1") && !strstr(snapshot,"SECRET BUYER") &&
+      !strstr(snapshot,market_key),"handoff excludes provider secrets and buyer data");
   market_set(page,"account","changed-shop");
+  ASSERT(!script_page_perform(page,"export"),"edited options block the snapshot save action");
   ASSERT(!script_page_perform(page,"save"),"edited options make result stale");
   atomic_store(&market_delay,true);
   market_enter_key(page);

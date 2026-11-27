@@ -51,4 +51,6 @@
   <string source="Paste" where="marketplace">Einfügen</string>
   <string source="Clipboard paste is unavailable. Enter the credential in the masked field." where="marketplace">Einfügen aus der Zwischenablage ist nicht verfügbar. Geben Sie die Zugangsdaten in das maskierte Feld ein.</string>
   <string source="Marketplace connections are unavailable in this build." where="marketplace">Marktplatzverbindungen sind in diesem Build nicht verfügbar.</string>
+  <string source="Save Orders Snapshot..." where="marketplace">Bestellungen exportieren…</string>
+  <string source="Orders snapshot saved." where="marketplace">Bestellungen gespeichert.</string>
 </strings>

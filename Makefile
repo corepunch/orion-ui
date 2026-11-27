@@ -511,6 +511,9 @@ share: $(HELP_BOOKS) | $(SHARE_DIR)
 	  cp -R $$dir/. $(SHARE_DIR)/$$name/$$variant/; \
 	done
 	@cp $(LEDGER_ASSISTANT_VOCABULARY) $(SHARE_DIR)/ledger/addons/assistant/vocabulary.lua
+	@mkdir -p $(SHARE_DIR)/ledger/tools/vendor/onecreader
+	@cp $(APPS)/ledger/tools/inspect_1cd.py $(APPS)/ledger/tools/onecd_*.py $(SHARE_DIR)/ledger/tools/
+	@cp $(APPS)/ledger/tools/vendor/onecreader/*.py $(APPS)/ledger/tools/vendor/onecreader/LICENSE $(SHARE_DIR)/ledger/tools/vendor/onecreader/
 
 # ── Core libraries ───────────────────────────────────────────────────────
 library: $(CORE_LIBS)
@@ -689,6 +692,8 @@ test: share $(TEST_BINS) lua-docs-check launch-check $(if $(filter Darwin,$(UNAM
 	@echo "Running tests..."
 	python3 apps/ledger/tests/test_1cd_extract.py
 	python3 apps/ledger/tests/test_1cd_stage.py
+	python3 apps/ledger/tests/test_1c_reconcile.py
+	python3 apps/ledger/tests/provider_exchange_test.py
 	@$(COPY_DLLS)
 	@for t in $(TEST_BINS); do \
 	    echo "Running $$t..."; \

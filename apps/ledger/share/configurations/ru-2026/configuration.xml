@@ -115,6 +115,7 @@
     <vat_rate id="5" code="standard_2025" treatment="standard" valid_to="2025-12-31" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="20% (до 2026)" rate="20"/>
     <vat_rate id="6" code="usn_5" treatment="reduced" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="5% (УСН)" rate="5"/>
     <vat_rate id="7" code="usn_7" treatment="reduced" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="7% (УСН)" rate="7"/>
+    <vat_rate id="8" code="standard_2018" treatment="standard" valid_from="2004-01-01" valid_to="2018-12-31" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="18%" rate="18"/>
   </vat_rates>
   <doc_types>
     <doc_type id="1" debit_id="22" credit_id="34" vat_debit_id="16" vat_credit_id="34" cost_debit_id="0" cost_credit_id="0" code="receipt" name="Поступление товаров" prefix="ПТ-" form="document" base="net" vat_book="2" auto_accounts="0" script="" description="Товары от поставщика по УПД или накладной и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС."/>
@@ -171,6 +172,29 @@
     <balance_rule id="9" account_id="22" currency_account_id="0" document="ОстаткиСобственныхТМЦ" credit="0"/>
     <balance_rule id="10" account_id="42" currency_account_id="0" document="ОстаткиРасчетовПоКредитамЗаймам" credit="1"/>
   </balance_rules>
+  <import_documents>
+    <import_document id="1" source_type="Документ.ПоступлениеТоваровУслуг"      doc_type_id="1"/>
+    <import_document id="2" source_type="Документ.РеализацияТоваровУслуг"       doc_type_id="2"/>
+    <import_document id="3" source_type="Документ.ПоступлениеУслуг"             doc_type_id="3"/>
+    <import_document id="4" source_type="Документ.ПриходныйКассовыйОрдер"       doc_type_id="4"/>
+    <import_document id="5" source_type="Документ.РасходныйКассовыйОрдер"       doc_type_id="5"/>
+    <import_document id="6" source_type="Документ.ПлатежноеПоручениеИсходящее"   doc_type_id="6"/>
+    <import_document id="7" source_type="Документ.ПоступлениеНаРасчетныйСчет"    doc_type_id="7"/>
+    <import_document id="8"  source_type="Документ.СписаниеСРасчетногоСчета"      doc_type_id="6"/>
+    <import_document id="9"  source_type="Документ.ВводНачальныхОстатков"                   doc_type_id="10"/>
+    <import_document id="10" source_type="Документ.СчетНаОплатуПокупателю"                  doc_type_id="9"/>
+    <import_document id="11" source_type="Документ.ТребованиеНакладная"                     doc_type_id="9"/>
+    <import_document id="12" source_type="Документ.ИнвентаризацияТоваров"                   doc_type_id="9"/>
+    <import_document id="13" source_type="Документ.ПеремещениеТоваров"                      doc_type_id="9"/>
+    <import_document id="14" source_type="Документ.СчетФактураВыданный"                     doc_type_id="9"/>
+    <import_document id="15" source_type="Документ.СчетФактураПолученный"                   doc_type_id="9"/>
+    <import_document id="16" source_type="Документ.КорректировочныйСчетФактураВыданный"     doc_type_id="9"/>
+    <import_document id="17" source_type="Документ.КорректировочныйСчетФактураПолученный"   doc_type_id="9"/>
+    <import_document id="18" source_type="Документ.РегламентнаяОперация"                    doc_type_id="9"/>
+    <import_document id="19" source_type="Документ.ПринятиеКУчетуОС"                       doc_type_id="14"/>
+    <import_document id="20" source_type="Документ.НачислениеЗарплаты"                      doc_type_id="11"/>
+    <import_document id="21" source_type="Документ.ВедомостьНаВыплатуЗарплатыВКассу" doc_type_id="12"/>
+  </import_documents>
   <print_forms>
     <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="vat-invoice.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 23.01.2026 № 26); ФНС от 26.12.2025 № СД-4-3/11730@"/>
     <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="universal-transfer-document.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>

@@ -69,6 +69,7 @@
     <function name="market_cancel" lua="true" export="market_cancel"><returns type="bool" /></function>
     <function name="market_paste" lua="true" export="market_paste"><returns type="bool" /></function>
     <function name="market_save" lua="true" export="market_save"><returns type="bool" /></function>
+    <function name="market_export" lua="true" export="market_export"><returns type="bool" /></function>
     <function name="recipe_file" lua="true" export="recipe_file">
       <returns type="nresults" />
     </function>

@@ -25,6 +25,7 @@
       <item name="language" label="Language..." />
       <Separator />
       <item name="import_1c" label="Import from 1C..." />
+      <item name="imported_attachments" label="Imported Attachments..." />
       <item name="recipes" label="Automation Recipes..." />
       <item name="marketplace" label="Marketplaces..." />
       <item name="addon" label="Open Add-on..." />
@@ -84,6 +85,8 @@
       <item name="new_warehouse" label="New Warehouse..." />
       <item name="edit_warehouse" label="Edit Warehouse..." />
       <item name="delete_warehouse" label="Delete Warehouse..." />
+      <Separator />
+      <item name="reference" label="Imported Catalogs..." />
     </menu>
     <menu name="view" label="View">
       <item name="back" label="Back" shortcut="Alt+Left" />
@@ -182,6 +185,7 @@
         <Button command="catalog.new_bank_account" icon="ledger-payroll" text="New" size="large" tooltip="New bank account" />
         <Button command="catalog.edit_bank_account" icon="ledger-edit" text="Edit" tooltip="Edit bank account" />
         <Button command="catalog.delete_bank_account" icon="ledger-delete" text="Delete" tooltip="Delete bank account" />
+        <Button command="catalog.reference" text="Imported Catalogs" />
       </Group>
       <Group label="Items">
         <Button command="catalog.new_item" icon="ledger-nav-items" text="New" size="large" tooltip="New item" />
@@ -632,6 +636,7 @@
         <field name="vat_verified_on" type="date" />
         <field name="vat_verification_reference" type="string" length="256" />
         <field name="name" type="string" length="160" />
+        <field name="full_name" type="string" length="256" />
         <field name="tax_id" type="string" length="16" />
         <field name="kpp" type="string" length="16" />
         <field name="address" type="string" length="256" />
@@ -645,6 +650,7 @@
         <field name="unit_id" type="integer" relation="cfg.units.id" />
         <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
         <field name="sku" type="string" length="16" />
+        <field name="kind" type="string" length="16" />
         <field name="name" type="string" length="160" />
         <field name="price" type="double" />
       </table>
@@ -656,7 +662,9 @@
         <field name="name" type="string" length="128" />
         <field name="position" type="string" length="96" />
         <field name="tax_id" type="string" length="16" />
+        <field name="birth_date" type="date" />
         <field name="hired" type="date" default="today" />
+        <field name="department" type="string" length="128" />
         <field name="salary" type="double" />
         <field name="allowance" type="double" />
       </table>
@@ -672,6 +680,7 @@
         <field name="cost" type="double" />
         <field name="life" type="integer" default="36" />
         <field name="commissioned" type="date" />
+        <field name="depreciation_method" type="string" length="24" />
       </table>
       <table name="currencies">
         <field name="id" type="integer" key="YES" />
@@ -689,12 +698,14 @@
       <table name="contracts">
         <field name="id" type="integer" key="YES" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
+        <field name="organization_id" type="integer" relation="organizations.id" on-delete="deny" />
         <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
         <field name="number" type="string" length="32" />
         <field name="date" type="date" default="today" />
         <field name="name" type="string" length="160" />
         <field name="kind" type="string" length="16" />
         <field name="valid_until" type="date" />
+        <field name="subject" type="string" length="256" />
         <field name="comment" type="string" length="256" />
       </table>
       <!-- Bank accounts of the organization or of a counterparty (1C Банковские счета). -->
@@ -709,6 +720,7 @@
         <field name="bik" type="string" length="16" />
         <field name="swift" type="string" length="16" />
         <field name="corr_account" type="string" length="64" />
+        <field name="bank_id" type="integer" relation="banks.id" on-delete="deny" />
       </table>
       <!-- Warehouses (1C Склады). kind: wholesale, retail, ... -->
       <table name="warehouses">
@@ -759,6 +771,8 @@
         <field name="guid" type="string" length="64" />
         <field name="table_name" type="string" length="32" />
         <field name="record_id" type="integer" />
+        <field name="catalog_folder_id" type="integer" relation="import_catalog_folders.id" on-delete="nullify" />
+        <field name="source_deleted" type="boolean" />
       </table>
       <!-- Amounts are in the document's currency; posting converts them at
            its rate (the rate on the document date when left empty). -->
@@ -785,6 +799,7 @@
         <field name="bank_account_id" type="integer" relation="bank_accounts.id" on-delete="deny" />
         <field name="number" type="string" length="24" />
         <field name="date" type="date" default="today" />
+        <field name="time" type="string" length="9" />
         <field name="comment" type="string" length="256" />
         <field name="import_source" type="string" length="65" />
         <field name="correction_of" type="integer" relation="documents.id" on-delete="deny" />
@@ -797,6 +812,7 @@
         <field name="vat_minor" type="int64" />
         <field name="total_minor" type="int64" />
         <field name="posted" type="boolean" />
+        <field name="source_posted_state" type="string" length="12" />
       </table>
       <table name="doc_lines">
         <field name="id" type="integer" key="YES" />
@@ -870,6 +886,18 @@
         <field name="credit_tax_minor" type="int64" />
         <field name="credit_permanent_minor" type="int64" />
         <field name="credit_temporary_minor" type="int64" />
+        <field name="source_line" type="integer" />
+        <field name="source_inactive" type="boolean" />
+        <field name="source_period" type="string" length="24" />
+        <field name="debit_quantity_set" type="boolean" />
+        <field name="credit_quantity_set" type="boolean" />
+        <field name="debit_quantity_milli" type="int64" />
+        <field name="credit_quantity_milli" type="int64" />
+        <field name="source_currencies_set" type="boolean" />
+        <field name="debit_currency_id" type="integer" relation="currencies.id" />
+        <field name="credit_currency_id" type="integer" relation="currencies.id" />
+        <field name="debit_currency_amount" type="double" />
+        <field name="credit_currency_amount" type="double" />
       </table>
       <!-- A monotonic accounting close boundary, inclusive. -->
       <table name="period_locks">
@@ -934,6 +962,7 @@
       <table name="report_settings">
         <field name="id" type="integer" key="YES" />
         <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="subconto_slot" type="integer" default="1" />
         <field name="date_from" type="date" />
         <field name="date_to" type="date" />
       </table>
@@ -954,7 +983,8 @@
         <field name="id" type="integer" key="YES" />
         <field name="document_id" type="integer" relation="documents.id" />
         <field name="account_id" type="integer" relation="cfg.accounts.id" />
-        <field name="subconto_id" type="integer" relation="ib.{account.subconto_kind.table}.id" />
+        <field name="subconto_kind_id" type="integer" relation="cfg.subconto_kinds.id" />
+        <field name="subconto_id" type="integer" relation="ib.{subconto_kind.table}.id" />
         <field name="corr_id" type="integer" relation="cfg.accounts.id" />
         <field name="date" type="date" />
         <field name="debit" type="double" />
@@ -965,7 +995,8 @@
       <table name="analysis_rows" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="account_id" type="integer" relation="cfg.accounts.id" />
-        <field name="subconto_id" type="integer" relation="ib.{account.subconto_kind.table}.id" />
+        <field name="subconto_kind_id" type="integer" relation="cfg.subconto_kinds.id" />
+        <field name="subconto_id" type="integer" relation="ib.{subconto_kind.table}.id" />
         <field name="opening_dr" type="double" />
         <field name="opening_cr" type="double" />
         <field name="debit_turnover" type="double" />
@@ -1116,6 +1147,87 @@
         <field name="amount_minor" type="int64" />
         <field name="vat_minor" type="int64" />
         <field name="total_minor" type="int64" />
+      </table>
+      <table name="import_attachments">
+        <field name="id" type="integer" key="YES" />
+        <field name="guid" type="string" length="64" />
+        <field name="metadata" type="string" length="128" />
+        <field name="owner_guid" type="string" length="64" />
+        <field name="owner_type" type="string" length="128" />
+        <field name="name" type="string" length="512" />
+        <field name="extension" type="string" length="64" />
+        <field name="size" type="int64" />
+        <field name="sha256" type="string" length="65" />
+        <field name="unavailable" type="string" length="256" />
+        <field name="volume_guid" type="string" length="64" />
+      </table>
+      <table name="import_attachment_chunks">
+        <field name="id" type="integer" key="YES" />
+        <field name="attachment_id" type="integer" relation="import_attachments.id" on-delete="cascade" />
+        <field name="ordinal" type="integer" />
+        <field name="data" type="string" length="2045" />
+      </table>
+      <table name="import_snapshots">
+        <field name="id" type="integer" key="YES" />
+        <field name="source_file" type="string" length="256" />
+        <field name="source_size" type="string" length="20" />
+        <field name="source_sha256" type="string" length="65" />
+        <field name="format_version" type="string" length="16" />
+        <field name="locale" type="string" length="8" />
+        <field name="config_name" type="string" length="64" />
+        <field name="config_version" type="string" length="16" />
+        <field name="imported_date" type="date" default="today" />
+      </table>
+      <table name="banks">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="160" />
+        <field name="bik" type="string" length="16" />
+        <field name="swift" type="string" length="16" />
+        <field name="corr_account" type="string" length="32" />
+        <field name="city" type="string" length="128" />
+      </table>
+      <table name="departments">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="160" />
+        <field name="code" type="string" length="32" />
+        <field name="organization_id" type="integer" relation="organizations.id" on-delete="deny" />
+      </table>
+      <table name="import_document_details">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
+        <field name="section_name" type="string" length="96" />
+        <field name="line_number" type="integer" />
+        <field name="field_name" type="string" length="96" />
+        <field name="value_type" type="string" length="24" />
+        <field name="value" type="string" length="512" />
+        <field name="reference_type" type="string" length="96" />
+        <field name="reference_guid" type="string" length="40" />
+        <field name="is_empty" type="boolean" />
+        <field name="is_dangling" type="boolean" />
+      </table>
+      <table name="ext_units">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="8" />
+        <field name="name" type="string" length="32" />
+      </table>
+      <table name="import_catalog_folders">
+        <field name="id" type="integer" key="YES" />
+        <field name="metadata" type="string" length="96" />
+        <field name="name" type="string" length="160" />
+        <field name="code" type="string" length="32" />
+        <field name="parent_id" type="integer" relation="import_catalog_folders.id" on-delete="nullify" />
+      </table>
+      <!-- Append-only physical stock operation journal. Monetary postings remain in entries. -->
+      <table name="stock_operations">
+        <field name="id" type="integer" key="YES" />
+        <field name="action" type="integer" />
+        <field name="source_key" type="string" length="160" />
+        <field name="item_id" type="integer" relation="items.id" on-delete="deny" />
+        <field name="warehouse_id" type="integer" relation="warehouses.id" on-delete="deny" />
+        <field name="destination_id" type="integer" relation="warehouses.id" on-delete="deny" />
+        <field name="quantity_milli" type="int64" />
+        <field name="original_id" type="integer" relation="stock_operations.id" on-delete="deny" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="deny" />
       </table>
     </database>
   </databases>
@@ -1355,7 +1467,7 @@
             <Column field="address" title="Address" width="0" />
           </TableView>
           <SplitView name="counterparty_detail_split" orientation="horizontal" split-ratio="0.5" flags="flexspace">
-            <TableView name="contracts" text="Contracts" source="ib.contracts" form="contract" flags="nofill,vscroll,flexspace">
+            <TableView name="contracts" text="Contracts" source="ib.contracts" form="contract" master="counterparties" master-field="counterparty_id" flags="nofill,vscroll,flexspace">
               <Column field="date" title="Date" width="84" />
               <Column field="number" title="Number" width="72" />
               <Column field="name" title="Name" width="0" min-width="100" />
@@ -1562,6 +1674,7 @@
             <Column field="balance" title="Balance" width="86" />
           </TableView>
           <TableView name="analysis" zeros="blank" text="Account Analysis" source="ib.analysis_rows" flags="notitle,nofill,vscroll">
+            <Column field="subconto_kind.name" title="Analytics kind" width="115" />
             <Column field="subconto.name" title="Analytics" width="0" min-width="140" />
             <Column field="opening_dr" title="Opening Dr" width="86" total="sum" />
             <Column field="opening_cr" title="Opening Cr" width="86" total="sum" />
@@ -1791,8 +1904,8 @@
             <Space name="number_flex" />
           </StackView>
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
-          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" />
-          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" />
+          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" master="counterparty" filter-field="counterparty_id" />
+          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" master="counterparty" filter-field="counterparty_id" filter-value="0" />
         </Column>
         <Column name="labels2" width="auto">
           <Label name="lbl_type" text="Document:" />
@@ -2121,6 +2234,14 @@
       </StackView>
     </form>
 
+    <form name="read_1cd" title="Read 1C Infobase" focus="cancel" width="440" spacing="8" padding="8">
+      <Label text="Reading the 1C copy and preparing an import preview." />
+      <StackView orientation="horizontal">
+        <Space />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
     <form name="lock_period" title="Close Accounting Period" focus="date" width="520" spacing="6" padding="8">
       <Label text="Closing is permanent. Reversals must use a later open date." />
       <GridView spacing="4"><Column width="auto"><Label text="Close through:" /></Column><Column><TextBox name="date" /></Column></GridView>
@@ -2153,8 +2274,124 @@
       </StackView>
     </form>
 
+    <form name="imported_document" title="Imported Document" width="1000" height="570" spacing="8" padding="8">
+      <StackView name="heading" orientation="horizontal" spacing="8">
+        <Label name="caption" font="title" />
+        <Badge name="source_state" icon="ledger-doc-posted" color="info" />
+      </StackView>
+      <GridView name="header" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_contract" text="Contract:" />
+        </Column>
+        <Column name="values">
+          <Label name="date" field="ib.documents.date" />
+          <Label name="counterparty" />
+          <Label name="contract" />
+        </Column>
+        <Column name="labels2" width="auto">
+          <Label name="lbl_warehouse" text="Warehouse:" />
+          <Label name="lbl_bank" text="Bank account:" />
+          <Label name="lbl_reference" text="Payment reference:" />
+        </Column>
+        <Column name="values2">
+          <Label name="warehouse" />
+          <Label name="bank_account" />
+          <Label name="payment_reference" field="ib.documents.payment_reference" />
+        </Column>
+      </GridView>
+      <TabView name="history" flags="flexspace">
+        <TableView name="postings" text="Entries" source="ib.entries" zeros="blank" flags="nofill,vscroll,WINDOW_HSCROLL,flexspace">
+          <Column field="date" title="Date" width="90" />
+          <Column field="debit.code" title="Dr" width="56" />
+          <Column field="debit_subconto.name" title="Dr Analytics 1" width="104" />
+          <Column field="debit_subconto2.name" title="Dr Analytics 2" width="104" />
+          <Column field="debit_subconto3.name" title="Dr Analytics 3" width="104" />
+          <Column field="credit.code" title="Cr" width="56" />
+          <Column field="credit_subconto.name" title="Cr Analytics 1" width="104" />
+          <Column field="credit_subconto2.name" title="Cr Analytics 2" width="104" />
+          <Column field="credit_subconto3.name" title="Cr Analytics 3" width="104" />
+          <Column field="amount" title="Amount" width="96" />
+          <Column field="debit_quantity" title="Dr Quantity" width="95" />
+          <Column field="credit_quantity" title="Cr Quantity" width="95" />
+          <Column field="debit_currency.code" title="Dr Currency" width="85" />
+          <Column field="debit_currency_amount" title="Dr Currency Amount" width="118" />
+          <Column field="credit_currency.code" title="Cr Currency" width="85" />
+          <Column field="credit_currency_amount" title="Cr Currency Amount" width="118" />
+          <Column field="source_line" title="Source Line" width="80" />
+          <Column field="content" title="Content" width="180" />
+          <RowIcon field="source_inactive" value="true" icon="ledger-doc-draft" color="warning" />
+        </TableView>
+        <TableView name="lines" text="Lines" source="ib.doc_lines" zeros="blank" flags="nofill,vscroll,flexspace">
+          <Column field="item.name" title="Item" width="0" min-width="120" />
+          <Column field="quantity" title="Qty" width="64" />
+          <Column field="price" title="Price" width="80" />
+          <Column field="amount" title="Amount" width="90" />
+          <Column field="vat" title="Tax Amount" width="84" />
+          <Column field="total" title="Total" width="90" />
+        </TableView>
+        <TableView name="details" text="Source Details" source="ib.import_document_details" flags="nofill,vscroll,WINDOW_HSCROLL,flexspace">
+          <Column field="section_name" title="Section" width="200" />
+          <Column field="line_number" title="Line" width="54" />
+          <Column field="field_name" title="Field" width="200" />
+          <Column field="value" title="Value" width="200" />
+          <Column field="value_type" title="Type" width="90" />
+          <Column field="reference_type" title="Reference Type" width="190" />
+          <Column field="reference_guid" title="Source ID" width="250" />
+        </TableView>
+      </TabView>
+      <StackView name="footer" orientation="horizontal" spacing="8">
+        <Label name="comment" field="ib.documents.comment" flags="flexspace" />
+        <Label name="lbl_total" text="Total:" />
+        <Label name="total" field="ib.documents.total" font="title" />
+      </StackView>
+    </form>
+
+    <form name="imported_attachments" title="Imported Attachments" width="680" height="360" spacing="8" padding="8">
+      <TableView name="files" source="ib.import_attachments" frame="true" flags="nofill,vscroll,flexspace">
+        <Column field="name" title="File Name" width="0" min-width="180" />
+        <Column field="extension" title="Extension" width="74" />
+        <Column field="owner_type" title="Owner Type" width="230" />
+        <Column field="size" title="Size (bytes)" width="95" />
+        <Column field="unavailable" title="Unavailable" width="88" />
+      </TableView>
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space />
+        <Button name="save_as" text="Save As..." flags="BUTTON_DEFAULT" />
+        <Button name="close" text="Close" />
+      </StackView>
+    </form>
+
+    <form name="reference_catalogs" title="Imported Catalogs" width="690" height="400" spacing="8" padding="8">
+      <TabView name="catalogs" flags="flexspace">
+        <TableView name="banks" text="Banks" source="ib.banks" flags="nofill,vscroll,flexspace">
+          <Column field="name" title="Name" width="0" min-width="160" />
+          <Column field="bik" title="BIK" width="85" />
+          <Column field="swift" title="SWIFT" width="80" />
+          <Column field="corr_account" title="Correspondent Account" width="160" />
+          <Column field="city" title="City" width="0" min-width="80" />
+        </TableView>
+        <TableView name="departments" text="Departments" source="ib.departments" flags="nofill,vscroll,flexspace">
+          <Column field="code" title="Code" width="100" />
+          <Column field="name" title="Name" width="0" min-width="120" />
+          <Column field="organization.name" title="Organization" width="0" min-width="160" />
+        </TableView>
+        <TableView name="folders" text="Catalog Folders" source="ib.import_catalog_folders" flags="nofill,vscroll,flexspace">
+          <Column field="metadata" title="Catalog" width="0" min-width="150" />
+          <Column field="code" title="Code" width="96" />
+          <Column field="name" title="Folder" width="0" min-width="130" />
+          <Column field="parent.name" title="Parent Folder" width="0" min-width="130" />
+        </TableView>
+      </TabView>
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space />
+        <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
+      </StackView>
+    </form>
+
     <!-- Manual operation: the accountant types the entries themselves. -->
-    <form name="operation" title="Manual Operation" width="680" height="520" spacing="6" padding="8">
+    <form name="operation" title="Manual Operation" width="900" height="520" spacing="6" padding="8">
       <GridView name="header" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_type" text="Operation:" />
@@ -2171,17 +2408,21 @@
           <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
           <TextBox name="date" field="ib.documents.date" />
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
-          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" />
+          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" master="counterparty" filter-field="counterparty_id" />
           <ComboBox name="warehouse" field="ib.documents.warehouse_id" source="ib.warehouses" display="name" value="id" />
-          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" />
+          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" master="counterparty" filter-field="counterparty_id" filter-value="0" />
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="entries" zeros="blank" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="entries" zeros="blank" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,WINDOW_HSCROLL,flexspace">
         <Column field="debit.code" title="Dr" width="56" />
-        <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
+        <Column field="debit_subconto.name" title="Dr Analytics 1" width="96" />
+        <Column field="debit_subconto2.name" title="Dr Analytics 2" width="96" />
+        <Column field="debit_subconto3.name" title="Dr Analytics 3" width="96" />
         <Column field="credit.code" title="Cr" width="56" />
-        <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
+        <Column field="credit_subconto.name" title="Cr Analytics 1" width="96" />
+        <Column field="credit_subconto2.name" title="Cr Analytics 2" width="96" />
+        <Column field="credit_subconto3.name" title="Cr Analytics 3" width="96" />
         <Column field="quantity" title="Qty" width="64" />
         <Column field="amount" title="Amount" width="90" />
         <Column field="content" title="Content" width="0" />
@@ -2210,9 +2451,13 @@
       <GridView name="fields" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_debit" text="Debit:" />
-          <Label name="lbl_debit_subconto" text="Debit analytics:" />
+          <Label name="lbl_debit_subconto" text="Debit analytics 1:" />
+          <Label name="lbl_debit_subconto2" text="Debit analytics 2:" />
+          <Label name="lbl_debit_subconto3" text="Debit analytics 3:" />
           <Label name="lbl_credit" text="Credit:" />
-          <Label name="lbl_credit_subconto" text="Credit analytics:" />
+          <Label name="lbl_credit_subconto" text="Credit analytics 1:" />
+          <Label name="lbl_credit_subconto2" text="Credit analytics 2:" />
+          <Label name="lbl_credit_subconto3" text="Credit analytics 3:" />
           <Label name="lbl_quantity" text="Quantity:" />
           <Label name="lbl_currency" text="Currency:" />
           <Label name="lbl_currency_amount" text="Currency amount:" />
@@ -2222,8 +2467,12 @@
         <Column name="inputs">
           <ComboBox name="debit" field="ib.entries.debit_id" source="cfg.accounts" display="code" value="id" />
           <ComboBox name="debit_subconto" field="ib.entries.debit_subconto_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="debit_subconto2" field="ib.entries.debit_subconto2_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="debit_subconto3" field="ib.entries.debit_subconto3_id" source="ib.counterparties" display="name" value="id" />
           <ComboBox name="credit" field="ib.entries.credit_id" source="cfg.accounts" display="code" value="id" />
           <ComboBox name="credit_subconto" field="ib.entries.credit_subconto_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="credit_subconto2" field="ib.entries.credit_subconto2_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="credit_subconto3" field="ib.entries.credit_subconto3_id" source="ib.counterparties" display="name" value="id" />
           <TextBox name="quantity" field="ib.entries.quantity" />
           <ComboBox name="currency" field="ib.entries.currency_id" source="ib.currencies" display="code" value="id" />
           <TextBox name="currency_amount" field="ib.entries.currency_amount" />
@@ -2489,22 +2738,26 @@
       <GridView name="fields" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_organization" text="Organization:" />
           <Label name="lbl_number" text="Number:" />
           <Label name="lbl_date" text="Date:" />
           <Label name="lbl_name" text="Name:" />
           <Label name="lbl_kind" text="Kind:" />
           <Label name="lbl_currency" text="Currency:" />
           <Label name="lbl_valid_until" text="Valid until:" />
+          <Label name="lbl_subject" text="Subject:" />
           <Label name="lbl_comment" text="Comment:" />
         </Column>
         <Column name="inputs">
           <ComboBox name="counterparty" field="ib.contracts.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="organization" field="ib.contracts.organization_id" source="ib.organizations" display="name" value="id" />
           <TextBox name="number" field="ib.contracts.number" />
           <TextBox name="date" field="ib.contracts.date" />
           <TextBox name="name" field="ib.contracts.name" />
           <TextBox name="kind" field="ib.contracts.kind" placeholder="supplier, customer, other" />
           <ComboBox name="currency" field="ib.contracts.currency_id" source="ib.currencies" display="code" value="id" />
           <TextBox name="valid_until" field="ib.contracts.valid_until" />
+          <TextBox name="subject" field="ib.contracts.subject" />
           <TextBox name="comment" field="ib.contracts.comment" />
         </Column>
       </GridView>
@@ -2578,11 +2831,13 @@
           <Label name="lbl_from" text="From:" />
           <Label name="lbl_to" text="To:" />
           <Label name="lbl_account" text="Account:" />
+          <Label text="Analytics slot (1–3):" />
         </Column>
         <Column name="inputs">
           <TextBox name="date_from" field="ib.report_settings.date_from" placeholder="Beginning" />
           <TextBox name="date_to" field="ib.report_settings.date_to" placeholder="End" />
           <ComboBox name="account" field="ib.report_settings.account_id" source="cfg.accounts" display="code" value="id" />
+          <TextBox name="subconto_slot" field="ib.report_settings.subconto_slot" type="integer" />
         </Column>
       </GridView>
       <Label name="hint" text="The account card and analysis show the chosen account; the cash book, assets and payroll use the period." />

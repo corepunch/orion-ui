@@ -44,7 +44,11 @@
       </GridView>
       <Label name="status" />
       <Label name="order_summary" />
-      <Label name="stock_summary" />
+      <StackView name="snapshot_controls" orientation="horizontal" spacing="6">
+        <Label name="stock_summary" />
+        <Space name="snapshot_gap" />
+        <Button name="export" text="Save Orders Snapshot..." action="export" />
+      </StackView>
       <MultiEdit name="results" flags="WINDOW_NOFOCUS,WINDOW_NOTABSTOP,vscroll,flexspace" />
       <Label name="error" />
       <StackView name="actions" orientation="horizontal" spacing="6">

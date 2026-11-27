@@ -170,8 +170,18 @@ static int l_entry(lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_getfield(L, 1, "debit");  int debit = account_id(L, -1);  lua_pop(L, 1);
   lua_getfield(L, 1, "credit"); int credit = account_id(L, -1); lua_pop(L, 1);
-  ledger_subjects_t s = { (int)opt_number(L, 1, "counterparty", g_post->doc->counterparty_id), (int)opt_number(L, 1, "item", 0),
-                          (int)opt_number(L, 1, "employee", 0), (int)opt_number(L, 1, "asset", 0) };
+  ledger_subjects_t s = {
+    .counterparty    = (int)opt_number(L, 1, "counterparty",    g_post->doc->counterparty_id),
+    .item            = (int)opt_number(L, 1, "item",            0),
+    .employee        = (int)opt_number(L, 1, "employee",        0),
+    .asset           = (int)opt_number(L, 1, "asset",           0),
+    .warehouse       = (int)opt_number(L, 1, "warehouse",       0),
+    .contract        = (int)opt_number(L, 1, "contract",        0),
+    .debit_subconto2 = (int)opt_number(L, 1, "debit_subconto2", 0),
+    .debit_subconto3 = (int)opt_number(L, 1, "debit_subconto3", 0),
+    .credit_subconto2= (int)opt_number(L, 1, "credit_subconto2",0),
+    .credit_subconto3= (int)opt_number(L, 1, "credit_subconto3",0),
+  };
   lua_getfield(L, 1, "content");
   const char *content = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
   ledger_add_entry(g_post, debit, credit, opt_number(L, 1, "amount", 0), &s, opt_number(L, 1, "quantity", 0),
@@ -182,7 +192,10 @@ static int l_entry(lua_State *L) {
 
 static int l_turnover(lua_State *L) {
   if (!g_post) return luaL_error(L, "ledger.turnover outside a posting");
-  ledger_turnover_t t = ledger_turnover(g_post, account_id(L, 1), (int)luaL_optinteger(L, 2, -1), (int)luaL_optinteger(L, 3, -1));
+  int slot = (int)luaL_optinteger(L, 4, 1);
+  if (slot < 1 || slot > 3) return luaL_argerror(L, 4, "analytics slot must be 1, 2 or 3");
+  ledger_turnover_t t = ledger_turnover_slot(g_post, account_id(L, 1), (int)luaL_optinteger(L, 2, -1),
+                                             (int)luaL_optinteger(L, 3, -1), slot);
   lua_createtable(L, 0, 6);
   lua_pushnumber(L, t.dr); lua_setfield(L, -2, "dr");         lua_pushnumber(L, t.cr); lua_setfield(L, -2, "cr");
   lua_pushnumber(L, t.dr_qty); lua_setfield(L, -2, "dr_qty"); lua_pushnumber(L, t.cr_qty); lua_setfield(L, -2, "cr_qty");
@@ -604,6 +617,69 @@ static int l_transaction(lua_State *L) {
     return luaL_error(L, "cannot commit transaction");
   }
   return lua_gettop(L) - 1;
+}
+
+static int stock_int(lua_State *L, int arg, bool allow_zero) {
+  lua_Integer value = luaL_checkinteger(L, arg);
+  if (value < (allow_zero ? 0 : 1) || value > INT_MAX) luaL_argerror(L, arg, "invalid stock record ID");
+  return (int)value;
+}
+
+static const char *stock_key(lua_State *L) {
+  if (!g_script_writable || !g_script_transactions || g_post)
+    luaL_error(L, "stock writes require a writable script and ledger.transaction, outside posting");
+  size_t size;
+  const char *key = luaL_checklstring(L, 1, &size);
+  if (size != strlen(key)) luaL_argerror(L, 1, "source key contains NUL");
+  return key;
+}
+
+static int stock_result(lua_State *L, int id) {
+  if (!id) return luaL_error(L, "stock operation rejected: invalid arguments, insufficient stock, or conflicting request");
+  lua_pushinteger(L, id);
+  return 1;
+}
+
+static int l_stock_balance(lua_State *L) {
+  ledger_stock_t stock;
+  if (!ledger_stock_balance(get_database_by_name("ib"), get_database_by_name("cfg"),
+      stock_int(L, 1, false), stock_int(L, 2, true), &stock))
+    return luaL_error(L, "cannot read stock balance");
+  lua_createtable(L, 0, 3);
+  lua_pushinteger(L, stock.on_hand); lua_setfield(L, -2, "on_hand_milli");
+  lua_pushinteger(L, stock.reserved); lua_setfield(L, -2, "reserved_milli");
+  lua_pushinteger(L, stock.available); lua_setfield(L, -2, "available_milli");
+  return 1;
+}
+
+static int l_stock_reserve(lua_State *L) {
+  const char *key = stock_key(L);
+  return stock_result(L, ledger_stock_reserve(get_database_by_name("ib"), get_database_by_name("cfg"),
+    key, stock_int(L, 2, false), stock_int(L, 3, false), luaL_checkinteger(L, 4)));
+}
+
+static int l_stock_release(lua_State *L) {
+  const char *key = stock_key(L);
+  return stock_result(L, ledger_stock_release(get_database_by_name("ib"), get_database_by_name("cfg"),
+    key, stock_int(L, 2, false)));
+}
+
+static int l_stock_transfer(lua_State *L) {
+  const char *key = stock_key(L);
+  return stock_result(L, ledger_stock_transfer(get_database_by_name("ib"), get_database_by_name("cfg"),
+    key, stock_int(L, 2, false), stock_int(L, 3, false), stock_int(L, 4, false), luaL_checkinteger(L, 5)));
+}
+
+static int l_stock_reverse_transfer(lua_State *L) {
+  const char *key = stock_key(L);
+  return stock_result(L, ledger_stock_reverse_transfer(get_database_by_name("ib"), get_database_by_name("cfg"),
+    key, stock_int(L, 2, false)));
+}
+
+static int l_stock_fulfill(lua_State *L) {
+  const char *key = stock_key(L);
+  return stock_result(L, ledger_stock_fulfill(get_database_by_name("ib"), get_database_by_name("cfg"),
+    key, stock_int(L, 2, false), stock_int(L, 3, false)));
 }
 
 #include "build/generated/apps/ledger/ledger_api.h"

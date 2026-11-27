@@ -16,9 +16,11 @@ bool ledger_market_supported(void);
 bool ledger_market_cancel(lua_State *L);
 bool ledger_market_paste(lua_State *L);
 const char *ledger_market_printable(lua_State *L);
+const char *ledger_market_snapshot(lua_State *L);
 // These explicit host entry points exercise the same view and worker offline.
 script_page_t *ledger_market_test_open(const char *share, const char *json_module, ledger_market_request_fn request);
 bool ledger_market_test_wait(script_page_t *page);
 const char *ledger_market_test_html(script_page_t *page);
+const char *ledger_market_test_snapshot(script_page_t *page);
 void ledger_market_test_close(script_page_t *page);
 #endif

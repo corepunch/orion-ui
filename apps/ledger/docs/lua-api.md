@@ -58,7 +58,7 @@ Find an account in the active configuration by its code.
 
 ## `ledger.entry(entry)`
 
-Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Fields: debit, credit (code or ID), amount, quantity, content, counterparty, item, employee, asset, currency, currency_amount.
+Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Subject fields (auto-derive analytics from the account's kind): counterparty, item, employee, asset, warehouse, contract. Per-side slot-2/3 explicit overrides (bypass auto-derive when non-zero): debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3. Other fields: debit, credit (code or ID), amount, quantity, content, currency, currency_amount.
 
 | Argument | Type | Description |
 |---|---|---|
@@ -66,7 +66,7 @@ Add an entry to the document currently being posted. Only available inside posti
 
 **Returns:** `nil` — No values.
 
-## `ledger.turnover(account, subconto?, currency?)`
+## `ledger.turnover(account, subconto?, currency?, slot?)`
 
 Read cumulative turnovers before the current document plus its entries so far. Only available inside posting context.
 
@@ -75,6 +75,7 @@ Read cumulative turnovers before the current document plus its entries so far. O
 | `account` | `string\|integer` |  |
 | `subconto` | `integer?` | Analytics ID; omitted means all. |
 | `currency` | `integer?` | Currency ID; omitted means all. |
+| `slot` | `integer?` | Analytics slot 1–3. Defaults to 1. |
 
 **Returns:** `table` — dr, cr, dr_qty, cr_qty, dr_cur, cr_cur.
 
@@ -211,6 +212,78 @@ Validate a catalog insert or patch without writing. Applies the same schema, val
 | `id` | `integer?` | Existing record ID for an update. |
 
 **Returns:** `table` — Validated record copy; a new record has id=0 until insertion.
+
+## `ledger.stock_balance(item_id, warehouse_id)`
+
+Read physical on-hand, active reserved and available quantities as exact thousandths. Warehouse zero reads unassigned historical stock. The balance is current over posted entries; marketplace inventory is not a source.
+
+| Argument | Type | Description |
+|---|---|---|
+| `item_id` | `integer` |  |
+| `warehouse_id` | `integer` |  |
+
+**Returns:** `table` — on_hand_milli, reserved_milli, available_milli
+
+## `ledger.stock_reserve(source_key, item_id, warehouse_id, quantity_milli)`
+
+Reserve available quantity for a source order or work order. Requires a writable ledger.transaction. All stock mutation keys are unique per infobase and accept a byte-for-byte identical retry; conflicting requests fail.
+
+| Argument | Type | Description |
+|---|---|---|
+| `source_key` | `string` |  |
+| `item_id` | `integer` |  |
+| `warehouse_id` | `integer` |  |
+| `quantity_milli` | `integer` |  |
+
+**Returns:** `integer` — Reservation operation ID.
+
+## `ledger.stock_release(source_key, reservation_id)`
+
+Release a whole reservation once, without adjusting physical inventory. Requires a writable ledger.transaction.
+
+| Argument | Type | Description |
+|---|---|---|
+| `source_key` | `string` |  |
+| `reservation_id` | `integer` |  |
+
+**Returns:** `integer` — Release operation ID.
+
+## `ledger.stock_transfer(source_key, item_id, warehouse_id, destination_id, quantity_milli)`
+
+Move available physical goods between two named warehouses of the infobase. This does not change pooled monetary inventory valuation. Requires a writable ledger.transaction.
+
+| Argument | Type | Description |
+|---|---|---|
+| `source_key` | `string` |  |
+| `item_id` | `integer` |  |
+| `warehouse_id` | `integer` |  |
+| `destination_id` | `integer` |  |
+| `quantity_milli` | `integer` |  |
+
+**Returns:** `integer` — Transfer operation ID.
+
+## `ledger.stock_reverse_transfer(source_key, transfer_id)`
+
+Reverse one transfer if its destination still has sufficient available stock. Requires a writable ledger.transaction.
+
+| Argument | Type | Description |
+|---|---|---|
+| `source_key` | `string` |  |
+| `transfer_id` | `integer` |  |
+
+**Returns:** `integer` — Transfer reversal operation ID.
+
+## `ledger.stock_fulfill(source_key, reservation_id, document_id)`
+
+Consume one reservation by posting a matching draft goods sale in the same transaction. It must use the same item, complete reserved quantity and warehouse. The reserved quantity is not restored when the accounting sale is separately reversed. Requires a writable ledger.transaction.
+
+| Argument | Type | Description |
+|---|---|---|
+| `source_key` | `string` |  |
+| `reservation_id` | `integer` |  |
+| `document_id` | `integer` |  |
+
+**Returns:** `integer` — Fulfillment operation ID.
 
 # Record fields
 
@@ -460,6 +533,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `vat_verified_on` | `date` |  |
 | `vat_verification_reference` | `string` |  |
 | `name` | `string` |  |
+| `full_name` | `string` |  |
 | `tax_id` | `string` |  |
 | `kpp` | `string` |  |
 | `address` | `string` |  |
@@ -476,6 +550,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `unit_id` | `integer` | cfg.units.id |
 | `vat_rate_id` | `integer` | cfg.vat_rates.id |
 | `sku` | `string` |  |
+| `kind` | `string` |  |
 | `name` | `string` |  |
 | `price` | `double` |  |
 
@@ -488,7 +563,9 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `name` | `string` |  |
 | `position` | `string` |  |
 | `tax_id` | `string` |  |
+| `birth_date` | `date` |  |
 | `hired` | `date` |  |
+| `department` | `string` |  |
 | `salary` | `double` |  |
 | `allowance` | `double` |  |
 
@@ -505,6 +582,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `cost` | `double` |  |
 | `life` | `integer` |  |
 | `commissioned` | `date` |  |
+| `depreciation_method` | `string` |  |
 
 ## `ib.currencies`
 
@@ -529,12 +607,14 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `counterparty_id` | `integer` | counterparties.id |
+| `organization_id` | `integer` | organizations.id |
 | `currency_id` | `integer` | currencies.id |
 | `number` | `string` |  |
 | `date` | `date` |  |
 | `name` | `string` |  |
 | `kind` | `string` |  |
 | `valid_until` | `date` |  |
+| `subject` | `string` |  |
 | `comment` | `string` |  |
 
 ## `ib.bank_accounts`
@@ -551,6 +631,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `bik` | `string` |  |
 | `swift` | `string` |  |
 | `corr_account` | `string` |  |
+| `bank_id` | `integer` | banks.id |
 
 ## `ib.warehouses`
 
@@ -603,6 +684,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `guid` | `string` |  |
 | `table_name` | `string` |  |
 | `record_id` | `integer` |  |
+| `catalog_folder_id` | `integer` | import_catalog_folders.id |
+| `source_deleted` | `boolean` |  |
 
 ## `ib.documents`
 
@@ -630,6 +713,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `bank_account_id` | `integer` | bank_accounts.id |
 | `number` | `string` |  |
 | `date` | `date` |  |
+| `time` | `string` |  |
 | `comment` | `string` |  |
 | `import_source` | `string` |  |
 | `correction_of` | `integer` | documents.id |
@@ -642,6 +726,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `vat_minor` | `int64` |  |
 | `total_minor` | `int64` |  |
 | `posted` | `boolean` |  |
+| `source_posted_state` | `string` |  |
 
 ## `ib.doc_lines`
 
@@ -723,6 +808,18 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `credit_tax_minor` | `int64` |  |
 | `credit_permanent_minor` | `int64` |  |
 | `credit_temporary_minor` | `int64` |  |
+| `source_line` | `integer` |  |
+| `source_inactive` | `boolean` |  |
+| `source_period` | `string` |  |
+| `debit_quantity_set` | `boolean` |  |
+| `credit_quantity_set` | `boolean` |  |
+| `debit_quantity_milli` | `int64` |  |
+| `credit_quantity_milli` | `int64` |  |
+| `source_currencies_set` | `boolean` |  |
+| `debit_currency_id` | `integer` | currencies.id |
+| `credit_currency_id` | `integer` | currencies.id |
+| `debit_currency_amount` | `double` |  |
+| `credit_currency_amount` | `double` |  |
 
 ## `ib.period_locks`
 
@@ -799,6 +896,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `account_id` | `integer` | cfg.accounts.id |
+| `subconto_slot` | `integer` |  |
 | `date_from` | `date` |  |
 | `date_to` | `date` |  |
 
@@ -823,7 +921,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `id` | `integer` |  |
 | `document_id` | `integer` | documents.id |
 | `account_id` | `integer` | cfg.accounts.id |
-| `subconto_id` | `integer` | ib.{account.subconto_kind.table}.id |
+| `subconto_kind_id` | `integer` | cfg.subconto_kinds.id |
+| `subconto_id` | `integer` | ib.{subconto_kind.table}.id |
 | `corr_id` | `integer` | cfg.accounts.id |
 | `date` | `date` |  |
 | `debit` | `double` |  |
@@ -837,7 +936,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `account_id` | `integer` | cfg.accounts.id |
-| `subconto_id` | `integer` | ib.{account.subconto_kind.table}.id |
+| `subconto_kind_id` | `integer` | cfg.subconto_kinds.id |
+| `subconto_id` | `integer` | ib.{subconto_kind.table}.id |
 | `opening_dr` | `double` |  |
 | `opening_cr` | `double` |  |
 | `debit_turnover` | `double` |  |
@@ -1001,3 +1101,110 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `amount_minor` | `int64` |  |
 | `vat_minor` | `int64` |  |
 | `total_minor` | `int64` |  |
+
+## `ib.import_attachments`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `guid` | `string` |  |
+| `metadata` | `string` |  |
+| `owner_guid` | `string` |  |
+| `owner_type` | `string` |  |
+| `name` | `string` |  |
+| `extension` | `string` |  |
+| `size` | `int64` |  |
+| `sha256` | `string` |  |
+| `unavailable` | `string` |  |
+| `volume_guid` | `string` |  |
+
+## `ib.import_attachment_chunks`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `attachment_id` | `integer` | import_attachments.id |
+| `ordinal` | `integer` |  |
+| `data` | `string` |  |
+
+## `ib.import_snapshots`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `source_file` | `string` |  |
+| `source_size` | `string` |  |
+| `source_sha256` | `string` |  |
+| `format_version` | `string` |  |
+| `locale` | `string` |  |
+| `config_name` | `string` |  |
+| `config_version` | `string` |  |
+| `imported_date` | `date` |  |
+
+## `ib.banks`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `name` | `string` |  |
+| `bik` | `string` |  |
+| `swift` | `string` |  |
+| `corr_account` | `string` |  |
+| `city` | `string` |  |
+
+## `ib.departments`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `name` | `string` |  |
+| `code` | `string` |  |
+| `organization_id` | `integer` | organizations.id |
+
+## `ib.import_document_details`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `document_id` | `integer` | documents.id |
+| `section_name` | `string` |  |
+| `line_number` | `integer` |  |
+| `field_name` | `string` |  |
+| `value_type` | `string` |  |
+| `value` | `string` |  |
+| `reference_type` | `string` |  |
+| `reference_guid` | `string` |  |
+| `is_empty` | `boolean` |  |
+| `is_dangling` | `boolean` |  |
+
+## `ib.ext_units`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `code` | `string` |  |
+| `name` | `string` |  |
+
+## `ib.import_catalog_folders`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `metadata` | `string` |  |
+| `name` | `string` |  |
+| `code` | `string` |  |
+| `parent_id` | `integer` | import_catalog_folders.id |
+
+## `ib.stock_operations`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `action` | `integer` |  |
+| `source_key` | `string` |  |
+| `item_id` | `integer` | items.id |
+| `warehouse_id` | `integer` | warehouses.id |
+| `destination_id` | `integer` | warehouses.id |
+| `quantity_milli` | `int64` |  |
+| `original_id` | `integer` | stock_operations.id |
+| `document_id` | `integer` | documents.id |

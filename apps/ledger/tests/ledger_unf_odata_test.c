@@ -72,6 +72,7 @@ int main(void) {
   test_local_workflow("apps/ledger/tests/product_card_test.lua");
   test_local_workflow("apps/ledger/tests/fulfillment_test.lua");
   test_local_workflow("apps/ledger/tests/bank_statement.lua");
+  test_local_workflow("apps/ledger/tests/settlement_review_test.lua");
   test_local_workflow("apps/ledger/tests/item_documents_test.lua");
   test_local_workflow("apps/ledger/tests/recipe_browser_test.lua");
   test_local_workflow("apps/ledger/tests/ozon_marketplace_test.lua");
