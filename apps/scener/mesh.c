@@ -266,9 +266,9 @@ static void mesh_slice_x(Mesh *m,float step){
             Vertex cutAB=mesh_vertex_at_x(m,a,b,plane),cutCA=mesh_vertex_at_x(m,c,a,plane);
             int iab=m->nverts; DA_PUSH(m->verts,m->nverts,m->cverts,cutAB);
             int ica=m->nverts; DA_PUSH(m->verts,m->nverts,m->cverts,cutCA);
-            Tri near={iab,b,c},far={iab,c,ica};
+            Tri first={iab,b,c},second={iab,c,ica};
             m->tris[t]=(Tri){a,iab,ica};
-            DA_PUSH(m->tris,m->ntris,m->ctris,near); DA_PUSH(m->tris,m->ntris,m->ctris,far);
+            DA_PUSH(m->tris,m->ntris,m->ctris,first); DA_PUSH(m->tris,m->ntris,m->ctris,second);
         }
         t--;   /* the piece left in this slot may cross the next plane */
     }
