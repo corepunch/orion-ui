@@ -1,9 +1,7 @@
 // Win32-style tab control. Direct children are pages; each child's title is
 // used as its TabBar label and only the selected page is visible.
 //
-// Icons are set per-tab via tcSetImageStrip (bitmap_strip_t*) + tcSetTabIcon
-// (tab_index, icon_index).  When icons are present the tab header height
-// grows to MAX(TAB_CONTROL_HEIGHT, icon_h + 4).
+// Named page icons use tcSetPageGlyph; bitmap tabs use tcSetImageStrip and tcSetTabIcon.
 //
 // tcSetItems turns the control into a header-only tab bar (TCM_INSERTITEM): its
 // tabs are labels with caller data, and the parent swaps content on tcnSelChange.
@@ -20,10 +18,13 @@
 #include "commctl.h"
 #include <stdio.h>
 
-typedef struct tab_focus_s {
+enum { TAB_GLYPH_SIZE = 24 };
+
+typedef struct tab_page_state_s {
   window_t *page, *focus;
-  struct tab_focus_s *next;
-} tab_focus_t;
+  char *icon, *checked_icon;
+  struct tab_page_state_s *next;
+} tab_page_state_t;
 
 typedef struct tab_hidden_s {
   window_t *page;
@@ -40,7 +41,7 @@ typedef struct {
   int selected, scroll;
   window_t *pressed_page;
   ipoint16_t press_point;
-  tab_focus_t *focus;
+  tab_page_state_t *page_states;
   tab_hidden_t *hidden;
   uint32_t style;
   bitmap_strip_t strip;
@@ -118,21 +119,39 @@ static void tab_free_items(tabview_state_t *st) {
   free(st->items); st->items = NULL; st->item_count = 0;
 }
 
+static tab_page_state_t *tab_page_state(const tabview_state_t *st, const window_t *page) {
+  for (tab_page_state_t *entry = st->page_states; entry; entry = entry->next)
+    if (entry->page == page) return entry;
+  return NULL;
+}
+
+static tab_page_state_t *tab_ensure_page_state(tabview_state_t *st, window_t *page) {
+  tab_page_state_t *entry = tab_page_state(st, page);
+  if (entry) return entry;
+  entry = calloc(1, sizeof(*entry));
+  if (!entry) return NULL;
+  entry->page = page;
+  entry->next = st->page_states;
+  st->page_states = entry;
+  return entry;
+}
+
+static void tab_free_page_state(tab_page_state_t *entry) {
+  free(entry->icon);
+  free(entry->checked_icon);
+  free(entry);
+}
+
 static void tab_remember_focus(window_t *win, window_t *focus) {
   tabview_state_t *st = win->userdata;
   if (!st || !(st->style & TAB_STYLE_RESTORE_FOCUS)) return;
   window_t *page = focus;
   while (page && page->parent != win) page = page->parent;
   if (!page || page == st->list || page == st->actions || page != tab_page(win, st->selected)) return;
-  tab_focus_t *entry = st->focus;
-  while (entry && entry->page != page) entry = entry->next;
+  tab_page_state_t *entry = tab_ensure_page_state(st, page);
   if (!entry) {
-    entry = calloc(1, sizeof(*entry));
-    if (!entry) {
-      fprintf(stderr, "[tv] focus allocation failed win=%u page=%u\n", win->id, page->id);
-      fflush(stderr); return;
-    }
-    entry->page = page; entry->next = st->focus; st->focus = entry;
+    fprintf(stderr, "[tv] focus allocation failed win=%u page=%u\n", win->id, page->id);
+    fflush(stderr); return;
   }
   entry->focus = focus;
 }
@@ -160,16 +179,16 @@ static void tab_restore_focus(window_t *win) {
   if (!st || !(st->style & TAB_STYLE_RESTORE_FOCUS)) return;
   window_t *page = tab_page(win, st->selected), *focus = NULL;
   if (!page) return;
-  for (tab_focus_t *entry = st->focus; entry; entry = entry->next)
-    if (entry->page == page) focus = entry->focus;
+  const tab_page_state_t *entry = tab_page_state(st, page);
+  if (entry) focus = entry->focus;
   if (!tab_focusable(page, focus)) focus = tab_first_focus(page);
   set_focus(focus ? focus : win);
 }
 
 static void tab_forget_window(tabview_state_t *st, window_t *win) {
-  for (tab_focus_t **p = &st->focus; *p;) {
-    tab_focus_t *entry = *p;
-    if (entry->page == win) { *p = entry->next; free(entry); continue; }
+  for (tab_page_state_t **p = &st->page_states; *p;) {
+    tab_page_state_t *entry = *p;
+    if (entry->page == win) { *p = entry->next; tab_free_page_state(entry); continue; }
     if (entry->focus == win) entry->focus = NULL;
     p = &entry->next;
   }
@@ -177,7 +196,10 @@ static void tab_forget_window(tabview_state_t *st, window_t *win) {
 
 static int tab_header_height(window_t *win, tabview_state_t *st) {
   tab_metrics_t m = tab_metrics(win);
-  return (st && st->strip.cols > 0) ? MAX(m.tab_h, st->strip.icon_h + m.icon_margin) : m.tab_h;
+  int icon_h = st && st->strip.cols > 0 ? st->strip.icon_h : 0;
+  for (const tab_page_state_t *entry = st ? st->page_states : NULL; entry; entry = entry->next)
+    if (entry->icon && !tab_hidden(st, entry->page)) { icon_h = MAX(icon_h, TAB_GLYPH_SIZE); break; }
+  return icon_h ? MAX(m.tab_h, icon_h + m.icon_margin) : m.tab_h;
 }
 
 static bool tab_single_hidden(window_t *win, tabview_state_t *st) {
@@ -188,17 +210,28 @@ static int tab_header_extent(window_t *win, tabview_state_t *st) {
   return tab_single_hidden(win, st) && !st->actions ? 0 : tab_header_height(win, st);
 }
 
-static bool tab_has_icon(tabview_state_t *st, int idx) {
+static bool tab_has_strip_icon(const tabview_state_t *st, int idx) {
   return st && st->tab_icons && idx >= 0 && idx < st->tab_icon_count
          && st->tab_icons[idx] >= 0 && st->strip.cols > 0;
 }
 
+static const char *tab_glyph(window_t *win, const tabview_state_t *st, int idx) {
+  const tab_page_state_t *entry = st && !st->item_mode ? tab_page_state(st, tab_page(win, idx)) : NULL;
+  return entry ? idx == st->selected && entry->checked_icon ? entry->checked_icon : entry->icon : NULL;
+}
+
+static int tab_icon_width(window_t *win, const tabview_state_t *st, int idx) {
+  if (tab_glyph(win, st, idx)) return TAB_GLYPH_SIZE;
+  return tab_has_strip_icon(st, idx) ? st->strip.icon_w : 0;
+}
+
 static int tab_width(window_t *win, const char *title, tabview_state_t *st, int idx) {
   tab_metrics_t m = tab_metrics(win);
+  int icon_w = tab_icon_width(win, st, idx);
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
-    return tab_has_icon(st, idx) ? st->strip.icon_w + m.icon_only_pad : m.tab_h;
+    return icon_w ? icon_w + m.icon_only_pad : m.tab_h;
   int w = MAX(m.tab_min, text_strwidth(ui_selector(win, "TabView::tab"), title) + m.tab_pad_l + m.tab_pad_r);
-  if (tab_has_icon(st, idx)) w += st->strip.icon_w + m.tab_gap;
+  if (icon_w) w += icon_w + m.tab_gap;
   return w;
 }
 
@@ -207,7 +240,8 @@ static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
   tab_metrics_t m = tab_metrics(win);
   int w = m.row_min, chrome = m.list_pad.x + m.list_pad.w + m.row_pad_l + m.row_pad_r;
   for (int i = 0, n = tab_count(win); i < n; i++) {
-    int iw = tab_has_icon(st, i) ? st->strip.icon_w + m.row_gap : 0;
+    int iw = tab_icon_width(win, st, i);
+    if (iw) iw += m.row_gap;
     w = MAX(w, text_strwidth(ui_selector(win, "TabView::row"), tab_title(win, i)) + iw + chrome);
   }
   return w;
@@ -229,8 +263,13 @@ static void sidebar_sync_scroll(window_t *win, tabview_state_t *st) {
   window_set_scroll_content(st->list, 0, tab_count(win) * m.row_h, m.list_pad, (irect16_t){0});
 }
 
-static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
-  if (!tab_has_icon(st, idx)) return;
+static void draw_tab_icon(window_t *win, tabview_state_t *st, int idx, int x, int y, int h, uint32_t color) {
+  const char *glyph = tab_glyph(win, st, idx);
+  if (glyph) {
+    draw_sysicon(glyph, x, y + (h - TAB_GLYPH_SIZE) / 2, TAB_GLYPH_SIZE, color);
+    return;
+  }
+  if (!tab_has_strip_icon(st, idx)) return;
   int ic = st->tab_icons[idx];
   int col = ic % st->strip.cols;
   int row = ic / st->strip.cols;
@@ -251,17 +290,18 @@ static void draw_tab_item(window_t *win, const char *title, int x, bool selected
   int h = th - y;
   ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
   theme_draw_in(win, THEME_PART_TAB, rect_inset_xy(R(x, y, w, h), selected ? 0 : m.rest_offset, 0), state);
-  bool has_icon = tab_has_icon(st, idx);
+  int icon_w = tab_icon_width(win, st, idx);
+  uint32_t color = theme_foreground_in(win, THEME_PART_TAB, state);
   if (st->style & TAB_STYLE_ICONS_ONLY) {
-    draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
+    draw_tab_icon(win, st, idx, x + (w - icon_w) / 2, y, h, color);
     return;
   }
-  int sw = text_strwidth(ui_selector(win, "TabView::tab"), title), iw = has_icon ? st->strip.icon_w + m.tab_gap : 0;
+  int sw = text_strwidth(ui_selector(win, "TabView::tab"), title), iw = icon_w ? icon_w + m.tab_gap : 0;
   int content_w = iw + sw;
   int cx = x + (w - content_w) / 2;
-  if (has_icon) { draw_tab_icon(st, idx, cx, y, h); cx += iw; }
+  if (icon_w) { draw_tab_icon(win, st, idx, cx, y, h, color); cx += iw; }
   draw_text(ui_selector(win, "TabView::tab"), title, cx, y + (h - text_char_height(ui_selector(win, "TabView::tab"))) / 2,
-                  theme_foreground_in(win, THEME_PART_TAB, state));
+                  color);
 }
 
 static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) {
@@ -276,6 +316,26 @@ static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) 
 
 static int tab_available_width(window_t *win, tabview_state_t *st) {
   return st->actions && !is_sidebar(st) ? st->actions->frame.x : get_client_rect(win).w;
+}
+
+static irect16_t tab_header_rect(window_t *win, tabview_state_t *st) {
+  return R(0, 0, tab_available_width(win, st), tab_header_extent(win, st));
+}
+
+static int tab_hit(window_t *win, tabview_state_t *st, ipoint16_t point, irect16_t *rect) {
+  irect16_t header = tab_header_rect(win, st);
+  if (!rect_contains_point(header, point)) return -1;
+  bool single = tab_single_hidden(win, st);
+  int left = single ? 0 : tab_metrics(win).bar_pad - st->scroll;
+  for (int i = 0, n = tab_count(win); i < n; i++) {
+    int w = single ? header.w : tab_width(win, tab_title(win, i), st, i);
+    if (point.x >= left && point.x < left + w) {
+      if (rect) *rect = rect_intersect(header, R(left, 0, w, header.h));
+      return i;
+    }
+    left += w;
+  }
+  return -1;
 }
 
 static result_t tab_actions_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -378,9 +438,11 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
           if (i == st->selected) theme_draw_in(win, THEME_PART_MENU_ITEM, rect_inset_xy(r, -m.row_bleed, 0), state);
           const char *row = ui_selector(tabs, "TabView::row");
           int x = r.x + m.row_pad_l;
-          if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + m.row_gap; }
+          int icon_w = tab_icon_width(tabs, st, i);
+          uint32_t color = theme_foreground_in(win, THEME_PART_MENU_ITEM, state);
+          if (icon_w) { draw_tab_icon(tabs, st, i, x, r.y, r.h, color); x += icon_w + m.row_gap; }
           draw_text_ellipsized(row, tab_title(tabs, i), x, r.y + (r.h - text_char_height(row)) / 2,
-                               r.x + r.w - m.row_pad_r - x, theme_foreground_in(win, THEME_PART_MENU_ITEM, state));
+                               r.x + r.w - m.row_pad_r - x, color);
         }
       }
       return true;
@@ -506,14 +568,14 @@ bool tabview_move_page(window_t *source, int index, window_t *target, int before
   tab_remember_focus(source, g_ui_runtime.focused);
   tab_remember_focus(target, g_ui_runtime.focused);
   window_t *selected = tab_page(source, src->selected);
-  tab_focus_t *memory = NULL;
-  for (tab_focus_t **p = &src->focus; *p; p = &(*p)->next)
+  tab_page_state_t *memory = NULL;
+  for (tab_page_state_t **p = &src->page_states; *p; p = &(*p)->next)
     if ((*p)->page == page) { memory = *p; *p = memory->next; break; }
   if (!window_reparent(page, target, before < target_count ? tab_page(target, before) : NULL)) {
-    if (memory) { memory->next = src->focus; src->focus = memory; }
+    if (memory) { memory->next = src->page_states; src->page_states = memory; }
     free(icons); return false;
   }
-  if (memory) { tab_forget_window(dst, page); memory->next = dst->focus; dst->focus = memory; }
+  if (memory) { tab_forget_window(dst, page); memory->next = dst->page_states; dst->page_states = memory; }
   if (source != target) {
     if (index < src->tab_icon_count) {
       memmove(src->tab_icons + index, src->tab_icons + index + 1, (size_t)(src->tab_icon_count - index - 1) * sizeof(int));
@@ -579,6 +641,17 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
     case evThemeChanged: case evResize: tab_arrange(win); return true;
     case evPaint: return tab_paint(win);
+    case evGetTooltipRect: case evGetTooltipText: {
+      if (!st || !lparam || !(st->style & TAB_STYLE_ICONS_ONLY) || is_sidebar(st) || tab_single_hidden(win, st))
+        return false;
+      ipoint16_t point = { (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam) };
+      irect16_t rect;
+      int index = tab_hit(win, st, point, &rect);
+      if (index < 0 || !*tab_title(win, index)) return false;
+      if (msg == evGetTooltipRect) *(irect16_t *)lparam = rect;
+      else snprintf(lparam, 256, "%s", tab_title(win, index));
+      return true;
+    }
     case evLeftButtonDown: {
       if (!st) {
         fprintf(stderr, "[tv] mousedown rejected win=%u reason=no_state\n",
@@ -586,21 +659,14 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         fflush(stderr);
         return false;
       }
-      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-      if (is_sidebar(st)) return false;
-      int th = tab_header_extent(win, st);
-      if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
-      int left = tab_single_hidden(win, st) ? 0 : tab_metrics(win).bar_pad - st->scroll;
-      for (int i = 0, n = tab_count(win); i < n; i++) {
-        int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(win, tab_title(win, i), st, i);
-        if (mx >= left && mx < left + w) {
-          tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true);
-          if ((st->style & TAB_STYLE_DRAG_TABS) && !st->item_mode) {
-            st->pressed_page = tab_page(win, i); st->press_point = (ipoint16_t){mx, my}; set_capture(win);
-          }
-          return true;
+      ipoint16_t point = { (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam) };
+      if (is_sidebar(st) || !rect_contains_point(tab_header_rect(win, st), point)) return false;
+      int index = tab_hit(win, st, point, NULL);
+      if (index >= 0) {
+        tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, index, true);
+        if ((st->style & TAB_STYLE_DRAG_TABS) && !st->item_mode) {
+          st->pressed_page = tab_page(win, index); st->press_point = point; set_capture(win);
         }
-        left += w;
       }
       return true;
     }
@@ -853,6 +919,35 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       tab_arrange(win); invalidate_window(win);
       return true;
     }
+    case tcSetPageGlyph: {
+      window_t *page = st && !st->item_mode ? tab_page(win, (int)wparam) : NULL;
+      const segment_glyph_t *glyph = lparam;
+      if (!page || (glyph && (!glyph->icon || !*glyph->icon))) {
+        fprintf(stderr, "[tv] set_page_glyph rejected win=%u index=%u page=%p icon=%p\n",
+                win->id, wparam, (void *)page, glyph ? (const void *)glyph->icon : NULL);
+        fflush(stderr);
+        return false;
+      }
+      tab_page_state_t *entry = tab_page_state(st, page);
+      if (glyph) {
+        char *icon = strdup(glyph->icon);
+        bool has_checked = glyph->checked_icon && *glyph->checked_icon;
+        char *checked_icon = has_checked ? strdup(glyph->checked_icon) : NULL;
+        if (!icon || (has_checked && !checked_icon) || !(entry = tab_ensure_page_state(st, page))) {
+          free(icon); free(checked_icon);
+          fprintf(stderr, "[tv] set_page_glyph allocation failed win=%u index=%u\n", win->id, wparam);
+          fflush(stderr);
+          return false;
+        }
+        free(entry->icon); free(entry->checked_icon);
+        entry->icon = icon; entry->checked_icon = checked_icon;
+      } else if (entry) {
+        free(entry->icon); free(entry->checked_icon);
+        entry->icon = entry->checked_icon = NULL;
+      }
+      tab_arrange(win); invalidate_window(win);
+      return true;
+    }
     case tcAdjustRect:
       if (!st || !lparam) {
         fprintf(stderr, "[tv] adjust_rect rejected win=%u reason=%s\n",
@@ -867,7 +962,11 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (st) {
         tab_cleanup_icons(st);
         tab_free_items(st);
-        while (st->focus) { tab_focus_t *entry = st->focus; st->focus = entry->next; free(entry); }
+        while (st->page_states) {
+          tab_page_state_t *entry = st->page_states;
+          st->page_states = entry->next;
+          tab_free_page_state(entry);
+        }
         while (st->hidden) { tab_hidden_t *entry = st->hidden; st->hidden = entry->next; free(entry); }
         free(st); win->userdata = NULL;
       }

@@ -177,9 +177,6 @@
           <Button command="animation.play" icon="scener-play-pause" size="large" />
           <Button command="animation.rewind" icon="scener-skip-back" />
         </Group>
-        <Group label="Rigging">
-          <Button command="window.command_panel" icon="scener-tree-structure" size="large" />
-        </Group>
       </Tab>
     </ribbon>
 
@@ -194,5 +191,79 @@
           <spacer w="10" />
           <Button name="zoom_fit" command="view.zoom_fit" icon="view/frame" text="Fit" tooltip="Frame selected" />
     </toolbar>
+
+  <forms>
+    <form name="command_panel" title="Command Panel" width="230" height="540" auto_layout="1" spacing="0" flags="notitle,WINDOW_ALWAYSONTOP,WINDOW_NOTRAYBUTTON,WINDOW_NORESIZE">
+      <TabView name="command_tabs" flags="flexspace">
+        <StackView name="create_page" text="Create" spacing="6" padding="6" flags="vscroll">
+          <Label name="shapes_label" text="Shapes" />
+          <GridView name="shapes" spacing="4">
+            <Column name="shapes_left">
+              <Button command="create.box" text="Box" height="22" />
+              <Button command="create.sphere" text="Sphere" height="22" />
+              <Button command="create.cylinder" text="Cylinder" height="22" />
+              <Button command="create.cone" text="Cone" height="22" />
+              <Button command="create.torus" text="Torus" height="22" />
+              <Button command="create.prism" text="Prism" height="22" />
+            </Column>
+            <Column name="shapes_right">
+              <Button command="create.capsule" text="Capsule" height="22" />
+              <Button command="create.rect" text="Rectangle" height="22" />
+              <Button command="create.circle" text="Circle" height="22" />
+              <Button command="create.ellipse" text="Ellipse" height="22" />
+              <Button command="create.star" text="Star" height="22" />
+              <Button command="create.screen" text="Screen" height="22" />
+            </Column>
+          </GridView>
+          <Label name="architecture_label" text="Windows and Doors" />
+          <GridView name="architecture" spacing="4">
+            <Column name="architecture_left">
+              <Button command="create.arch" text="Arch" height="22" />
+              <Button command="create.window_round" text="Round Window" height="22" />
+              <Button command="create.window_cottage" text="Cottage Window" height="22" />
+              <Button command="create.window_gothic" text="Gothic Window" height="22" />
+            </Column>
+            <Column name="architecture_right">
+              <Button command="create.door_rectangular" text="Rectangular Door" height="22" />
+              <Button command="create.door_round" text="Round Door" height="22" />
+              <Button command="create.door_gothic" text="Gothic Door" height="22" />
+            </Column>
+          </GridView>
+          <Label name="lighting_label" text="Lights and Cameras" />
+          <GridView name="lighting" spacing="4">
+            <Column name="lighting_left">
+              <Button command="create.point_light" text="Point Light" height="22" />
+              <Button command="create.directional_light" text="Directional Light" height="22" />
+            </Column>
+            <Column name="lighting_right">
+              <Button command="create.camera" text="Camera from View" height="22" />
+            </Column>
+          </GridView>
+          <ReportView name="create_properties" height="132" flags="notitle,flexspace,vscroll,WINDOW_NOACTIVATE" />
+        </StackView>
+        <StackView name="modify_page" text="Modify" spacing="6" padding="6">
+          <Label name="modify_empty" text="Select an object to inspect." />
+          <ReportView name="selection_properties" flags="notitle,flexspace,vscroll,WINDOW_NOACTIVATE" />
+        </StackView>
+        <StackView name="hierarchy_page" text="Hierarchy" spacing="0" />
+        <StackView name="motion_page" text="Motion" spacing="6" padding="6">
+          <Button command="animation.play" text="Play / Pause" />
+          <Button command="animation.rewind" text="Go to Start" />
+        </StackView>
+        <StackView name="display_page" text="Display" spacing="6" padding="6">
+          <CheckBox name="scene_guides" text="Camera and Light Guides" />
+          <CheckBox name="character_guides" text="Character Guides" />
+        </StackView>
+        <StackView name="render_page" text="Render" spacing="6" padding="6">
+          <CheckBox name="cast_shadows" text="Cast Shadows" />
+          <CheckBox name="ambient_occlusion" text="Ambient Occlusion" />
+        </StackView>
+        <StackView name="utilities_page" text="Utilities" spacing="6" padding="6">
+          <Button command="file.new" text="New Scene" />
+          <Button command="file.saveas" text="Save Scene As…" />
+        </StackView>
+      </TabView>
+    </form>
+  </forms>
 
 </orion>

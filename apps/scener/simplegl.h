@@ -404,6 +404,7 @@ const char *scene_node_attr(const void *node,const char *name);
 int scene_node_attr_count(const void *node);
 const char *scene_node_attr_name(const void *node,int index);
 const char *scene_node_attr_value(const void *node,int index);
+void scene_visit_node_modifiers(const void *node, void (*visit)(void *, const void *), void *context);
 int scene_rig_joint_count(Scene *s,void *instance);
 void *scene_rig_joint_at(Scene *s,void *instance,int index,int *depth);
 int scene_rig_select_joint(Scene *s,void *instance,void *joint);

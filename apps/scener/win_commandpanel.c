@@ -1,31 +1,9 @@
 #include "scener.h"
-#include <orion/kernel/renderer.h>
+#include <orion/user/dock.h>
 #include <orion/user/draw.h>
-#include <orion/user/bmp_icon_loader.h>
 #include <orion/commctl/commctl.h>
 
-enum {
-	CP_WIDTH = SIDE_PANEL_WIDTH,
-	CP_BUTTON_HEIGHT = 20,
-};
-
-typedef void (*cp_action_fn)(void *context, uint16_t id);
-typedef struct {
-	const char *label;
-	uint16_t id;
-	const char *icon;
-	cp_action_fn action;
-	void *context;
-} cp_command_t;
-typedef struct { const char *label; const cp_command_t *commands; int count; } cp_section_t;
-typedef struct { const char *label; uint16_t id; const char *icon; const cp_section_t *sections; int count; } cp_tab_t;
-typedef struct { const cp_tab_t *tabs; int count; } cp_datasource_t;
-typedef struct {
-	bitmap_strip_t strip;
-	window_t *tabview;
-	window_t *rig_panel;
-	const cp_datasource_t *datasource;
-} cp_state_t;
+typedef struct { window_t *tabs, *rig_panel; } cp_state_t;
 
 enum { RIG_EDIT_ROT=6000, RIG_EDIT_OFFSET, RIG_EDIT_PIVOT, RIG_MIRROR, RIG_REPARENT, RIG_IK_TARGET, RIG_IK_POLE, RIG_SAVE_POSE, RIG_ASSIGN_POSE, RIG_ASSIGN_SHOT,
 	RIG_VALUE_X, RIG_VALUE_Y, RIG_VALUE_Z, RIG_VALUE_OK, RIG_VALUE_CANCEL, RIG_NAME_EDIT };
@@ -94,11 +72,8 @@ static result_t rig_name_proc(window_t *win,uint32_t msg,uint32_t wparam,void *l
 }
 
 void scener_rig_panel_refresh(void){
-	window_t *panel = g_app ? g_app->command_panel_win : NULL;
-#ifdef BUILD_AS_GEM
-	cp_state_t *command_panel = panel ? panel->userdata : NULL;
-	panel = command_panel ? command_panel->rig_panel : NULL;
-#endif
+	cp_state_t *commands = g_app && g_app->command_panel_win ? g_app->command_panel_win->userdata : NULL;
+	window_t *panel = commands ? commands->rig_panel : NULL;
 	rig_panel_state_t *st=panel?(rig_panel_state_t*)panel->userdata:NULL;
 	if(!st || !st->list) return;
 	send_message(st->list,RVM_CLEAR,0,NULL); st->instance=NULL;
@@ -151,10 +126,7 @@ static result_t rig_panel_proc(window_t *win,uint32_t msg,uint32_t wparam,void *
 		for(window_t *child=win->children;child;child=child->next) send_message(child,evPaint,0,NULL);
 		return true;
 	}
-	if (msg == evDestroy) {
-		if (g_app && g_app->command_panel_win == win) g_app->command_panel_win = NULL;
-		return false;
-	}
+	if (msg == evDestroy) return true;
 	if(msg==evCommand && st && g_app && g_app->active_doc){
 		scene_doc_t *doc=g_app->active_doc; Scene *s=&doc->scene;
 		if((window_t*)lparam==st->list && HIWORD(wparam)==RVN_SELCHANGE){
@@ -206,224 +178,93 @@ static result_t rig_panel_proc(window_t *win,uint32_t msg,uint32_t wparam,void *
 	return false;
 }
 
-#define COUNT_OF(a) ((int)(sizeof(a) / sizeof((a)[0])))
+static const segment_glyph_t command_panel_glyphs[] = {
+	[SCENER_TAB_CREATE]    = {"scener-cube",               "scener-cube-fill"},
+	[SCENER_TAB_MODIFY]    = {"scener-sliders-horizontal", "scener-sliders-horizontal-fill"},
+	[SCENER_TAB_HIERARCHY] = {"scener-tree-structure",     "scener-tree-structure-fill"},
+	[SCENER_TAB_MOTION]    = {"scener-play-circle",        "scener-play-circle-fill"},
+	[SCENER_TAB_DISPLAY]   = {"scener-monitor",            "scener-monitor-fill"},
+	[SCENER_TAB_RENDER]    = {"scener-camera",             "scener-camera-fill"},
+	[SCENER_TAB_UTILITIES] = {"scener-wrench",             "scener-wrench-fill"},
+};
 
-static void cp_menu_action(void *context, uint16_t id) {
-	(void)context;
-	handle_menu_command(id);
+void scener_select_panel_tab(int tab) {
+	window_t *panel = g_app ? g_app->command_panel_win : NULL;
+	cp_state_t *state = panel ? panel->userdata : NULL;
+	if (state && state->tabs) send_message(state->tabs, tcSetSelection, tab, NULL);
 }
 
-#define CP_MENU_COMMAND(label, id, icon) { label, id, icon, cp_menu_action, NULL }
-
-static const cp_command_t kControlItems[] = {
-	CP_MENU_COMMAND("Select",  ID_TOOL_SELECT, "tools/select"),
-	CP_MENU_COMMAND("Move",    ID_TOOL_MOVE,   "tools/move"),
-	CP_MENU_COMMAND("Rotate",  ID_TOOL_ROTATE, "tools/rotate"),
-	CP_MENU_COMMAND("Scale",   ID_TOOL_SCALE,  "tools/scale"),
-};
-
-static const cp_command_t kShapeItems[] = {
-	CP_MENU_COMMAND("Box",      ID_CREATE_BOX,      "primitives/box"),
-	CP_MENU_COMMAND("Rect", ID_CREATE_RECT, "primitives/box"),
-	CP_MENU_COMMAND("Circle", ID_CREATE_CIRCLE, "primitives/sphere"),
-	CP_MENU_COMMAND("Ellipse", ID_CREATE_ELLIPSE, "primitives/sphere"),
-	CP_MENU_COMMAND("Star", ID_CREATE_STAR, "primitives/prism"),
-	CP_MENU_COMMAND("Screen", ID_CREATE_SCREEN, "primitives/box"),
-	CP_MENU_COMMAND("Sphere",   ID_CREATE_SPHERE,   "primitives/sphere"),
-	CP_MENU_COMMAND("Cylinder", ID_CREATE_CYLINDER, "primitives/cylinder"),
-	CP_MENU_COMMAND("Cone",     ID_CREATE_CONE,     "primitives/cone"),
-	CP_MENU_COMMAND("Torus",    ID_CREATE_TORUS,    "primitives/torus"),
-	CP_MENU_COMMAND("Prism",    ID_CREATE_PRISM,    "primitives/prism"),
-	CP_MENU_COMMAND("Capsule",  ID_CREATE_CAPSULE,  "primitives/capsule"),
-	CP_MENU_COMMAND("Arch",     ID_CREATE_ARCH,     "primitives/arch"),
-	CP_MENU_COMMAND("Round Window", ID_CREATE_WINDOW_ROUND, "primitives/arch"),
-	CP_MENU_COMMAND("Cottage Window", ID_CREATE_WINDOW_COTTAGE, "primitives/box"),
-	CP_MENU_COMMAND("Gothic Window", ID_CREATE_WINDOW_GOTHIC, "primitives/arch"),
-	CP_MENU_COMMAND("Rectangular Door", ID_CREATE_DOOR_RECTANGULAR, "primitives/box"),
-	CP_MENU_COMMAND("Round Door", ID_CREATE_DOOR_ROUND, "primitives/arch"),
-	CP_MENU_COMMAND("Gothic Door", ID_CREATE_DOOR_GOTHIC, "primitives/arch"),
-};
-
-static const cp_command_t kSceneItems[] = {
-	CP_MENU_COMMAND("Point Light", ID_CREATE_POINT_LIGHT,       "scene/point-light"),
-	CP_MENU_COMMAND("Directional", ID_CREATE_DIRECTIONAL_LIGHT, "scene/directional-light"),
-	CP_MENU_COMMAND("Camera",      ID_CREATE_CAMERA,            "scene/camera"),
-};
-
-static const cp_command_t kModifierItems[] = {
-	CP_MENU_COMMAND("Taper",   ID_MODIFY_TAPER,   "modifiers/taper"),
-	CP_MENU_COMMAND("Twist",   ID_MODIFY_TWIST,   "modifiers/twist"),
-	CP_MENU_COMMAND("Bend",    ID_MODIFY_BEND,    "modifiers/bend"),
-	CP_MENU_COMMAND("Stretch", ID_MODIFY_STRETCH, "modifiers/stretch"),
-	CP_MENU_COMMAND("Skew",    ID_MODIFY_SKEW,    "modifiers/skew"),
-	CP_MENU_COMMAND("Extrude", ID_MODIFY_EXTRUDE, "modifiers/extrude"),
-	CP_MENU_COMMAND("Mirror",  ID_MODIFY_MIRROR,  "modifiers/mirror"),
-	CP_MENU_COMMAND("Noise",   ID_MODIFY_NOISE,   "modifiers/noise"),
-	CP_MENU_COMMAND("Shell",   ID_MODIFY_SHELL,   "modifiers/shell"),
-	CP_MENU_COMMAND("Array",   ID_MODIFY_ARRAY,   "modifiers/array"),
-};
-
-static const cp_section_t kCreateSections[] = {
-	{ "Controls",           kControlItems,  COUNT_OF(kControlItems)  },
-	{ "Shapes",             kShapeItems,    COUNT_OF(kShapeItems)    },
-	{ "Lights and Cameras", kSceneItems,    COUNT_OF(kSceneItems)    },
-};
-
-static const cp_section_t kModifySections[] = {
-	{ "Modifiers", kModifierItems, COUNT_OF(kModifierItems) },
-};
-
-#define CP_ICON_CREATE    "tabs/create"
-#define CP_ICON_MODIFY    "tabs/modify"
-#define CP_ICON_HIERARCHY "tabs/hierarchy"
-#define CP_ICON_MOTION    "tabs/motion"
-#define CP_ICON_DISPLAY   "tabs/display"
-#define CP_ICON_UTILITIES "tabs/utilities"
-
-/* Tab icon names match kTabs[] order — indices 0..5 used with tcSetTabIcon. */
-static const char *kTabIconNames[] = {
-	CP_ICON_CREATE, CP_ICON_MODIFY, CP_ICON_HIERARCHY,
-	CP_ICON_MOTION, CP_ICON_DISPLAY, CP_ICON_UTILITIES,
-};
-
-static const cp_tab_t kTabs[] = {
-	{ "Create",    ID_CP_TAB_CREATE,    CP_ICON_CREATE,    kCreateSections, COUNT_OF(kCreateSections) },
-	{ "Modify",    ID_CP_TAB_MODIFY,    CP_ICON_MODIFY,    kModifySections, COUNT_OF(kModifySections) },
-	{ "Hierarchy", ID_CP_TAB_HIERARCHY, CP_ICON_HIERARCHY, NULL, 0 },
-	{ "Motion",    ID_CP_TAB_MOTION,    CP_ICON_MOTION,    NULL, 0 },
-	{ "Display",   ID_CP_TAB_DISPLAY,   CP_ICON_DISPLAY,   NULL, 0 },
-	{ "Utilities", ID_CP_TAB_UTILITIES, CP_ICON_UTILITIES, NULL, 0 },
-};
-
-static const cp_datasource_t kCommandPanelDataSource = {
-	.tabs = kTabs, .count = COUNT_OF(kTabs),
-};
-
-static bool cp_build_tab_strip(bitmap_strip_t *strip) {
-	char icons_dir[1024];
-	int n = snprintf(icons_dir, sizeof(icons_dir), "%s/../share/scener/icons", ui_get_exe_dir());
-	if (n <= 0 || (size_t)n >= sizeof(icons_dir)) return false;
-	int count = COUNT_OF(kTabIconNames);
-	return bmp_build_strip(icons_dir, kTabIconNames, count, 24, count, strip, NULL);
+void scener_inspect_selection(void) {
+	window_t *panel = g_app ? g_app->command_panel_win : NULL;
+	cp_state_t *state = panel ? panel->userdata : NULL;
+	if (state && state->tabs && send_message(state->tabs, tcGetSelection, 0, NULL) == SCENER_TAB_CREATE)
+		scener_select_panel_tab(SCENER_TAB_MODIFY);
 }
 
-static window_t *cp_create_page(window_t *tabview, const cp_tab_t *tab) {
-	if(tab->id==ID_CP_TAB_HIERARCHY)
-		return create_window("Rig Hierarchy",WINDOW_NOTITLE,MAKERECT(0,0,1,1),tabview,rig_panel_proc,0,NULL);
-	window_t *page = create_window(tab->label, WINDOW_NOTITLE,
-		MAKERECT(0, 0, 1, 1), tabview, "StackView", 0, NULL);
-	if (!page) return NULL;
-	page->layout.layout_spacing = 4;
-	for (int s = 0; s < tab->count; s++) {
-		const cp_section_t *section = &tab->sections[s];
-		window_t *section_win = create_window("", WINDOW_NOTITLE,
-			MAKERECT(0, 0, 1, 1), page, "StackView", 0, NULL);
-		if (!section_win) continue;
-		section_win->layout.layout_spacing = 4;
-		create_window(section->label, WINDOW_NOTITLE,
-			MAKERECT(0, 0, 1, CONTROL_HEIGHT), section_win, "Label", 0, NULL);
-		window_t *grid = create_window("", WINDOW_NOTITLE,
-			MAKERECT(0, 0, 1, 1), section_win, "GridView", 0, NULL);
-		if (!grid) continue;
-		grid->layout.layout_spacing = 4;
-		send_message(grid, evInitChildren, 0, NULL);
-		window_t *columns[2] = { grid->children, grid->children ? grid->children->next : NULL };
-		for (int i = 0; i < section->count; i++) {
-			window_t *column = columns[i % 2];
-			if (!column) continue;
-			const cp_command_t *command = &section->commands[i];
-			window_t *button = create_window(command->label,
-				WINDOW_NOTITLE, MAKERECT(0, 0, 1, CP_BUTTON_HEIGHT),
-				column, "Button", 0, NULL);
-			if (button) button->id = command->id;
+void scener_sync_panel_checks(void) {
+	window_t *panel = g_app ? g_app->command_panel_win : NULL;
+	if (!panel) return;
+	const struct { uint16_t id; bool checked; } checks[] = {
+		{ID_COMMAND_PANEL_CAST_SHADOWS,      !(g_app->debug_flags & DBG_NO_SHADOWS)},
+		{ID_COMMAND_PANEL_AMBIENT_OCCLUSION, (g_app->debug_flags & DBG_SSAO) != 0},
+		{ID_COMMAND_PANEL_SCENE_GUIDES,     !(g_app->debug_flags & DBG_HIDE_LIGHTS)},
+		{ID_COMMAND_PANEL_CHARACTER_GUIDES,    !(g_app->debug_flags & DBG_HIDE_CHARS)},
+	};
+	for (size_t i = 0; i < ARRAY_LEN(checks); i++) {
+		window_t *control = get_window_item(panel, checks[i].id);
+		uint32_t value = checks[i].checked ? btnStateChecked : btnStateUnchecked;
+		if (control && send_message(control, btnGetCheck, 0, NULL) != value) {
+			send_message(control, btnSetCheck, value, NULL);
+			invalidate_window(control);
 		}
 	}
-	if (!tab->count)
-		create_window("No controls available", WINDOW_NOTITLE,
-			MAKERECT(0, 0, 1, CONTROL_HEIGHT), page, "Label", 0, NULL);
-	return page;
 }
 
-static const cp_command_t *cp_find_command(const cp_datasource_t *source, uint16_t id) {
-	if (!source) return NULL;
-	for (int t = 0; t < source->count; t++)
-		for (int s = 0; s < source->tabs[t].count; s++)
-			for (int i = 0; i < source->tabs[t].sections[s].count; i++) {
-				const cp_command_t *command = &source->tabs[t].sections[s].commands[i];
-				if (command->id == id) return command;
-			}
-	return NULL;
-}
-
-result_t win_command_panel(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-	(void)lparam;
-	cp_state_t *st = (cp_state_t *)win->userdata;
+static result_t win_command_panel(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+	cp_state_t *state = win->userdata;
 	switch (msg) {
 		case evCreate: {
-			st = calloc(1, sizeof(*st));
-			if (!st) return false;
-			win->userdata = st;
-			st->datasource = &kCommandPanelDataSource;
-			bool has_strip = cp_build_tab_strip(&st->strip);
-			st->tabview = create_window("", WINDOW_NOTITLE | WINDOW_NORESIZE,
-				MAKERECT(0, 0, 1, 1), win, "TabView", 0, NULL);
-			if (!st->tabview) return false;
-			for (int i = 0; i < st->datasource->count; i++) {
-				window_t *page = cp_create_page(st->tabview, &st->datasource->tabs[i]);
-				if(i==2) st->rig_panel=page;
-				if (page) show_window(page, true);
+			state = allocate_window_data(win, sizeof(*state));
+			if (!state) return false;
+			state->tabs = get_window_item(win, ID_COMMAND_PANEL_COMMAND_TABS);
+			if (!state->tabs) return false;
+			for (size_t i = 0; i < ARRAY_LEN(command_panel_glyphs); i++) {
+				segment_glyph_t glyph = command_panel_glyphs[i];
+				send_message(state->tabs, tcSetPageGlyph, i, &glyph);
 			}
-			send_message(st->tabview, tcSetStyle, TAB_STYLE_ICONS_ONLY, NULL);
-			if (has_strip) {
-				send_message(st->tabview, tcSetImageStrip, 0, &st->strip);
-				for (int i = 0; i < st->datasource->count; i++)
-					send_message(st->tabview, tcSetTabIcon, i, (void*)(intptr_t)i);
-			}
-			irect16_t cr = get_client_rect(win);
-			layout_arrange_t a = {R(0, 0, cr.w, cr.h)};
-			send_message(st->tabview, evArrange, 0, &a);
-			show_window(st->tabview, true);
-			scener_rig_panel_refresh();
+			send_message(state->tabs, tcSetStyle, TAB_STYLE_ICONS_ONLY, NULL);
+			window_t *hierarchy = get_window_item(win, ID_COMMAND_PANEL_HIERARCHY_PAGE);
+			state->rig_panel = create_window("", WINDOW_NOTITLE | WINDOW_FLEXSPACE,
+				MAKERECT(0, 0, 1, 1), hierarchy, rig_panel_proc, 0, NULL);
+			property_browser_init(win);
 			return true;
 		}
-		case evPaint: {
-			if (!st) return false;
-			irect16_t cr = get_client_rect(win);
-			fill_rect(get_sys_color(brControlBg), cr);
-			for (window_t *c = win->children; c; c = c->next)
-				send_message(c, evPaint, 0, NULL);
-			return true;
-		}
-		case evResize: {
-			if (!st) return false;
-			irect16_t cr = get_client_rect(win);
-			for (window_t *c = win->children; c; c = c->next) {
-				layout_arrange_t a = {R(0, 0, cr.w, cr.h)};
-				send_message(c, evArrange, 0, &a);
-			}
-			return true;
-		}
-		case evCommand: {
-			if (HIWORD(wparam) == tcnSelChange) return true;
-			uint16_t id = LOWORD(wparam);
-			for (int i = 0; st && i < st->datasource->count; i++) if (st->datasource->tabs[i].id == id) {
-				if (st && st->tabview) send_message(st->tabview, tcSetSelection, i, NULL);
-				return true;
-			}
-			const cp_command_t *command = cp_find_command(st ? st->datasource : NULL, id);
-			if (command && command->action) {
-				command->action(command->context, command->id);
-				return true;
-			}
+		case evPaint:
+			fill_rect(get_sys_color(brControlBg), get_client_rect(win));
 			return false;
+		case evCommand: {
+			uint16_t id = LOWORD(wparam), code = HIWORD(wparam);
+			if (code == tcnSelChange) return true;
+			if (state && state->rig_panel &&
+				((code == btnClicked && id >= RIG_EDIT_ROT && id <= RIG_ASSIGN_SHOT) ||
+				 (code == RVN_SELCHANGE && lparam && ((window_t *)lparam)->parent == state->rig_panel)))
+				return send_message(state->rig_panel, msg, wparam, lparam);
+			if (code != btnClicked) return false;
+			switch (id) {
+				case ID_COMMAND_PANEL_CAST_SHADOWS:      id = ID_VIEW_SHOW_SHADOWS; break;
+				case ID_COMMAND_PANEL_AMBIENT_OCCLUSION: id = ID_VIEW_TOGGLE_SSAO; break;
+				case ID_COMMAND_PANEL_SCENE_GUIDES:
+				case ID_COMMAND_PANEL_CHARACTER_GUIDES:
+					g_app->debug_flags ^= id == ID_COMMAND_PANEL_SCENE_GUIDES ? DBG_HIDE_LIGHTS : DBG_HIDE_CHARS;
+					scener_sync_tool_ui();
+					return true;
+			}
+			if (id < ID_COMMAND_BASE || id > ID_HELP_ABOUT) return false;
+			handle_menu_command(id);
+			return true;
 		}
 		case evDestroy:
-			if (st) {
-				R_DeleteTexture(st->strip.tex);
-				free(st);
-				win->userdata = NULL;
-			}
-			if (g_app) g_app->command_panel_win = NULL;
+			if (g_app && g_app->command_panel_win == win) g_app->command_panel_win = NULL;
 			return false;
 		default:
 			return false;
@@ -431,21 +272,20 @@ result_t win_command_panel(window_t *win, uint32_t msg, uint32_t wparam, void *l
 }
 
 window_t *create_command_panel_window(void) {
-	if (!g_app) return NULL;
+	if (!g_app || !g_app->chrome_win) return NULL;
 #ifdef BUILD_AS_GEM
-	int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-	int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-	int win_h = (int)((sh - MENUBAR_HEIGHT - TOOLBAR_BAND_HEIGHT - 40) * 0.60f);
-	window_t *win = create_window("Command Panel",
-		WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-		MAKERECT(sw - CP_WIDTH, MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT, CP_WIDTH, win_h),
-		NULL, win_command_panel, g_app->hinstance, NULL);
+	int top = MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT;
+	int left = ui_get_system_metrics(kSystemMetricScreenWidth) - SIDE_PANEL_WIDTH;
+	window_t *win = create_window_from_form(&scener_command_panel_form, left, top, NULL,
+		win_command_panel, g_app->hinstance, NULL);
+	if (win) resize_window(win, SIDE_PANEL_WIDTH, MAX(1, ui_get_system_metrics(kSystemMetricScreenHeight) - top));
 #else
-	irect16_t workspace = get_client_rect(g_app->chrome_win);
-	get_application_workspace(g_app->hinstance, &workspace);
-	irect16_t frame = rect_split_right(workspace, CP_WIDTH);
-	window_t *win = create_window(ui_tr("Rig Hierarchy"), WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON,
-		&frame, NULL, rig_panel_proc, g_app->hinstance, NULL);
+	window_t *win = create_window_from_form(&scener_command_panel_form, 0, 0, g_app->chrome_win,
+		win_command_panel, g_app->hinstance, NULL);
+	if (win && !dock_window(win, DOCK_RIGHT, DOCK_EDGE(DOCK_RIGHT), DOCK_NOFLOAT, SIDE_PANEL_WIDTH, SIDE_PANEL_WIDTH)) {
+		destroy_window(win);
+		return NULL;
+	}
 #endif
 	if (win) show_window(win, true);
 	return win;

@@ -1,5 +1,4 @@
 #include "scener.h"
-#include <orion/user/dock.h>
 #include <orion/commctl/commctl.h>
 
 enum { PROP_NAME_WIDTH = 104 };
@@ -13,7 +12,6 @@ typedef struct {
 	const prop_def_t *properties;
 	int count, common, material;
 } node_class_t;
-typedef struct { window_t *list_win; } prop_browser_state_t;
 
 #define PROP_COUNT(a) ((int)(sizeof(a)/sizeof((a)[0])))
 #define P(label,attr,def)       { label, attr, NULL, def, PROP_TEXT }
@@ -155,97 +153,113 @@ static void prop_add_set(window_t *list,const void *node,const prop_def_t *prope
 	for(int i=0;i<count;i++) prop_add_row(list,properties[i].label,prop_value(node,&properties[i],value,sizeof(value)));
 }
 
-void property_browser_refresh(void){
+static void prop_setup_list(window_t *list) {
+	if (!list) return;
+	send_message(list, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
+	send_message(list, RVM_SETCOLUMNTITLESVISIBLE, 1, NULL);
+	reportview_column_t name = {ui_tr("Property"), PROP_NAME_WIDTH}, value = {ui_tr("Value"), 0};
+	send_message(list, RVM_ADDCOLUMN, 0, &name);
+	send_message(list, RVM_ADDCOLUMN, 0, &value);
+}
+
+void property_browser_init(window_t *panel) {
+	prop_setup_list(get_window_item(panel, ID_COMMAND_PANEL_CREATE_PROPERTIES));
+	prop_setup_list(get_window_item(panel, ID_COMMAND_PANEL_SELECTION_PROPERTIES));
+}
+
+static void prop_show(window_t *win, bool visible) {
+	if (win && window_has_state(win, WINDOW_STATE_VISIBLE) != visible) show_window(win, visible);
+}
+
+static void prop_creation_row(void *list, const char *name, const char *value) {
+	prop_add_row(list, name, value);
+}
+
+typedef struct { window_t *list; bool has_modifiers; } prop_modifier_rows_t;
+
+static void prop_modifier_row(void *context, const void *node) {
+	prop_modifier_rows_t *rows = context;
+	if (!rows->has_modifiers) {
+		prop_add_row(rows->list, ui_tr("Modifiers"), "");
+		rows->has_modifiers = true;
+	}
+	const node_class_t *definition = prop_find_class(scene_node_tag(node));
+	const char *tag = scene_node_tag(node);
+	prop_add_row(rows->list, definition ? ui_tr(definition->label) : tag, "");
+	if (definition) prop_add_set(rows->list, node, definition->properties, definition->count);
+	for (int i = 0; i < scene_node_attr_count(node); i++) {
+		const char *name = scene_node_attr_name(node, i);
+		if (name && !prop_attr_is_known(definition, name))
+			prop_add_row(rows->list, name, scene_node_attr_value(node, i));
+	}
+}
+
+void property_browser_refresh(void) {
+	window_t *panel = g_app ? g_app->command_panel_win : NULL;
+	if (!panel) return;
 	scener_rig_panel_refresh();
-	window_t *win=g_app?g_app->property_browser_win:NULL;
-	prop_browser_state_t *st=win?(prop_browser_state_t*)win->userdata:NULL;
-	if(!st||!st->list_win) return;
-	send_message(st->list_win,RVM_CLEAR,0,NULL);
-	scene_doc_t *doc=g_app->active_doc;
-	if(!doc){ prop_add_row(st->list_win,"Status","No active document"); return; }
-	void *node=doc->scene.selectedNode;
-	if(!node){ prop_add_row(st->list_win,"Status","No node selected"); return; }
+	window_t *draft = get_window_item(panel, ID_COMMAND_PANEL_CREATE_PROPERTIES);
+	window_t *list = get_window_item(panel, ID_COMMAND_PANEL_SELECTION_PROPERTIES);
+	window_t *empty = get_window_item(panel, ID_COMMAND_PANEL_MODIFY_EMPTY);
+	scene_doc_t *doc = g_app->active_doc;
+	uint16_t create_mode = doc ? doc->scene.createMode : 0;
+	void *node = doc ? doc->scene.selectedNode : NULL;
+	int selected = doc ? doc->scene.selectedObj : -1;
+	bool mesh_selected = doc && selected >= 0 && selected < doc->scene.nobjs;
+	prop_show(draft, create_mode != 0);
+	prop_show(list, node || mesh_selected);
+	prop_show(empty, !node && !mesh_selected);
+	if (draft && create_mode) {
+		send_message(draft, RVM_CLEAR, 0, NULL);
+		scener_visit_creation_properties(create_mode, prop_creation_row, draft);
+	}
+	if (!list || (!node && !mesh_selected)) return;
+	send_message(list, RVM_CLEAR, 0, NULL);
+	if (!node) {
+		const SceneObj *object = &doc->scene.objs[selected];
+		char value[64];
+		prop_add_row(list, ui_tr("Class"), ui_tr("Mesh"));
+		snprintf(value, sizeof(value), "%d", object->mesh->nverts);
+		prop_add_row(list, ui_tr("Vertices"), value);
+		snprintf(value, sizeof(value), "%d", object->mesh->ntris);
+		prop_add_row(list, ui_tr("Triangles"), value);
+		return;
+	}
 	if(doc->scene.selectedRigInstance==node && doc->scene.selectedRigJoint){
 		void *joint=doc->scene.selectedRigJoint;
 		char value[128];
-		prop_add_row(st->list_win,"Character",scene_node_attr(node,"name"));
-		prop_add_row(st->list_win,"Joint",scene_node_attr(joint,"name"));
-		prop_add_row(st->list_win,"Pair",scene_node_attr(joint,"pair"));
+		prop_add_row(list,"Character",scene_node_attr(node,"name"));
+		prop_add_row(list,"Joint",scene_node_attr(joint,"name"));
+		prop_add_row(list,"Pair",scene_node_attr(joint,"pair"));
 		vec3 pivot=scene_rig_joint_value(&doc->scene,node,joint,"pivot");
-		snprintf(value,sizeof(value),"%.3g %.3g %.3g cm",pivot.x*100,pivot.y*100,pivot.z*100); prop_add_row(st->list_win,"Pivot",value);
+		snprintf(value,sizeof(value),"%.3g %.3g %.3g cm",pivot.x*100,pivot.y*100,pivot.z*100); prop_add_row(list,"Pivot",value);
 		vec3 rot=scene_rig_joint_value(&doc->scene,node,joint,"rot");
-		snprintf(value,sizeof(value),"%.3g %.3g %.3g deg",rot.x,rot.y,rot.z); prop_add_row(st->list_win,"Local pose rotation",value);
+		snprintf(value,sizeof(value),"%.3g %.3g %.3g deg",rot.x,rot.y,rot.z); prop_add_row(list,"Local pose rotation",value);
 		vec3 offset=scene_rig_joint_value(&doc->scene,node,joint,"pos");
-		snprintf(value,sizeof(value),"%.3g %.3g %.3g cm",offset.x*100,offset.y*100,offset.z*100); prop_add_row(st->list_win,"Local pose offset",value);
+		snprintf(value,sizeof(value),"%.3g %.3g %.3g cm",offset.x*100,offset.y*100,offset.z*100); prop_add_row(list,"Local pose offset",value);
 		const char *instance_name=scene_node_attr(node,"name");
 		for(int i=0;i<doc->scene.nrigTargets;i++) if(!strcmp(doc->scene.rigTargets[i].instance,instance_name?instance_name:"") &&
 			!strcmp(doc->scene.rigTargets[i].joint,scene_node_attr(joint,"name"))){
 			snprintf(value,sizeof(value),doc->scene.rigTargets[i].reachable?"Reachable":"Out of reach by %.2f cm",doc->scene.rigTargets[i].error*100);
-			prop_add_row(st->list_win,"IK target",value);
+			prop_add_row(list,"IK target",value);
 		}
-		prop_add_row(st->list_win,ui_tr("Edit"),ui_tr("Rig Hierarchy"));
-		prop_add_row(st->list_win,"Guide","Pivot at articulation; inspect bent seams");
+		prop_add_row(list,ui_tr("Edit"),ui_tr("Rig Hierarchy"));
+		prop_add_row(list,"Guide","Pivot at articulation; inspect bent seams");
 		return;
 	}
 	const char *tag=scene_node_tag(node);
 	const node_class_t *class_def=prop_find_class(tag);
-	prop_add_row(st->list_win,"Class",class_def?class_def->label:tag);
-	if(class_def&&class_def->common){ prop_add_row(st->list_win,"Transform",""); prop_add_set(st->list_win,node,kTransformProperties,PROP_COUNT(kTransformProperties)); }
-	if(class_def&&class_def->count){ prop_add_row(st->list_win,"Parameters",""); prop_add_set(st->list_win,node,class_def->properties,class_def->count); }
-	if(class_def&&class_def->material){ prop_add_row(st->list_win,"Material",""); prop_add_set(st->list_win,node,kMaterialProperties,PROP_COUNT(kMaterialProperties)); }
+	prop_add_row(list,"Class",class_def?class_def->label:tag);
+	if(class_def&&class_def->common){ prop_add_row(list,"Transform",""); prop_add_set(list,node,kTransformProperties,PROP_COUNT(kTransformProperties)); }
+	if(class_def&&class_def->count){ prop_add_row(list,"Parameters",""); prop_add_set(list,node,class_def->properties,class_def->count); }
+	if(class_def&&class_def->material){ prop_add_row(list,"Material",""); prop_add_set(list,node,kMaterialProperties,PROP_COUNT(kMaterialProperties)); }
 	int added_other=0;
 	for(int i=0;i<scene_node_attr_count(node);i++){
 		const char *name=scene_node_attr_name(node,i);
 		if(!name||prop_attr_is_known(class_def,name)) continue;
-		if(!added_other){ prop_add_row(st->list_win,"Other",""); added_other=1; }
-		prop_add_row(st->list_win,name,scene_node_attr_value(node,i));
+		if(!added_other){ prop_add_row(list,"Other",""); added_other=1; }
+		prop_add_row(list,name,scene_node_attr_value(node,i));
 	}
-}
-
-window_t *create_property_browser_window(void){
-	if(!g_app) return NULL;
-#ifdef BUILD_AS_GEM
-	int sw=ui_get_system_metrics(kSystemMetricScreenWidth),sh=ui_get_system_metrics(kSystemMetricScreenHeight);
-	int total_h=sh-MENUBAR_HEIGHT-TOOLBAR_BAND_HEIGHT-40;
-	int cmd_h=(int)(total_h*0.60f);
-	window_t *win=create_window("Properties",WINDOW_ALWAYSONTOP|WINDOW_NOTRAYBUTTON|WINDOW_NORESIZE,
-		MAKERECT(sw-SIDE_PANEL_WIDTH,MENUBAR_HEIGHT+TOOLBAR_BAND_HEIGHT+cmd_h,SIDE_PANEL_WIDTH,total_h-cmd_h),
-		NULL,win_property_browser,g_app->hinstance,NULL);
-#else
-	if (!g_app->chrome_win) return NULL;
-	window_t *win = create_window(ui_tr("Properties"), WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE | WINDOW_NORESIZE,
-		MAKERECT(0, 0, SIDE_PANEL_WIDTH, 1), g_app->chrome_win, win_property_browser, g_app->hinstance, NULL);
-	if (win && !dock_window(win, DOCK_RIGHT, DOCK_EDGE(DOCK_RIGHT), DOCK_NOFLOAT, SIDE_PANEL_WIDTH, SIDE_PANEL_WIDTH)) {
-		destroy_window(win);
-		return NULL;
-	}
-#endif
-	if(win) show_window(win,true);
-	return win;
-}
-
-result_t win_property_browser(window_t *win,uint32_t msg,uint32_t wparam,void *lparam){
-	(void)wparam; (void)lparam;
-	prop_browser_state_t *st=(prop_browser_state_t*)win->userdata;
-	switch(msg){
-		case evCreate:
-			st=allocate_window_data(win,sizeof(*st));
-			st->list_win=create_window("",WINDOW_NOTITLE|WINDOW_NOFILL|WINDOW_VSCROLL,MAKERECT(0,0,win->frame.w,win->frame.h),win,win_reportview,0,NULL);
-			if(st->list_win){
-				send_message(st->list_win,RVM_SETVIEWMODE,RVM_VIEW_REPORT,NULL);
-				send_message(st->list_win,RVM_SETCOLUMNTITLESVISIBLE,1,NULL);
-				reportview_column_t name={"Property",PROP_NAME_WIDTH},value={"Value",0};
-				send_message(st->list_win,RVM_ADDCOLUMN,0,&name); send_message(st->list_win,RVM_ADDCOLUMN,0,&value);
-			}
-			return true;
-		case evResize: {
-			irect16_t client = get_client_rect(win);
-			if(st&&st->list_win) resize_window(st->list_win,client.w,client.h);
-			return true;
-		}
-		case evDestroy:
-			if(g_app) g_app->property_browser_win=NULL;
-			return false;
-		default: return false;
-	}
+	prop_modifier_rows_t modifiers = { .list = list };
+	scene_visit_node_modifiers(node, prop_modifier_row, &modifiers);
 }

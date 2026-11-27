@@ -49,7 +49,7 @@ output extension, or by `--exporter ID`. Exporters are shared libraries; see
 their options, and how to write another.
 
 `--screenshot` writes the viewport alone. `--ui-shot FILE.png|FILE.jpg` captures the
-editor's first painted frame, including the ribbon and Properties pane, then
+editor's first painted frame, including the ribbon and tabbed Command Panel, then
 exits. It uses an offscreen surface when the platform supports one.
 
 `--check`, `--query` and `--prefab-info` load the scene without a graphical

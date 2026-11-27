@@ -1,4 +1,5 @@
 #include "test_framework.h"
+#include "test_env.h"
 #include "scener.h"
 #include <unistd.h>
 #include <sys/stat.h>
@@ -43,6 +44,74 @@ static void test_tool_commands_share_document_state(void) {
   ASSERT_EQUAL(doc.scene.createMode, 0);
   ASSERT_EQUAL(scener_active_tool(), ID_TOOL_ROTATE);
 
+  g_app = NULL;
+  PASS();
+}
+
+static void test_command_panel_properties_follow_editor_state(void) {
+  TEST("scener command panel: docked controls open contextual creation and selection properties");
+  test_env_init();
+  ui_update_screen_size(1024 * UI_WINDOW_SCALE, 768 * UI_WINDOW_SCALE);
+  scene_doc_t doc = {0};
+  app_state_t app = { .docs = &doc, .active_doc = &doc };
+  g_app = &app;
+  app.chrome_win = create_ribbon_chrome("Scener Test", scener_ribbon_proc, &scener_ribbon, scener_toolbar_proc, 0);
+  ASSERT_NOT_NULL(app.chrome_win);
+  app.command_panel_win = create_command_panel_window();
+  ASSERT_NOT_NULL(app.command_panel_win);
+  ASSERT_TRUE(app.command_panel_win->parent == app.chrome_win);
+  ASSERT_TRUE(window_test_load(&doc.scene,
+    "<scene><sun dir='0 -1 0'/><rect size='100 100'><extrude amount='20'/><bevel amount='2'/></rect></scene>"));
+  property_browser_refresh();
+
+  window_t *panel = app.command_panel_win;
+  window_t *tabs = get_window_item(panel, ID_COMMAND_PANEL_COMMAND_TABS);
+  window_t *draft = get_window_item(panel, ID_COMMAND_PANEL_CREATE_PROPERTIES);
+  window_t *selection = get_window_item(panel, ID_COMMAND_PANEL_SELECTION_PROPERTIES);
+  window_t *box = get_window_item(panel, ID_CREATE_BOX);
+  ASSERT_NOT_NULL(tabs);
+  ASSERT_NOT_NULL(draft);
+  ASSERT_NOT_NULL(selection);
+  ASSERT_NOT_NULL(box);
+  ASSERT_EQUAL(send_message(tabs, tcGetCount, 0, NULL), 7);
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), SCENER_TAB_CREATE);
+  ASSERT_FALSE(window_has_state(draft, WINDOW_STATE_VISIBLE));
+  ASSERT_FALSE(window_has_state(selection, WINDOW_STATE_VISIBLE));
+
+  send_message(box, evLeftButtonDown, 0, NULL);
+  send_message(box, evLeftButtonUp, 0, NULL);
+  ASSERT_EQUAL(doc.scene.createMode, ID_CREATE_BOX);
+  ASSERT_TRUE(window_has_state(draft, WINDOW_STATE_VISIBLE));
+  ASSERT_FALSE(window_has_state(selection, WINDOW_STATE_VISIBLE));
+  reportview_item_t row;
+  ASSERT_TRUE(send_message(draft, RVM_GETITEMDATA, 1, &row));
+  ASSERT_STR_EQUAL(row.text, "Width (cm)");
+  ASSERT_STR_EQUAL(row.subitems[0], "100");
+
+  ASSERT_TRUE(scener_ribbon_proc(NULL, evCommand, MAKEDWORD(ID_TOOL_SELECT, kAcceleratorNotification), NULL));
+  ASSERT_EQUAL(doc.scene.createMode, 0);
+  ASSERT_FALSE(window_has_state(draft, WINDOW_STATE_VISIBLE));
+  ASSERT_FALSE(window_has_state(selection, WINDOW_STATE_VISIBLE));
+
+  doc.scene.selectedObj = scene_pick_object(&doc.scene, v3(0, 0, 2), v3(0, 0, -1), NULL);
+  ASSERT_NOT_NULL(doc.scene.selectedNode);
+  scener_inspect_selection();
+  property_browser_refresh();
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), SCENER_TAB_MODIFY);
+  ASSERT_TRUE(window_has_state(selection, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(send_message(selection, RVM_GETITEMDATA, 0, &row));
+  ASSERT_STR_EQUAL(row.subitems[0], "Rect");
+  const char *expected[] = { "Modifiers", "Extrude", "Bevel" };
+  size_t found = 0;
+  int count = (int)send_message(selection, RVM_GETITEMCOUNT, 0, NULL);
+  for (int i = 0; i < count && found < ARRAY_LEN(expected); i++) {
+    ASSERT_TRUE(send_message(selection, RVM_GETITEMDATA, i, &row));
+    if (!strcmp(row.text, expected[found])) found++;
+  }
+  ASSERT_EQUAL(found, ARRAY_LEN(expected));
+
+  scene_free(&doc.scene);
+  test_env_shutdown();
   g_app = NULL;
   PASS();
 }
@@ -1710,6 +1779,7 @@ static void test_mocap_retarget(void){
 int main(void) {
   TEST_START("scener input and command state");
   test_tool_commands_share_document_state();
+  test_command_panel_properties_follow_editor_state();
   test_prefab_files_open_as_documents();
   test_device_screen_geometry_and_assets();
   test_cone_normals_follow_slope();

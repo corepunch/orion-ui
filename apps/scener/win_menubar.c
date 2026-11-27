@@ -38,6 +38,7 @@ window_t *create_main_toolbar_window(void) {
 
 void scener_sync_command_state(void) {
   if (!g_app) return;
+  scener_sync_panel_checks();
   uint16_t active = scener_active_tool();
   if (g_app->main_toolbar_win)
     send_message(g_app->main_toolbar_win, tbCheckButton, active, (void *)(intptr_t)1);
@@ -73,6 +74,7 @@ void scener_sync_command_state(void) {
 void scener_sync_tool_ui(void) {
   if (!g_app) return;
   scener_sync_command_state();
+  property_browser_refresh();
   if (g_app->command_panel_win) invalidate_window(g_app->command_panel_win);
   for (scene_doc_t *doc = g_app->docs; doc; doc = doc->next)
     if (doc->viewport_win) invalidate_window(doc->viewport_win);
@@ -111,6 +113,93 @@ static bool is_create_primitive(uint16_t id) {
   return id >= ID_CREATE_BOX && id <= ID_CREATE_DOOR_GOTHIC;
 }
 
+enum {
+  CREATE_SIZE_CM = 100,
+  CREATE_RADIUS_CM = 50,
+  CREATE_SPHERE_STEPS = 16,
+  CREATE_ROUND_SIDES = 24,
+  CREATE_PRISM_SIDES = 6,
+  CREATE_TORUS_RADIUS_CM = 40,
+  CREATE_TORUS_TUBE_CM = 15,
+  CREATE_CAPSULE_RADIUS_CM = 30,
+  CREATE_CAPSULE_CYLINDER_CM = 60,
+  CREATE_ARCH_DEPTH_CM = 30,
+  CREATE_ARCH_FRAME_CM = 15,
+  CREATE_DETAIL_STEPS = 12,
+};
+
+typedef struct {
+  const char *label;
+  double number;
+  int decimals;
+} creation_property_t;
+
+static const creation_property_t kCreationProperties[][6] = {
+  [ID_CREATE_BOX - ID_CREATE_BOX] = {
+    { "Width (cm)", CREATE_SIZE_CM, 0 }, { "Height (cm)", CREATE_SIZE_CM, 0 }, { "Depth (cm)", CREATE_SIZE_CM, 0 },
+  },
+  [ID_CREATE_RECT - ID_CREATE_BOX] = {
+    { "Width (cm)", 100, 0 }, { "Height (cm)", 100, 0 }, { "Extrude (cm)", 20, 0 }, { "Bevel (cm)", 2, 0 },
+  },
+  [ID_CREATE_CIRCLE - ID_CREATE_BOX] = {
+    { "Radius (cm)", 50, 0 }, { "Segments", 32, 0 }, { "Extrude (cm)", 20, 0 }, { "Bevel (cm)", 2, 0 },
+  },
+  [ID_CREATE_ELLIPSE - ID_CREATE_BOX] = {
+    { "Width (cm)", 100, 0 }, { "Height (cm)", 70, 0 }, { "Segments", 48, 0 }, { "Extrude (cm)", 20, 0 }, { "Bevel (cm)", 2, 0 },
+  },
+  [ID_CREATE_STAR - ID_CREATE_BOX] = {
+    { "Outer Radius (cm)", 50, 0 }, { "Inner Radius (cm)", 25, 0 }, { "Points", 5, 0 }, { "Extrude (cm)", 20, 0 }, { "Bevel (cm)", 2, 0 },
+  },
+  [ID_CREATE_SCREEN - ID_CREATE_BOX] = {
+    { "Width (cm)", 7.03, 2 }, { "Height (cm)", 15.54, 2 }, { "Depth (cm)", 0.03, 2 }, { "Corner Radius (cm)", 0.98, 2 },
+  },
+  [ID_CREATE_SPHERE - ID_CREATE_BOX] = {
+    { "Radius (cm)", CREATE_RADIUS_CM, 0 }, { "Rings", CREATE_SPHERE_STEPS, 0 }, { "Slices", CREATE_SPHERE_STEPS, 0 },
+  },
+  [ID_CREATE_CYLINDER - ID_CREATE_BOX] = {
+    { "Radius (cm)", CREATE_RADIUS_CM, 0 }, { "Height (cm)", CREATE_SIZE_CM, 0 }, { "Sides", CREATE_ROUND_SIDES, 0 },
+  },
+  [ID_CREATE_CONE - ID_CREATE_BOX] = {
+    { "Base Radius (cm)", CREATE_RADIUS_CM, 0 }, { "Top Radius (cm)", 0, 0 }, { "Height (cm)", CREATE_SIZE_CM, 0 }, { "Sides", CREATE_ROUND_SIDES, 0 },
+  },
+  [ID_CREATE_TORUS - ID_CREATE_BOX] = {
+    { "Major Radius (cm)", CREATE_TORUS_RADIUS_CM, 0 }, { "Minor Radius (cm)", CREATE_TORUS_TUBE_CM, 0 },
+    { "Major Segments", CREATE_ROUND_SIDES, 0 }, { "Minor Segments", CREATE_DETAIL_STEPS, 0 },
+  },
+  [ID_CREATE_PRISM - ID_CREATE_BOX] = {
+    { "Radius (cm)", CREATE_RADIUS_CM, 0 }, { "Height (cm)", CREATE_SIZE_CM, 0 }, { "Sides", CREATE_PRISM_SIDES, 0 },
+  },
+  [ID_CREATE_CAPSULE - ID_CREATE_BOX] = {
+    { "Radius (cm)", CREATE_CAPSULE_RADIUS_CM, 0 }, { "Cylinder Height (cm)", CREATE_CAPSULE_CYLINDER_CM, 0 },
+    { "Rings", CREATE_DETAIL_STEPS, 0 }, { "Slices", CREATE_DETAIL_STEPS, 0 },
+  },
+  [ID_CREATE_ARCH - ID_CREATE_BOX] = {
+    { "Width (cm)", CREATE_SIZE_CM, 0 }, { "Height (cm)", CREATE_SIZE_CM, 0 }, { "Depth (cm)", CREATE_ARCH_DEPTH_CM, 0 },
+    { "Frame (cm)", CREATE_ARCH_FRAME_CM, 0 }, { "Segments", CREATE_DETAIL_STEPS, 0 },
+  },
+  [ID_CREATE_WINDOW_ROUND - ID_CREATE_BOX] = { { "Width (cm)", 120, 0 }, { "Height (cm)", 180, 0 } },
+  [ID_CREATE_WINDOW_COTTAGE - ID_CREATE_BOX] = { { "Width (cm)", 120, 0 }, { "Height (cm)", 140, 0 } },
+  [ID_CREATE_WINDOW_GOTHIC - ID_CREATE_BOX] = { { "Width (cm)", 120, 0 }, { "Height (cm)", 220, 0 } },
+  [ID_CREATE_DOOR_RECTANGULAR - ID_CREATE_BOX] = { { "Width (cm)", 100, 0 }, { "Height (cm)", 210, 0 } },
+  [ID_CREATE_DOOR_ROUND - ID_CREATE_BOX] = { { "Width (cm)", 100, 0 }, { "Height (cm)", 210, 0 } },
+  [ID_CREATE_DOOR_GOTHIC - ID_CREATE_BOX] = { { "Width (cm)", 100, 0 }, { "Height (cm)", 210, 0 } },
+};
+
+void scener_visit_creation_properties(uint16_t command, void (*visit)(void *, const char *, const char *), void *context) {
+  if (!visit || !is_create_primitive(command)) return;
+  for (size_t i = 0; i < ARRAY_LEN(scener_action_meta); i++) {
+    if (scener_action_meta[i].id == command) {
+      visit(context, ui_tr("Object"), ui_tr(scener_action_meta[i].label));
+      break;
+    }
+  }
+  const creation_property_t *props = kCreationProperties[command - ID_CREATE_BOX];
+  for (size_t i = 0; i < ARRAY_LEN(kCreationProperties[0]) && props[i].label; i++) {
+    char value[64];
+    visit(context, ui_tr(props[i].label), ui_format_number(props[i].number, props[i].decimals, value, sizeof(value)));
+  }
+}
+
 bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
   if (!doc || !is_create_primitive(id)) return false;
   const char *profile_tag = NULL;
@@ -142,16 +231,19 @@ bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
     return true;
   }
   Mesh m = {0};
-  float lift = 0.0f;
+  const float size = CREATE_SIZE_CM / 100.0f, radius = CREATE_RADIUS_CM / 100.0f;
+  float lift = size / 2.0f;
   switch (id) {
-    case ID_CREATE_BOX:      m = gen_box(1, 1, 1); lift = 0.5f; break;
-    case ID_CREATE_SPHERE:   m = gen_sphere(0.5f, 16, 16); lift = 0.5f; break;
-    case ID_CREATE_CYLINDER: m = gen_cylinder(0.5f, 1, 24); lift = 0.5f; break;
-    case ID_CREATE_CONE:     m = gen_cone(0.5f, 0, 1, 24, 1); lift = 0.5f; break;
-    case ID_CREATE_TORUS:    m = gen_torus(0.4f, 0.15f, 24, 12); lift = 0.15f; break;
-    case ID_CREATE_PRISM:    m = gen_prism(0.5f, 1, 6); lift = 0.5f; break;
-    case ID_CREATE_CAPSULE:  m = gen_capsule(0.3f, 0.6f, 12, 12); lift = 0.3f; break;
-    case ID_CREATE_ARCH:     m = gen_arch(1, 1, 0.3f, 0.15f, 12, 0); lift = 0.5f; break;
+    case ID_CREATE_BOX:      m = gen_box(size, size, size); break;
+    case ID_CREATE_SPHERE:   m = gen_sphere(radius, CREATE_SPHERE_STEPS, CREATE_SPHERE_STEPS); lift = radius; break;
+    case ID_CREATE_CYLINDER: m = gen_cylinder(radius, size, CREATE_ROUND_SIDES); break;
+    case ID_CREATE_CONE:     m = gen_cone(radius, 0, size, CREATE_ROUND_SIDES, 1); break;
+    case ID_CREATE_TORUS:    lift = CREATE_TORUS_TUBE_CM / 100.0f;
+                            m = gen_torus(CREATE_TORUS_RADIUS_CM / 100.0f, lift, CREATE_ROUND_SIDES, CREATE_DETAIL_STEPS); break;
+    case ID_CREATE_PRISM:    m = gen_prism(radius, size, CREATE_PRISM_SIDES); break;
+    case ID_CREATE_CAPSULE:  lift = CREATE_CAPSULE_RADIUS_CM / 100.0f;
+                            m = gen_capsule(lift, CREATE_CAPSULE_CYLINDER_CM / 100.0f, CREATE_DETAIL_STEPS, CREATE_DETAIL_STEPS); break;
+    case ID_CREATE_ARCH:     m = gen_arch(size, size, CREATE_ARCH_DEPTH_CM / 100.0f, CREATE_ARCH_FRAME_CM / 100.0f, CREATE_DETAIL_STEPS, 0); break;
     default: return false;
   }
   mat4 M = mat4_translate(vadd(ground_pos, v3(0, lift, 0)));
@@ -322,6 +414,7 @@ void handle_menu_command(uint16_t id) {
       if (doc) {
         doc->scene.createMode = id;
         doc->scene.editMode = EDIT_Q_SELECT;
+        scener_select_panel_tab(SCENER_TAB_CREATE);
         scener_sync_tool_ui();
       }
       break;
@@ -368,9 +461,7 @@ void handle_menu_command(uint16_t id) {
         g_app->command_panel_win = create_command_panel_window();
       if (g_app->command_panel_win) {
         show_window(g_app->command_panel_win, true);
-#ifdef BUILD_AS_GEM
-        send_message(g_app->command_panel_win, evCommand, MAKEDWORD(ID_CP_TAB_HIERARCHY, btnClicked), NULL);
-#endif
+        scener_select_panel_tab(SCENER_TAB_HIERARCHY);
         property_browser_refresh();
       }
       break;

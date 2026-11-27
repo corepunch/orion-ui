@@ -390,10 +390,8 @@ static void create_app_windows(hinstance_t hinstance) {
     send_message(g_app->menubar_win, kMenuBarMessageSetMenus, kNumMenus, (void *)kMenus);
 #endif
 
-#ifdef BUILD_AS_GEM
   g_app->command_panel_win = create_command_panel_window();
-#endif
-  g_app->property_browser_win = create_property_browser_window();
+  property_browser_refresh();
   scener_sync_command_state();
 }
 
@@ -615,10 +613,6 @@ void gem_shutdown(void) {
   if (g_app->command_panel_win && is_window(g_app->command_panel_win))
     destroy_window(g_app->command_panel_win);
   g_app->command_panel_win = NULL;
-
-  if (g_app->property_browser_win && is_window(g_app->property_browser_win))
-    destroy_window(g_app->property_browser_win);
-  g_app->property_browser_win = NULL;
 
   if (g_app->chrome_win && is_window(g_app->chrome_win))
     destroy_window(g_app->chrome_win);

@@ -308,6 +308,7 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 						doc->scene.draggingHandle = GIZMO_NONE;
 						float distance = 0;
 						doc->scene.selectedObj = scene_pick_object(&doc->scene, doc->scene.camPos, ray, &distance);
+						if (doc->scene.selectedObj >= 0) scener_inspect_selection();
 						property_browser_refresh();
 						VP_LOG("pick mouse=(%d,%d) size=(%d,%d) cam=(%.3f,%.3f,%.3f) ray=(%.3f,%.3f,%.3f) hit=%d distance=%.3f objects=%d\n",
 							vp->last_mouse_x, vp->last_mouse_y, cr.w, cr.h,

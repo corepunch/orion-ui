@@ -115,6 +115,15 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     }
     case evPaint:
       return false;
+    case evCommand: {
+      // Some controls deliver notifications directly to their root. The dock
+      // host passes those notifications to the pane that owns the control.
+      window_t *pane = lparam;
+      if (!is_window(pane)) return false;
+      while (pane->parent && pane->parent != win) pane = pane->parent;
+      return pane->parent == win && pane->dock && pane != lparam &&
+        send_message(pane, msg, wparam, lparam);
+    }
     case evClose:
       return st && st->menubar ? send_message(st->menubar, msg, wparam, lparam) : false;
     case evDockChanged:

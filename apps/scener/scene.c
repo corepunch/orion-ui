@@ -3084,6 +3084,16 @@ static int has_modifier_parser(const char *tag){
 	return 0;
 }
 
+void scene_visit_node_modifiers(const void *node, void (*visit)(void *, const void *), void *context) {
+	const XmlNode *parent = node;
+	if (!parent || !visit) return;
+	for (int i = 0; i < parent->nkids; i++) {
+		const XmlNode *child = parent->kids[i];
+		if (has_modifier_parser(child->tag) || !strcmp(child->tag, "fillet"))
+			visit(context, child);
+	}
+}
+
 static void warn_unsupported_tree(Scene *s, XmlNode *n, const char *path, const char *parent){
 	scene_issue(s,SCENE_ISSUE_ERROR,"element",path,n->line,"unsupported XML element <%s> in <%s>",n->tag,parent);
 	for(int i=0;i<n->nkids;i++) warn_unsupported_tree(s,n->kids[i],path,n->tag);
