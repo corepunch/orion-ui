@@ -29,7 +29,7 @@ function ledger.field(db, table, id, path) end
 ---@return table|nil
 function ledger.account(code) end
 
----Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Fields: debit, credit (code or ID), amount, quantity, content, counterparty, item, employee, asset, currency, currency_amount.
+---Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Subject fields (auto-derive analytics from the account's kind): counterparty, item, employee, asset, warehouse, contract. Per-side slot-2/3 explicit overrides (bypass auto-derive when non-zero): debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3. Other fields: debit, credit (code or ID), amount, quantity, content, currency, currency_amount.
 ---@param entry table Entry fields.
 function ledger.entry(entry) end
 
@@ -37,8 +37,9 @@ function ledger.entry(entry) end
 ---@param account string|integer
 ---@param subconto? integer Analytics ID; omitted means all.
 ---@param currency? integer Currency ID; omitted means all.
+---@param slot? integer Analytics slot 1–3. Defaults to 1.
 ---@return table
-function ledger.turnover(account, subconto, currency) end
+function ledger.turnover(account, subconto, currency, slot) end
 
 ---Read the exchange rate on a date. Zero means no rate was found.
 ---@param currency_id integer
@@ -101,3 +102,45 @@ function ledger.reverse(document_id, date, reason) end
 ---@param id? integer Existing record ID for an update.
 ---@return table
 function ledger.validate(table, fields, id) end
+
+---Read physical on-hand, active reserved and available quantities as exact thousandths. Warehouse zero reads unassigned historical stock. The balance is current over posted entries; marketplace inventory is not a source.
+---@param item_id integer
+---@param warehouse_id integer
+---@return table
+function ledger.stock_balance(item_id, warehouse_id) end
+
+---Reserve available quantity for a source order or work order. Requires a writable ledger.transaction. All stock mutation keys are unique per infobase and accept a byte-for-byte identical retry; conflicting requests fail.
+---@param source_key string
+---@param item_id integer
+---@param warehouse_id integer
+---@param quantity_milli integer
+---@return integer
+function ledger.stock_reserve(source_key, item_id, warehouse_id, quantity_milli) end
+
+---Release a whole reservation once, without adjusting physical inventory. Requires a writable ledger.transaction.
+---@param source_key string
+---@param reservation_id integer
+---@return integer
+function ledger.stock_release(source_key, reservation_id) end
+
+---Move available physical goods between two named warehouses of the infobase. This does not change pooled monetary inventory valuation. Requires a writable ledger.transaction.
+---@param source_key string
+---@param item_id integer
+---@param warehouse_id integer
+---@param destination_id integer
+---@param quantity_milli integer
+---@return integer
+function ledger.stock_transfer(source_key, item_id, warehouse_id, destination_id, quantity_milli) end
+
+---Reverse one transfer if its destination still has sufficient available stock. Requires a writable ledger.transaction.
+---@param source_key string
+---@param transfer_id integer
+---@return integer
+function ledger.stock_reverse_transfer(source_key, transfer_id) end
+
+---Consume one reservation by posting a matching draft goods sale in the same transaction. It must use the same item, complete reserved quantity and warehouse. The reserved quantity is not restored when the accounting sale is separately reversed. Requires a writable ledger.transaction.
+---@param source_key string
+---@param reservation_id integer
+---@param document_id integer
+---@return integer
+function ledger.stock_fulfill(source_key, reservation_id, document_id) end

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stage format="orion-1cd-stage-v1">
+<header><source file="synthetic.1CD" size="0" sha256="0"/><configuration name="Synthetic" version="1"/></header>
+<chart-of-accounts/><subkonto-kinds/><records/><documents/><registers/>
+<attachments><attachment id="a0000000-0000-0000-0000-000000000001" type="Справочник.Файлы" owner-id="b0000000-0000-0000-0000-000000000001" owner-type="Справочник.Организации" name="sample" extension="bin" size="3" sha256="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad">YWJ=</attachment></attachments>
+</stage>

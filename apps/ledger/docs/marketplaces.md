@@ -8,8 +8,11 @@ a seven-day UTC time range and never contacts a seller until you click
 **Load Marketplace Data**. Orders and provider availability appear separately.
 Review held orders and then choose **Preview Pick Sheet**. **Save Pick Sheet**
 writes an HTML file only after you choose the destination. The pick sheet
-keeps order splits and excludes held orders. Ledger and the marketplaces are
-not modified. Cancel or close drops the result.
+keeps order splits and excludes held orders. **Save Orders Snapshot** exports
+the sanitized order data to a user-selected JSON file for the offline
+workbench. It does not export provider availability, credentials or customer
+addresses. For batches above 1 MiB, narrow the date range. Ledger and the
+marketplaces are not modified. Cancel or close drops the in-memory result.
 
 - **Ozon:** enter the numeric Seller Client ID and an API key with read access.
 - **eBay (advanced):** paste a short-lived seller OAuth **user access token**
@@ -32,8 +35,9 @@ unavailable. The desktop path does not require a shell, CLI or header file.
 ## Optional local CLI
 
 Run the Lua 5.4 CLI from a checkout on Linux or macOS with curl installed.
-It fetches one seller account at a time. Nothing is scheduled, persisted in
-Ledger, sent to a third-party intermediary, or changed on the marketplace.
+It fetches one seller account at a time. Fetching does not schedule a job, write
+to the Ledger infobase, send data to an intermediary, or change a marketplace.
+The separate offline workbench below can retain a sanitized copy locally.
 No live seller account was used to test either path.
 
 ## CLI credentials and eBay OAuth
@@ -104,11 +108,67 @@ quantity split by namespaced order ID, and reuses the existing Ledger print
 workflow. These IDs include provider, environment and the local account alias;
 choose a different alias for each seller. A missing or ambiguous line holds
 the whole order. If a source has no usable barcode, no barcode is invented.
-The same snapshot gives stable ordering and repeatable output. There is no
-persistent seen-order store, reservation, synchronization, cross-seller SKU
-mapping or automatic consolidation: re-running may include the same open
-orders, and the result may change as the seller source changes. Internal
+The stateless pick commands still include every eligible order in the selected
+window. For repeat picking, use the offline workbench instead. Internal
 packing labels are not carrier labels.
+
+## Offline marketplace workbench
+
+For local operator use on macOS or Linux. Use a private workspace directory
+per seller account and environment. The workbench imports a complete
+snapshot from the desktop export or fetch command above; it writes no Ledger stock or accounting
+records and has no network or fulfillment-confirmation capability. The
+desktop marketplace dialog remains read-only.
+
+```sh
+umask 077
+mkdir shop-work
+workbench=apps/ledger/tools/marketplace_workbench.lua
+lua "$workbench" shop-work sync ebay.json
+lua "$workbench" shop-work report
+# Explicit mapping: seller SKU, exact variant (empty when absent), Ledger item ID, barcode.
+lua "$workbench" shop-work map 0007 '' item-0007 0000123
+lua "$workbench" shop-work pick-html > shop-picks.html
+# Use one durable, unique event ID per physical scan. On retry, repeat the ID.
+lua "$workbench" shop-work scan 27-10001-00001 0000123 scan-session1-001
+lua "$workbench" shop-work pack 27-10001-00001  # only after all units cross the scan step
+# Verify the order/package in the seller portal before importing its PDF.
+lua "$workbench" shop-work attach-label 27-10001-00001 TRACK-01 portal-label.pdf
+lua "$workbench" shop-work reprint-label 27-10001-00001 TRACK-01 > reprint.pdf
+```
+
+- Importing the same contents again does not duplicate or reset a pick.
+  The fetch CLI includes capture-start time; supply the original Unix capture
+  time when importing an older snapshot without that field. Older observations
+  do not overwrite newer ones for the same order. If differing snapshots have
+  the same capture time, import a fresh capture instead. This is a local
+  observation version, not a provider revision token or an automatic cursor.
+  An order missing from a date window is never deleted or assumed cancelled.
+- Unmapped SKUs, barcode disagreements and ambiguous scans do not change
+  quantities. Leading zeroes are significant. The pick sheet prints only
+  remaining units of resolved open orders. Input is a decoded scanner value;
+  no camera hardware is controlled by this tool.
+- Explicit cancelled status stops picking and reprints. Other held statuses
+  cannot be advanced. A changed provider order that already has local work
+  requires review; the report retains the earlier picks. Review remaining
+  stock and retire old labels before using `restart ORDER_ID stock-reconciled`
+  on an eligible changed order. This is an operator acknowledgement, not a
+  Ledger reservation, release or inventory adjustment.
+- Carrier PDFs come from the operator's marketplace or carrier portal, not
+  from an internal packing-label generator. The original bytes (up to 128 KiB)
+  are associated with one order and package ID, with no silent replacement or
+  reassignment. Format checks cannot prove the issuer or order association.
+  Import only trusted files that you have verified against the portal.
+  Unlike normalized order snapshots, these PDFs may contain personal data.
+- This is a small offline workspace (maximum 1 MiB including labels), not a
+  shared database. Keep it on a local filesystem and back it up privately.
+  Concurrent writes are rejected and the new file replaces the old atomically.
+  If an interrupted command leaves `.writer/`, remove it only after confirming
+  no writer is running and checking that the previous state is still intact.
+- Fees, returns, payouts and margins are reported unknown; no finance feed is
+  connected. Provider availability still does not imply Ledger stock.
+  Native stock reservation/valuation, a camera UI, live carrier integration,
+  and any provider writes require separate validation.
 
 ## eBay coverage
 

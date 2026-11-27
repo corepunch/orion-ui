@@ -543,7 +543,13 @@ static const combobox_params_t *fl_combobox(fl_build_t *b, xmlNodePtr c, const c
   if (!p) { b->ok = false; return NULL; }
   const char *filter_field = fl_attrs_first(lib, c, "filter-field", "filter_field");
   const char *filter_value = fl_attrs_first(lib, c, "filter-value", "filter_value");
-  *p = (combobox_params_t){ NULL, t->table_id, display, value, filter_field ? filter_field : "", filter_value ? filter_value : "" };
+  const char *master = fl_attr(lib, c, "master");
+  uint32_t master_id = fl_id_named(b, master);
+  if (master && (!master_id || fl_eq(master, name) || !filter_field || !*filter_field)) {
+    fl_error(b, c, "ComboBox '%s': master= needs another named control and filter-field=", fl_nz(name, ""));
+    return NULL;
+  }
+  *p = (combobox_params_t){ NULL, t->table_id, display, value, filter_field ? filter_field : "", filter_value ? filter_value : "", master_id };
   return p;
 }
 

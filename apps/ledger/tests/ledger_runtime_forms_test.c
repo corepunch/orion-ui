@@ -80,7 +80,8 @@ static bool lparam_same(const form_def_t *gf, const form_def_t *rf, const form_c
   if (!strcasecmp(g->class_name, "ComboBox")) {
     const combobox_params_t *a = g->lparam, *b = r->lparam;
     if (a->table_id != b->table_id || !str_same(a->display_field, b->display_field) || !str_same(a->value_field, b->value_field) ||
-        !str_same(a->filter_field, b->filter_field) || !str_same(a->filter_value, b->filter_value)) DIFF("combobox params");
+        !str_same(a->filter_field, b->filter_field) || !str_same(a->filter_value, b->filter_value) ||
+        index_of(gf, a->master_id) != index_of(rf, b->master_id)) DIFF("combobox params");
     return true;
   }
   if (!strcasecmp(g->class_name, "TabView")) {

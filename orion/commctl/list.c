@@ -36,8 +36,6 @@ static bool list_point_inside(window_t *win, uint32_t wparam) {
 static void list_cancel(window_t *win) {
   window_t *cb = win ? win->userdata : NULL;
   if (cb) {
-    if (win->userdata2)
-      memcpy(cb->title, win->userdata2, sizeof(cb->title));
     set_focus(cb);
     invalidate_window(cb);
   }
@@ -54,8 +52,6 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evCreate:
       return true;
     case evDestroy:
-      free(win->userdata2);
-      win->userdata2 = NULL;
       return true;
     case evPaint:
       if (!cb || !texts)
@@ -95,8 +91,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       window_set_state(win, WINDOW_STATE_PRESSED, false);
       if (cb) {
         if (win->cursor_pos < cb->cursor_pos) {
-          strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
-          cb->title[sizeof(cb->title) - 1] = '\0';
+          send_message(cb, cbSetCurrentSelection, win->cursor_pos, NULL);
           invalidate_window(cb);
         }
         set_focus(cb);
@@ -134,7 +129,8 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (key == AX_KEY_ENTER || key == AX_KEY_KP_ENTER) {
         if (cb) {
           if (win->cursor_pos < cb->cursor_pos) {
-            strncpy(cb->title, texts[win->cursor_pos], sizeof(cb->title));
+            send_message(cb, cbSetCurrentSelection, win->cursor_pos, NULL);
+            invalidate_window(cb);
             send_message(get_root_window(cb), evCommand, MAKEDWORD(cb->id, cbSelectionChange), cb);
           }
           set_focus(cb);

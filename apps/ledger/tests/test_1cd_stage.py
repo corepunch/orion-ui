@@ -1,4 +1,9 @@
 import importlib.util
+import base64
+import hashlib
+import json
+import os
+import struct
 import subprocess
 import sys
 import tempfile
@@ -7,6 +12,7 @@ import uuid
 import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
+from types import SimpleNamespace
 
 HERE = Path(__file__).resolve().parent
 SCRIPT = HERE.parent / 'tools' / 'inspect_1cd.py'
@@ -15,7 +21,8 @@ fake = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = fake
 spec.loader.exec_module(fake)
 sys.path.insert(0, str(HERE.parent / 'tools'))
-from onecd_stage import ref_uuid
+from onecd_stage import AttachmentManifest, Exporter, decode_value_storage, ref_uuid
+from onecd_meta import LazyObject
 
 F = fake.FixtureField
 
@@ -53,7 +60,8 @@ def ref_t(tg):
 # metadata GUIDs
 CATALOG, BANKS, OTHER, ENUM, DOC, CHART, KINDS, REG, INFO = (G(n) for n in (100, 101, 102, 200, 300, 31, 400, 500, 900))
 TYPEG = {n: G(10000 + n) for n in (100, 101, 102, 200, 300, 31, 400)}
-ENUM_A, ENUM_B = G(201), G(202)
+ENUM_A, ENUM_B, ENUM_C = G(201), G(202), G(203)
+CONST = G(901)
 
 
 def deflate_files(table_fields, files):
@@ -77,12 +85,12 @@ def build_tables():
         ent.append('{%s,"%s",%d}' % (guid, kind, number))
     for guid, kind, number in ((CATALOG, 'Reference', 100), (BANKS, 'Reference', 101), (OTHER, 'Reference', 102),
                                (ENUM, 'Enum', 200), (DOC, 'Document', 300), (CHART, 'Acc', 31), (KINDS, 'Chrc', 400),
-                               (REG, 'AccRg', 500), (REG, 'AccRgED', 501), (INFO, 'InfoRg', 900)):
+                               (REG, 'AccRg', 500), (REG, 'AccRgED', 501), (INFO, 'InfoRg', 900), (CONST, 'Const', 901)):
         add(guid, kind, number)
     flds = {1001: 'Название', 1002: 'Сальдо', 1003: 'Флаг', 1004: 'Контакт', 1005: 'Файл', 1006: 'Вид',
-            3001: 'Контрагент', 3002: 'Вид', 3003: 'Прочее', 879: 'Валютный', 880: 'Количественный',
+            1007: 'НеизвестныйТип', 3001: 'Контрагент', 3002: 'Вид', 3003: 'Прочее', 879: 'Валютный', 880: 'Количественный',
             884: 'Суммовой', 885: 'Валютный', 886: 'Количественный', 601: 'Организация', 602: 'Сумма',
-            603: 'Количество', 604: 'Валюта', 1012: 'Тип', 3012: 'Сумма'}
+            603: 'Количество', 604: 'Валюта', 1012: 'Тип', 3012: 'Сумма', 9011: 'Значение'}
     for number in flds:
         add(G(50000 + number), 'Fld', number)
     add(G(51010), 'VT', 1010)
@@ -91,15 +99,18 @@ def build_tables():
     files = {
         'root': '{2,%s,""}' % G(1),
         G(1): '{1,{0,%s,"1.2.3.4"}}' % hdr(G(2), 'Тестовая'),
+        CONST: obj(CONST, 'ОкруглятьИтоги', [G(10901)], fld(G(59011), 'Значение', B)),
         CATALOG: obj(CATALOG, 'Контрагенты', [TYPEG[100]],
                      fld(G(51001), 'Название', S) + fld(G(50000 + 1002), 'Сальдо', N) + fld(G(50000 + 1003), 'Флаг', B)
                      + fld(G(50000 + 1004), 'Контакт', S, '{"N",10,2,0}', '{"D","D"}', B, ref_t(TYPEG[101]))
                      + fld(G(50000 + 1005), 'Файл', ref_t('e199ca70-93cf-46ce-a54b-6edc88c3a296'))
                      + fld(G(50000 + 1006), 'Вид', ref_t(TYPEG[200]))
+                     + fld(G(50000 + 1007), 'НеизвестныйТип', ref_t(G(60000)))
                      + ',{0,%s}' % hdr(G(51010), 'Контакты') + fld(G(50000 + 1012), 'Тип', S)),
         BANKS: obj(BANKS, 'Банки', [TYPEG[101]]),
         OTHER: obj(OTHER, 'Прочее', [TYPEG[102]]),
-        ENUM: obj(ENUM, 'Виды', [TYPEG[200]], ',{0,%s},{0,%s}' % (hdr(ENUM_A, 'Первый'), hdr(ENUM_B, 'Второй'))),
+        ENUM: obj(ENUM, 'Виды', [TYPEG[200]], ',{0,%s},{0,%s},{0,%s}' %
+                  (hdr(ENUM_A, 'Первый'), hdr(ENUM_B, 'Второй'), hdr(ENUM_C, 'Третий'))),
         DOC: obj(DOC, 'Приход', [TYPEG[300]],
                  fld(G(50000 + 3001), 'Контрагент', ref_t(TYPEG[100])) + fld(G(50000 + 3002), 'Вид', ref_t(TYPEG[200]))
                  + fld(G(50000 + 3003), 'Прочее', ref_t(TYPEG[102]))
@@ -120,6 +131,32 @@ def build_tables():
     return tables
 
 
+class LazyObjectTests(unittest.TestCase):
+    def test_blob_chain_rejects_premature_end_and_cycles(self):
+        class Database:
+            page_size = 256
+
+            def __init__(self, pages):
+                self.pages = pages
+
+            def object_pages(self, _):
+                return len(self.pages) * self.page_size, list(range(len(self.pages)))
+
+            def read_page(self, page):
+                return self.pages[page]
+
+        def chunk(next_chunk, data):
+            return (struct.pack('<Ih', next_chunk, len(data)) + data).ljust(256, b'\0')
+
+        obj = LazyObject(Database([chunk(0, b'abc')]), 1)
+        self.assertEqual(obj.read_chain(0, 3), b'abc')
+        with self.assertRaisesRegex(ValueError, 'truncated blob chain'):
+            obj.read_chain(0, 4)
+        obj = LazyObject(Database([chunk(1, b'abc'), chunk(1, b'def')]), 1)
+        with self.assertRaisesRegex(ValueError, 'invalid blob chain'):
+            obj.read_chain(0, 7)
+
+
 class StageFixture(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -128,13 +165,17 @@ class StageFixture(unittest.TestCase):
         self.out = Path(self.tmp.name) / 'stage.xml'
         tables = build_tables()
         v = G
+        const_fields = [F('_RECORDKEY', 'B', length=4), F('_FLD9011', 'L')]
+        tables.append(fake.FixtureTable('_Const901', const_fields, [
+            fake.encode_row(const_fields, {'_RECORDKEY': T(1), '_FLD9011': True})]))
         # catalogs
         cat_f = [F('_IDRREF', 'B', length=16), F('_VERSION', 'RV'), F('_MARKED', 'L'), F('_PREDEFINEDID', 'B', length=16),
                  F('_PARENTIDRREF', 'B', length=16), F('_FOLDER', 'L'), F('_CODE', 'NVC', length=9), F('_DESCRIPTION', 'NVC', length=50),
                  F('_FLD1001', 'NVC', length=30), F('_FLD1002', 'N', length=15, precision=2), F('_FLD1003', 'L'),
                  F('_FLD1004_TYPE', 'B', length=1), F('_FLD1004_L', 'L'), F('_FLD1004_N', 'N', length=10, precision=2),
                  F('_FLD1004_T', 'DT'), F('_FLD1004_S', 'NVC', length=20), F('_FLD1004_RTREF', 'B', length=4),
-                 F('_FLD1004_RRREF', 'B', length=16), F('_FLD1005', 'I', null_exists=True), F('_FLD1006RREF', 'B', length=16)]
+                 F('_FLD1004_RRREF', 'B', length=16), F('_FLD1005', 'I', null_exists=True), F('_FLD1006RREF', 'B', length=16),
+                 F('_FLD1007RREF', 'B', length=16)]
         self.cat_f = cat_f
         k1, k2, k3, k4 = v(1001), v(1002), v(1003), v(1004)
         base = dict(_FOLDER=True)
@@ -142,12 +183,14 @@ class StageFixture(unittest.TestCase):
         def cat(guid, code, name, **kw):
             return fake.encode_row(cat_f, {'_IDRREF': R(guid), '_CODE': code, '_DESCRIPTION': name, **base, **kw})
         self.bank_guid = v(2001)
+        serialized = '\ufeff{"#",87126200-3e98-44e0-b931-ccb1d7edc497,{1,{0}}}'.encode('utf-8')
+        storage = b'\x01\x01' + struct.pack('<Q', len(serialized)) + serialized + struct.pack('<IQ', 0, 3) + b'abc'
         catalog_rows = [
             cat(k1, '1', 'Альфа', _FLD1001='Название', _FLD1002='-1234.50', _FLD1003=True, _FLD1004_TYPE=b'\x05',
-                _FLD1004_S='строка', _FLD1005=(0, 7), _FLD1006RREF=R(ENUM_B)),
+                _FLD1004_S='строка', _FLD1005=(1, len(storage)), _FLD1006RREF=R(ENUM_B)),
             cat(k2, '2', 'Бета', _FLD1002='0.00', _FLD1004_TYPE=b'\x08', _FLD1004_RTREF=T(101),
                 _FLD1004_RRREF=R(self.bank_guid), _FLD1006RREF=R(ENUM_A)),
-            cat(k3, '3', 'Гамма', _FLD1004_TYPE=b'\x03', _FLD1004_N='12.34'),
+            cat(k3, '3', 'Гамма', _FLD1004_TYPE=b'\x03', _FLD1004_N='12.34', _FLD1007RREF=R(G(70000))),
             cat(v(1005), '5', 'Дельта', _FLD1004_TYPE=b'\x09', _FLD1004_S='x'),
             cat(k4, '4', 'Группа', _FOLDER=False, _MARKED=True, _FLD1004_TYPE=b'\x01', _PARENTIDRREF=R(k1)),
         ]
@@ -155,7 +198,9 @@ class StageFixture(unittest.TestCase):
                 F('_FLD1012', 'NVC', length=20)]
         vt_rows = [fake.encode_row(vt_f, {'_REFERENCE100_IDRREF': R(k1), '_LINENO1011': n, '_FLD1012': t})
                    for n, t in ((3, 'третья'), (1, 'первая'), (2, 'вторая'))]
-        tables += [fake.FixtureTable('_Reference100', cat_f, catalog_rows), fake.FixtureTable('_Reference100_VT1010', vt_f, vt_rows)]
+        catalog = fake.FixtureTable('_Reference100', cat_f, catalog_rows)
+        catalog.blobs[1] = (0, storage)
+        tables += [catalog, fake.FixtureTable('_Reference100_VT1010', vt_f, vt_rows)]
         bank_f = [F('_IDRREF', 'B', length=16), F('_VERSION', 'RV'), F('_MARKED', 'L'), F('_FOLDER', 'L'),
                   F('_CODE', 'NVC', length=9), F('_DESCRIPTION', 'NVC', length=50)]
         tables.append(fake.FixtureTable('_Reference101', bank_f, [fake.encode_row(
@@ -164,8 +209,9 @@ class StageFixture(unittest.TestCase):
         tables.append(fake.FixtureTable('_Reference102', bank_f, [fake.encode_row(
             bank_f, {'_IDRREF': R(self.other_guid), '_CODE': 'P1', '_DESCRIPTION': 'Вытянутый', '_FOLDER': True})]))
         enum_f = [F('_IDRREF', 'B', length=16), F('_ENUMORDER', 'N', length=10)]
-        tables.append(fake.FixtureTable('_Enum200', enum_f, [fake.encode_row(enum_f, {'_IDRREF': R(ENUM_A), '_ENUMORDER': 0}),
-                                                            fake.encode_row(enum_f, {'_IDRREF': R(ENUM_B), '_ENUMORDER': 1})]))
+        tables.append(fake.FixtureTable('_Enum200', enum_f, [
+            fake.encode_row(enum_f, {'_IDRREF': R(guid), '_ENUMORDER': order})
+            for order, guid in enumerate((ENUM_A, ENUM_B, ENUM_C))]))
         # document with a tabular section
         doc_f = [F('_IDRREF', 'B', length=16), F('_VERSION', 'RV'), F('_MARKED', 'L'), F('_DATE_TIME', 'DT'), F('_NUMBER', 'NVC', length=11),
                  F('_POSTED', 'L'), F('_FLD3001RREF', 'B', length=16), F('_FLD3002RREF', 'B', length=16), F('_FLD3003RREF', 'B', length=16)]
@@ -318,12 +364,32 @@ class StageExportTest(StageFixture):
         self.assertEqual((group.get('folder'), alpha.get('folder'), group.get('deleted'), group.get('parent')),
                          ('true', 'false', 'true', self.k[0]))
         blob = alpha.find('v[@n="Файл"]')
-        self.assertEqual((blob.get('t'), blob.get('bytes')), ('blob', '7'))
+        self.assertEqual(blob.get('t'), 'value-storage')
+        self.assertIn('87126200-3e98-44e0-b931-ccb1d7edc497', blob.findtext('serialized'))
+        self.assertEqual(blob.find('segment').attrib, {'encoding': 'base64', 'bytes': '3'})
+        self.assertEqual(blob.findtext('segment'), 'YWJj')
         self.assertEqual(beta.find('v[@n="Файл"]').get('t'), 'null')
+        self.assertEqual(alpha.find('v[@n="НеизвестныйТип"]').attrib,
+                         {'n': 'НеизвестныйТип', 't': 'ref', 'empty': 'true'})
+        self.assertEqual(gamma.find('v[@n="НеизвестныйТип"]').get('t'), 'undecoded')
         enum = alpha.find('v[@n="Вид"]')
         self.assertEqual(enum.attrib, {'n': 'Вид', 't': 'enum', 'type': 'Перечисление.Виды', 'name': 'Второй', 'id': ENUM_B})
         listed = {(e.get('name'), e.get('order')) for e in root.find('enums')}
-        self.assertEqual(listed, {('Первый', '0'), ('Второй', '1')})
+        self.assertEqual(listed, {('Первый', '0'), ('Второй', '1'), ('Третий', '2')})
+        constant = root.find('constants/constant')
+        self.assertEqual(constant.attrib, {'type': 'Константа.ОкруглятьИтоги', 'key': '00000001'})
+        self.assertEqual(constant.findtext('v[@n="Значение"]'), 'true')
+
+    def test_compressed_value_storage(self):
+        source = b'\xef\xbb\xbf{}'
+        body = struct.pack('<Q', len(source)) + source + struct.pack('<IQ', 0, 2) + b'xy'
+        header = b'\x02\x01' + bytes.fromhex('534b6ff4888dc14ea0d5ebb6bda0a70d')
+        compressed = zlib.compress(body)[2:-4]
+        self.assertEqual(decode_value_storage(header + compressed), ('{}', [b'xy']))
+        with self.assertRaises(ValueError):
+            decode_value_storage(header + compressed[:-1])
+        with self.assertRaises(ValueError):
+            decode_value_storage(b'\x01\x01' + body[:-1])
 
     def test_dangling_pulled_and_missing(self):
         root = self.export()
@@ -365,10 +431,11 @@ class StageExportTest(StageFixture):
     def test_undecoded_marker_and_summary(self):
         root = self.export()
         marks = [e for e in root.iter('v') if e.get('t') == 'undecoded']
-        self.assertEqual(len(marks), 1)
-        self.assertEqual((marks[0].get('n'), marks[0].get('reason')), ('Контакт', 'unsupported value type code 9'))
-        self.assertEqual(root.find('summary/undecoded').get('count'), '1')
-        self.assertIn('undecoded markers: 1', self.result.stdout)
+        self.assertEqual({(mark.get('n'), mark.get('reason')) for mark in marks}, {
+            ('Контакт', 'unsupported value type code 9'),
+            ('НеизвестныйТип', 'reference target type unknown')})
+        self.assertEqual(root.find('summary/undecoded').get('count'), '2')
+        self.assertIn('undecoded markers: 2', self.result.stdout)
         self.assertIn('unsupported value type code 9', self.result.stdout)
 
 
@@ -404,6 +471,147 @@ class StageCliTest(StageFixture):
         self.assertNotIn('e+', text)
         self.assertEqual(ref_uuid(R(G(5))), G(5))
 
+
+
+
+class VatBookArchiveTest(unittest.TestCase):
+    def test_staged_register_and_saved_book_preserve_source_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, output = Path(tmp) / '1Cv8.1CD', Path(tmp) / 'stage.xml'
+            reg_guid, book_guid, book_type, stored_guid, sum_guid, table_guid = (G(n) for n in range(101, 107))
+            book_id = G(501)
+            entries = [(reg_guid, 'AccumRg', 10), (book_guid, 'Document', 20),
+                       (stored_guid, 'Fld', 30), (sum_guid, 'Fld', 31), (table_guid, 'VT', 40)]
+            config = {
+                'root': '{2,%s,""}' % G(1),
+                G(1): '{1,{0,%s,"1.2.3.4"}}' % hdr(G(2), 'Тестовая'),
+                reg_guid: obj(reg_guid, 'НДСЗаписиКнигиПродаж', [G(110)],
+                              fld(sum_guid, 'СуммаНДС', '{"N",15,2,0}')),
+                book_guid: obj(book_guid, 'КнигаПродажДляПередачиВЭлектронномВиде', [book_type],
+                               fld(stored_guid, 'СохраненноеПредставление', ref_t('e199ca70-93cf-46ce-a54b-6edc88c3a296'))
+                               + ',{0,%s}' % hdr(table_guid, 'Подробности') + fld(sum_guid, 'СуммаНДС', '{"N",15,2,0}'))
+            }
+            params = '{1,%s}' % ','.join('{%s,"%s",%d}' % item for item in entries)
+            cf = [F('FILENAME', 'NVC', length=128), F('BINARYDATA', 'I')]
+            cfg, param = deflate_files(cf, config), deflate_files(cf, {'DBNames': params})
+            cfg.name, param.name = 'CONFIG', 'PARAMS'
+            reg_fields = [F('_PERIOD', 'DT'), F('_RECORDERTREF', 'B', length=4),
+                          F('_RECORDERRREF', 'B', length=16), F('_LINENO', 'N', length=9),
+                          F('_ACTIVE', 'L'), F('_FLD31', 'N', length=15, precision=2)]
+            movements = [fake.encode_row(reg_fields, {'_PERIOD': '2026-01-02 03:04:05',
+                         '_RECORDERTREF': T(20), '_RECORDERRREF': R(book_id), '_LINENO': n,
+                         '_ACTIVE': active, '_FLD31': amount}) for n, active, amount in
+                         [(1, True, '19.20'), (2, False, '-1.30')]]
+            doc_fields = [F('_IDRREF', 'B', length=16), F('_MARKED', 'L'), F('_DATE_TIME', 'DT'),
+                          F('_NUMBER', 'NVC', length=12), F('_POSTED', 'L'), F('_FLD30', 'I', null_exists=True)]
+            body = b'\xef\xbb\xbf{"S","preserved"}'
+            envelope = b'\x01\x01' + struct.pack('<Q', len(body)) + body
+            books = fake.FixtureTable('_Document20', doc_fields, [fake.encode_row(doc_fields, {
+                '_IDRREF': R(book_id), '_DATE_TIME': '2026-01-01 00:00:00', '_NUMBER': 'A12',
+                '_FLD30': (1, len(envelope))})])
+            books.blobs[1] = (0, envelope)
+            tab_fields = [F('_DOCUMENT20_IDRREF', 'B', length=16), F('_KEYFIELD', 'B', length=4),
+                          F('_LINENO41', 'N', length=5), F('_FLD31', 'N', length=15, precision=2)]
+            tab = fake.FixtureTable('_Document20_VT40', tab_fields, [fake.encode_row(tab_fields, {
+                '_DOCUMENT20_IDRREF': R(book_id), '_LINENO41': 1, '_FLD31': '19.20'})])
+            fake.write_fake_1cd(source, [cfg, param, books, tab, fake.FixtureTable('_AccumRg10', reg_fields, movements)])
+            cmd = [sys.executable, str(SCRIPT), str(source), 'export-stage', '--output', str(output)]
+            result = subprocess.run(cmd, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            stage = ET.parse(output).getroot()
+            attachment = stage.find('attachments/attachment[@type="Archive.1C.VATBooks"]')
+            data = base64.b64decode(attachment.text, validate=True)
+            self.assertEqual(int(attachment.get('size')), len(data))
+            self.assertEqual(attachment.get('sha256'), hashlib.sha256(data).hexdigest())
+            archive = ET.fromstring(data)
+            self.assertEqual(archive.get('source-sha256'), hashlib.sha256(source.read_bytes()).hexdigest())
+            reg = archive.find('registers/register')
+            self.assertEqual((reg.get('type'), reg.get('source-table')), ('РегистрНакопления.НДСЗаписиКнигиПродаж', '_AccumRg10'))
+            self.assertEqual([(m.get('line'), m.get('active'), m.get('recorder'), m.findtext('v[@n="СуммаНДС"]'))
+                              for m in reg], [('1', 'true', book_id, '19.20'), ('2', 'false', book_id, '-1.30')])
+            book = archive.find('documents/document')
+            self.assertEqual(book.get('id'), book_id)
+            self.assertEqual(book.findtext('table/row/v'), '19.20')
+            raw = book.find('v[@n="СохраненноеПредставление"]/source-bytes')
+            self.assertEqual(base64.b64decode(raw.text, validate=True), envelope)
+            self.assertEqual(raw.get('sha256'), hashlib.sha256(envelope).hexdigest())
+            self.assertIsNone(stage.find('skipped/table[@name="_AccumRg10"]'))
+            first = output.read_bytes()
+            result = subprocess.run([*cmd, '--overwrite'], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_bytes(), first)
+
+
+class AttachmentManifestTest(unittest.TestCase):
+    def test_external_catalog_stages_manifest_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = b'abc'
+            (root / 'file.bin').write_bytes(data)
+            file_ref, volume_ref = b'\x11' * 16, b'\x22' * 16
+            info = SimpleNamespace(number=1, name='Справочник.ПрисоединенныеФайлы', short_name='ПрисоединенныеФайлы')
+            entry = {'type': info.name, 'id': ref_uuid(file_ref), 'volume_id': ref_uuid(volume_ref),
+                     'path': 'file.bin', 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+            path = root / 'manifest.json'
+            path.write_text(json.dumps({'format': 'orion-1cd-attachments-v1', 'source_sha256': 'source',
+                                        'attachments': [entry]}), encoding='utf-8')
+            table = SimpleNamespace(fields={'_FLD1': 'volume', '_DESCRIPTION': 'name'})
+            exporter = Exporter.__new__(Exporter)
+            exporter.meta = SimpleNamespace(objects={('Reference', 1): info}, object_table=lambda _: table)
+            exporter.nonempty = lambda _: True
+            exporter.field_name = lambda _info, _number: 'Том'
+            exporter.index = lambda _: {file_ref: b'row'}
+            exporter.primitive = lambda *_args: ({'t': 'string'}, 'file')
+            exporter.cell = lambda *_args: (False, volume_ref)
+            exporter.note = lambda *_args: None
+            exporter.attachment_manifest = None
+            missing, = exporter.export_attachments().kids
+            self.assertIn('unavailable', missing.attrs)
+            exporter.attachment_manifest = AttachmentManifest(path, 'source')
+            attached, = exporter.export_attachments().kids
+            self.assertEqual(attached.attrs['volume-id'], ref_uuid(volume_ref))
+            self.assertEqual(attached.attrs['sha256'], entry['sha256'])
+            self.assertEqual(attached.attrs['size'], '3')
+            self.assertEqual(attached.text, 'YWJj')
+
+    def test_verified_file_and_rejections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'data').mkdir()
+            (root / 'data' / 'file').write_bytes(b'abc')
+            entry = {'type': 'Справочник.ПрисоединенныеФайлы', 'id': G(1), 'volume_id': G(2),
+                     'path': 'data/file', 'size': 3, 'sha256': hashlib.sha256(b'abc').hexdigest()}
+            manifest = root / 'manifest.json'
+            def load():
+                manifest.write_text(json.dumps({'format': 'orion-1cd-attachments-v1',
+                    'source_sha256': 'source', 'attachments': [entry]}))
+                return AttachmentManifest(manifest, 'source')
+            attrs = {'type': entry['type'], 'id': G(1), 'volume-id': G(2), 'size': '3'}
+            mapping = load()
+            self.assertEqual(mapping.read(attrs), (b'abc', ''))
+            mapping.check_output(root / 'stage.xml')
+            with self.assertRaises(ValueError): mapping.check_output(manifest)
+            with self.assertRaises(ValueError): mapping.check_output(root / 'data' / 'file')
+            self.assertIsNone(mapping.read({**attrs, 'volume-id': G(3)})[0])
+            (root / 'data' / 'file').write_bytes(b'abd')
+            self.assertIsNone(mapping.read(attrs)[0])
+            (root / 'data' / 'file').unlink()
+            self.assertIsNone(mapping.read(attrs)[0])
+            (root / 'target').write_bytes(b'abc')
+            try:
+                (root / 'data' / 'file').symlink_to(root / 'target')
+            except OSError:
+                pass  # Some Windows runners lack symlink creation privileges.
+            else:
+                self.assertIsNone(mapping.read(attrs)[0])
+            entry['path'] = '../outside'
+            with self.assertRaises(ValueError): load()
+            entry['path'] = '/absolute'
+            with self.assertRaises(ValueError): load()
+            entry['path'] = 'C:/absolute'
+            with self.assertRaises(ValueError): load()
+            entry['path'] = 'data/file'
+            with self.assertRaises(ValueError): AttachmentManifest(manifest, 'other-source')
 
 if __name__ == '__main__':
     unittest.main()

@@ -77,7 +77,8 @@ bool ledger_period_closed(database_t *db, const char *date) {
 }
 
 bool ledger_close_document_blocks(const db_document_t *doc, const char *date) {
-  return !doc || !ledger_valid_date(doc->date) || (!doc->posted && strcmp(doc->date, date) <= 0);
+  return !doc || !ledger_valid_date(doc->date) ||
+    (!doc->posted && !ledger_document_imported(doc) && strcmp(doc->date, date) <= 0);
 }
 
 bool ledger_close_through(database_t *db, const char *date) {
@@ -267,7 +268,28 @@ static int reserve_document_id(database_t *db) {
   return id;
 }
 
+// Keep the journal stable behind named warehouse balances. Drafts remain
+// editable, and unpost/reversal go through the same native balance checks.
+static bool ledger_named_stock_posted(database_t *db, int id) {
+  const db_document_t *doc = (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  return doc && doc->posted && doc->warehouse_id && !ledger_document_imported(doc);
+}
+
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == dbGetFieldText && LOWORD(wparam) == TABLE_ENTRIES && lparam) {
+    db_field_text_t *field = lparam;
+    if (field->record && field->field && field->buf && field->buf_sz) {
+      bool debit = !strcmp(field->field, "debit_quantity"), credit = !strcmp(field->field, "credit_quantity");
+      if (debit || credit) {
+        const db_entry_t *entry = field->record;
+        if (debit ? entry->debit_quantity_set : entry->credit_quantity_set)
+          ui_format_number((double)(debit ? entry->debit_quantity_milli : entry->credit_quantity_milli) / 1000.0,
+                           3, field->buf, field->buf_sz);
+        else field->buf[0] = '\0';
+        return true;
+      }
+    }
+  }
   db_document_t reserved_doc;
   if (msg == dbReserveKey && LOWORD(wparam) == TABLE_DOCUMENTS) return reserve_document_id(db);
   if (msg == dbInsert && LOWORD(wparam) == TABLE_DOCUMENTS && lparam &&
@@ -285,12 +307,17 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
 
   if (msg == dbInsert || msg == dbUpdate || msg == dbDelete) {
     uint32_t table = LOWORD(wparam);
-    bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_PERIOD_CLOSURES || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVISION_LINES || table == TABLE_REVERSAL_LINKS;
+    bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_PERIOD_CLOSURES || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVISION_LINES || table == TABLE_REVERSAL_LINKS || table == TABLE_STOCK_OPERATIONS;
     if (table == TABLE_DOCUMENTS) {
       const db_document_t *doc = msg == dbDelete ? NULL : lparam;
       int id = msg == dbDelete ? (int)(intptr_t)lparam : doc ? doc->id : 0;
       locked = (doc && ledger_period_closed(db, doc->date)) || (msg != dbInsert && locked_document(db, id));
       if (!ledger_posting_active() && msg != dbInsert && (ledger_exact_posted(db, id) || ledger_reversal_linked(db, id))) locked = true;
+      if (!ledger_posting_active() && msg != dbInsert && ledger_named_stock_posted(db, id)) {
+        const db_document_t *old = (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+        if (!doc || !doc->posted || doc->warehouse_id != old->warehouse_id || doc->doc_type_id != old->doc_type_id ||
+            strcmp(doc->date, old->date)) locked = true;
+      }
     } else if (table == TABLE_DOC_LINES || table == TABLE_PAYROLL_LINES || table == TABLE_ASSET_LINES || table == TABLE_ENTRIES) {
       const void *old = msg == dbInsert || !lparam ? NULL : (const void *)db_schema_xml(db, dbFind, MAKEDWORD(table, 0),
         msg == dbDelete ? lparam : (void *)(intptr_t)*(const int *)lparam);
@@ -298,6 +325,9 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
                (msg != dbDelete && lparam && locked_document(db, document_of(db, table, lparam)));
       if (!ledger_posting_active() && ((old && (ledger_exact_posted(db, document_of(db, table, old)) || ledger_reversal_linked(db, document_of(db, table, old)))) ||
           (msg != dbDelete && lparam && (ledger_exact_posted(db, document_of(db, table, lparam)) || ledger_reversal_linked(db, document_of(db, table, lparam)))))) locked = true;
+      if (table == TABLE_ENTRIES && !ledger_posting_active() &&
+          ((old && ledger_named_stock_posted(db, document_of(db, table, old))) ||
+           (msg != dbDelete && lparam && ledger_named_stock_posted(db, document_of(db, table, lparam))))) locked = true;
     }
     if (locked) {
       fprintf(stderr, "[ledger] write rejected: closed period, protected posting or history table=%u message=%u\n", table, msg);
@@ -312,7 +342,8 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
   if (table_id == TABLE_DOCUMENTS && msg != dbDelete && lparam) {
     staged_doc = *(const db_document_t *)lparam;
     const db_document_t *old = msg == dbUpdate ? (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)staged_doc.id) : NULL;
-    if (msg == dbInsert && !staged_doc.currency_id && exact_trade_type(staged_doc.doc_type_id)) staged_doc.exact_money = true;
+    if (msg == dbInsert && !ledger_document_imported(&staged_doc) && !staged_doc.currency_id &&
+        exact_trade_type(staged_doc.doc_type_id)) staged_doc.exact_money = true;
     if (!ledger_posting_active() && staged_doc.exact_money && staged_doc.posted) {
       fprintf(stderr, "[ledger] document rejected: exact document=%d must be posted by the posting API\n", staged_doc.id); fflush(stderr); return 0;
     }

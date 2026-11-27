@@ -24,6 +24,9 @@ Russian, or German according to the app language. The Help tab
 also offers **Review the Journal** and **Read the Trial Balance** as guided
 tutorials. See [Orion Help](../../docs/help.md) for the book format.
 
+See [Ledger backlog integration and acceptance](docs/issue-integration.md) for
+operator entry points, verification and outstanding pilot requirements.
+
 ## Demo data
 
 Launch the Russian or German demo:
@@ -76,8 +79,8 @@ single previous copy, not a substitute for independent backups.
 | Documents | Journal of typed documents with numbering by prefix, lines, totals with VAT, post / unpost / delete; posting rules come from the configuration |
 | Goods | Receipts and sales by item; a sale writes the goods off at average cost (Dt 90.02 Kt 41.01) |
 | Manual operations | `Documents > New Manual Operation` (Ctrl+M): entries typed by the accountant; opening balances are an operation of that kind |
-| Analytics | Each account has up to three analytics kinds (counterparties, items, employees, fixed assets, contracts, warehouses, bank accounts); every entry keeps up to three objects per side, plus tax-accounting amounts per side (tax, permanent and temporary differences as exact minor units, unset distinct from zero). Posting rules, reports and the Lua API use only the first analytics; quantity and currency stay one per entry |
-| Contracts, bank accounts, warehouses | Catalogs for 1C's contracts, bank accounts and warehouses: contracts and bank accounts on the Counterparties page, warehouses on the Items page, with `Catalogs` menu commands. Documents may refer to a contract, a warehouse and a bank account; warehouse selection does not make stock accounting location-aware |
+| Analytics | Each account has up to three analytics kinds, and entries keep up to three objects per side. Account card, account analysis and the Lua turnover query can select a slot. Imported movements preserve amounts for tax accounting, quantities and currencies per side. Native posting rules keep their configured defaults |
+| Contracts, bank accounts, warehouses | Contracts and bank accounts appear on the Counterparties page, and warehouses appear on the Items page. Document choices follow the counterparty, with the company's own bank accounts also available. Goods entries with item and warehouse identify physical warehouse stock. Ledger still values goods by pooled average cost |
 | Payroll | Employees with salary, allowance and expense account; accrual with withheld income tax and employer contributions from the configuration's payroll taxes: flat rates with monthly or annual caps, progressive scales (cumulative as НДФЛ or annualized as Lohnsteuer), allowances with an income limit, all effective-dated by document date; payout of what is owed; payroll statement |
 | Fixed assets | Asset register; putting assets into service; straight-line depreciation in month-end closing |
 | Currencies | Currencies and exchange rates; documents in a currency post at the day's rate and keep both amounts; currency accounts are revalued at month end |
@@ -118,7 +121,7 @@ ID alone cannot distinguish such histories and requires independent review.
 The boundary and history limitations are described in the
 [readiness audit](docs/compliance-readiness.md).
 
-The headless `ledger-run --request` service accepts data-only JSON requests for
+The headless `ledger-run --request` [business module service](docs/business-modules.md) accepts data-only JSON requests for
 the `ru-2026` and `de-2026` configurations. It supports catalog listing and
 counterparty/item setup; draft goods receipt and sale creation, date and party
 edits, posting, and linked accounting reversal; document, journal and period
@@ -272,9 +275,9 @@ For read-only 1С:УНФ online catalog export and warehouse quantity previews,
 see [the OData connector](docs/unf-odata.md).
 
 An experimental, read-only tool can resolve a catalog from metadata and extract it from
-an offline `1Cv8.1CD` copy without 1C and prepare XML for this importer. It is
-limited to file format 8.3.8.0 and remains experimental; a small catalog from
-one real educational infobase has been checked. See the [1CD research and instructions](docs/1c-accounting-replacement-plan.md#эксперимент-чтение-1cd-без-платформы)
+an offline `1Cv8.1CD` copy without 1C and prepare XML for this importer. It
+reads formats 8.3.8.0 and 8.2.14.0. The latter is covered by a synthetic fixture.
+See the [1CD research and instructions](docs/1c-accounting-replacement-plan.md#эксперимент-чтение-1cd-без-платформы)
 before using it.
 
 `python3 apps/ledger/tools/inspect_1cd.py SOURCE.1CD export-stage --output stage.xml` (add
@@ -368,14 +371,37 @@ and automated regression tests.
 
 ### Staging file from a 1CD database
 
-The same command takes the staging file `inspect_1cd.py export-stage` writes and
-recognises it by its first line. One transaction brings in the chart of accounts and
-analytics kinds the configuration lacks, the organization, catalogs, and every
-document that has register movements, as operations holding the entries 1C wrote.
-Imported documents cannot be unposted or posted again; reverse them. Records keep
-their 1C GUIDs, so importing the file again updates catalogs instead of duplicating
-them. The summary shows totals; the full report, a line per 1C type and every held-back
-item, is saved as `import-1cd-report.txt` beside the infobase.
+**File > Import from 1C** accepts a consistent offline `.1CD` copy or the XML
+produced by `inspect_1cd.py export-stage`. For a `.1CD`, Ledger runs its bundled
+reader with Python 3 on the system PATH, then displays extracted counts for
+review. The reader opens the source read-only. You can also prepare the XML
+on the machine holding the snapshot and open only the XML in Ledger.
+
+The import transaction brings in accounts, analytics, catalogs, and historical
+documents using the 1C movements. Configured types open in their corresponding
+Ledger classifications. Open a migrated document to review its original posting
+status, entries, lines, and source details. Payment breakdowns, counterparty and
+tax settlements, and accounting notes appear under **Source Details**.
+Imported drafts stay in the journal. The Home posting reminder counts Ledger
+drafts that can still be posted.
+
+**Catalogs > Imported Catalogs** shows imported banks, departments and catalog
+folders with their source hierarchy.
+Bank accounts retain their local details and link to a bank when the importer can
+resolve it. Units match the configuration by code before name. New units and
+account extensions are stored in the destination infobase. An incoming
+organization with a different INN is held back. Departments and bank accounts
+owned by that organization require a matching destination organization.
+
+Repeat imports retain source GUIDs and refresh imported records and document
+details. The report lists catalog records marked for deletion that remain
+available to historical references. Ledger saves the report as
+`import-1cd-report.txt` beside the infobase.
+
+For selective inspection, `inspect_1cd.py` accepts an immutable HTTPS snapshot
+with a strong ETag and byte ranges. Full staging takes a local path and hashes
+the complete source. Selected information and accumulation register rows are
+available for review in the staging XML. Exchange rates have a Ledger mapping.
 Details: [the 1CD verification notes](docs/1cd-verification-without-1c.md).
 
 ## Research on 1C programmer tasks

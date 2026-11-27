@@ -54,6 +54,7 @@ static void setup(void) {
   insert(TABLE_ACCOUNTS, &(account_t){ .kind_id = 1, .code = "70" });
   insert(TABLE_ACCOUNTS, &(account_t){ .kind_id = 2, .code = "01" });
   insert(TABLE_ACCOUNTS, &(account_t){ .code = "51" });
+  insert(TABLE_ACCOUNTS, &(account_t){ .kind_id = 1, .code = "70" });
   insert(TABLE_PEOPLE, &(named_t){ .name = "Ivanov" });
   insert(TABLE_PEOPLE, &(named_t){ .name = "Petrova" });
   insert(TABLE_THINGS, &(named_t){ .name = "Computer" });
@@ -81,7 +82,7 @@ static void test_combobox_set_source(void) {
   TEST("ComboBox: cbSetSource lists another table and keeps value binding");
   test_env_init();
   window_t *root = test_env_create_window("Test", 0, 0, 300, 200, parent_proc, NULL);
-  combobox_params_t params = { g_db, TABLE_PEOPLE, "name", "id", NULL, NULL };
+  combobox_params_t params = { g_db, TABLE_PEOPLE, "name", "id", NULL, NULL, 0 };
   form_ctrl_def_t def = { .class_name = "ComboBox", .lparam = &params };
   window_t *cb = create_window("", 0, MAKERECT(10, 10, 120, 19), root, win_combobox, 0, &def);
   ASSERT_NOT_NULL(cb);
@@ -96,12 +97,42 @@ static void test_combobox_set_source(void) {
   PASS();
 }
 
+static void test_combobox_master_filter(void) {
+  TEST("ComboBox: master filter clears an unrelated choice and keeps records with matching IDs");
+  test_env_init();
+  register_commctl_classes();
+  window_t *root = test_env_create_window("Test", 0, 0, 300, 200, parent_proc, NULL);
+  combobox_params_t master_params = { g_db, TABLE_KINDS, "table", "id", NULL, NULL, 0 };
+  combobox_params_t child_params = { g_db, TABLE_ACCOUNTS, "code", "id", "kind_id", "0", 10 };
+  form_ctrl_def_t master_def = { .class_name = "ComboBox", .lparam = &master_params };
+  form_ctrl_def_t child_def = { .class_name = "ComboBox", .lparam = &child_params };
+  window_t *master = create_window("", 0, MAKERECT(10, 10, 120, 19), root, win_combobox, 0, &master_def);
+  window_t *child = create_window("", 0, MAKERECT(10, 40, 120, 19), root, win_combobox, 0, &child_def);
+  ASSERT_NOT_NULL(master); ASSERT_NOT_NULL(child);
+  master->id = 10;
+  send_message(master, cbSetCurrentValue, 1, NULL);
+  send_message(child, cbSetCurrentValue, 4, NULL);  // second "70"
+  ASSERT_TRUE(send_message(child, cbSyncMaster, 0, root));
+  ASSERT_EQUAL((int)child->cursor_pos, 3);
+  ASSERT_EQUAL((int)send_message(child, cbGetCurrentValue, 0, NULL), 4);
+  send_message(master, cbSetCurrentValue, 2, NULL);
+  ASSERT_TRUE(send_message(child, cbSyncMaster, 10, root));
+  ASSERT_EQUAL((int)child->cursor_pos, 2);
+  ASSERT_EQUAL((int)send_message(child, cbGetCurrentValue, 0, NULL), kComboBoxError);
+  send_message(child, cbSetCurrentValue, 3, NULL);
+  ASSERT_STR_EQUAL(child->title, "51");  // shared fallback survives either choice
+  destroy_window(root);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("db_polymorphic");
   setup();
   test_polymorphic_join();
   test_combobox_set_source();
+  test_combobox_master_filter();
   destroy_database(g_db);
   TEST_END();
 }

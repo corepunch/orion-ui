@@ -36,8 +36,10 @@ local forms = {new = "document", new_operation = "operation", new_payroll = "pay
 local commands = {
   ["file.save"] = ui.save, ["file.configuration"] = ui.configuration, ["file.language"] = ui.language,
   ["file.import_1c"] = ui.import, ["file.addon"] = ui.addon, ["file.recipes"] = ui.recipes, ["file.marketplace"] = ui.marketplace,
+  ["file.imported_attachments"] = function() ui.form("imported_attachments") end,
   ["catalog.labels"] = ui.labels,
   ["file.organization"] = function() ui.form("organization") end,
+  ["catalog.reference"] = function() ui.form("reference_catalogs") end,
   ["file.quit"] = function() ui.window("quit") end,
   ["help.assistant"] = ui.assistant, ["help.find_command"] = ui.assistant,
   ["help.topics"] = ui.help,

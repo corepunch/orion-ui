@@ -39,6 +39,9 @@ typedef struct {
 
 extern ledger_t *g_ledger;
 
+void ledger_sha256(const unsigned char *data, size_t len, char hex[65]);
+bool ledger_attachment_export(database_t *ib, int attachment_id, const char *path);
+
 // posting.c — accounting rules over the cfg and ib databases.
 // A posting in progress: the document, its type and its currency rate. Scripts
 // and plugins (ledger_script.c) add entries through the same functions.
@@ -50,7 +53,10 @@ typedef struct {
   bool *entry_failed;  // transaction-local failure latch, when posting
 } ledger_post_t;
 // What a posting is about; each side of an entry takes the object its account is analysed by.
-typedef struct { int counterparty, item, employee, asset; } ledger_subjects_t;
+typedef struct {
+  int counterparty, item, employee, asset, warehouse, contract;
+  int debit_subconto2, debit_subconto3, credit_subconto2, credit_subconto3;
+} ledger_subjects_t;
 typedef struct { double dr, cr, dr_qty, cr_qty, dr_cur, cr_cur; } ledger_turnover_t;
 typedef struct { const db_payroll_tax_t *tax; double amount; } ledger_tax_amount_t;
 void ledger_add_entry(const ledger_post_t *p, int debit, int credit, double amount, const ledger_subjects_t *s,
@@ -58,6 +64,7 @@ void ledger_add_entry(const ledger_post_t *p, int debit, int credit, double amou
 // Turnovers of account (with subaccounts) before the document being posted plus
 // its own entries so far; subconto and currency filter when >= 0.
 ledger_turnover_t ledger_turnover(const ledger_post_t *p, int account_id, int subconto_id, int currency_id);
+ledger_turnover_t ledger_turnover_slot(const ledger_post_t *p, int account_id, int subconto_id, int currency_id, int slot);
 double ledger_rate_on(database_t *ib, int currency_id, const char *date);
 int  ledger_field(database_t *db, int table_id, const char *field);
 // The account or one of its subaccounts (41.01 is within 41).
@@ -102,6 +109,17 @@ bool ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 void ledger_build_reports(database_t *ib, database_t *cfg);
 db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg);
 int  ledger_count_references(database_t *ib, int table_id, const char *field, int id);
+
+// inventory.c — physical stock and holds over Ledger's native accounting journal.
+typedef struct { int64_t on_hand, reserved, available; } ledger_stock_t;
+bool ledger_stock_balance(database_t *ib, database_t *cfg, int item, int warehouse, ledger_stock_t *out);
+int ledger_stock_reserve(database_t *ib, database_t *cfg, const char *key, int item, int warehouse, int64_t quantity);
+int ledger_stock_transfer(database_t *ib, database_t *cfg, const char *key, int item, int warehouse, int destination, int64_t quantity);
+int ledger_stock_release(database_t *ib, database_t *cfg, const char *key, int reservation);
+int ledger_stock_reverse_transfer(database_t *ib, database_t *cfg, const char *key, int transfer);
+int ledger_stock_fulfill(database_t *ib, database_t *cfg, const char *key, int reservation, int document);
+bool ledger_stock_validate_posting(database_t *ib, database_t *cfg, const db_document_t *doc, bool remove);
+bool ledger_stock_document_fulfilled(database_t *ib, int document);
 
 // home.c — the start page: the books' checks, money, settlements, documents
 // to create and the latest documents, into ib.home_rows and recent_documents.
@@ -172,6 +190,7 @@ typedef struct {
   int updated;                           // records found again through their source identity
   int entries;                           // register movements written as entries
   int lines;                             // rows of tabular sections written as document lines
+  int detail_fields;                     // source fields written as document details
   struct { char type[128]; int added, updated, removed, held; } counts[48];  // per 1C metadata type
   int count_types;
   char notes[4096];                      // held-back or unmapped items, one per line
@@ -181,6 +200,18 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
 bool ledger_file_is_stage(const char *path);  // the file's first line names the staging format
 // The report as text: the totals alone when summary, else a line per 1C type and every note.
 size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz, bool summary);
+// Source metadata from the staging file header; does not import anything.
+typedef struct {
+  char source_file[256];
+  char source_size[20];
+  char source_sha256[65];
+  char format_version[16];
+  char locale[8];
+  char config_name[64];
+  char config_version[16];
+  int accounts, records, documents, movements, skipped, external_attachments;
+} ledger_stage_header_t;
+bool ledger_stage_header(const char *path, ledger_stage_header_t *out);
 
 // ledger_addons.c — external processings: an add-on's .orion form driven by
 // its Lua script, with the "ledger" module for accounts, turnovers and posting.

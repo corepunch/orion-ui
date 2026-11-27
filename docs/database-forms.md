@@ -1015,6 +1015,11 @@ orionc chooses the DDX exchange from the bound field's declared type:
 | `ComboBox` with `source=` | `integer` | `ddx_push_combo_value` / `ddx_pull_combo_value` (record id, 0 = none) |
 | `CheckBox` | `boolean` | `ddx_push_check` / `ddx_pull_check` |
 
+A database-bound ComboBox can use `master="counterparty" filter-field="counterparty_id"`
+to show records whose foreign key matches another ComboBox on the same form.
+An optional `filter-value="0"` also keeps records with that value available.
+Changing the master clears a selection that no longer matches either value.
+
 A numeric field whose TextBox has a `placeholder` shows an empty box with
 the cue text when its value is zero, as zero there means "not given" (a rate
 taken from the document date, an item's own price); an empty box reads back

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stage format="orion-1cd-stage-v1">
+<header><source file="synthetic.1CD" sha256="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"/></header>
+<documents><document id="a1000000-0000-0000-0000-000000000001" type="Документ.КнигаПокупокДляПередачиВЭлектронномВиде" date="2026-02-01T11:00:00" number="VAT-SAVED-TEST" posted="false">
+  <table n="ТабличнаяЧасть">
+    <row line="4">
+      <v n="Номенклатура" t="ref" empty="true"/>
+      <v n="НДС" t="decimal">-19.20</v>
+    </row>
+  </table>
+</document></documents>
+<registers><register type="РегистрНакопления.НДСЗаписиКнигиПокупок" source-table="_AccumRg10">
+  <movement recorder="a1000000-0000-0000-0000-000000000001" line="4" active="true" period="2026-02-01T00:00:00">
+    <v n="НДС" t="decimal">-19.20</v>
+  </movement>
+</register></registers>
+<attachments><attachment id="a1000000-0000-0000-0000-000000000002" type="Archive.1C.VATBooks" name="1c-vat-books-aaaaaaaaaaaa" extension="xml" size="904" sha256="5e63996e5c26d9586e9ebf0ffa26209ef9ab769c8a7870462cce93828c6832aa">PHZhdC1ib29rcyBmb3JtYXQ9Im9yaW9uLTFjZC12YXQtYm9va3MtdjEiIHNvdXJjZS1zaGEyNTY9ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiPjxyZWdpc3RlcnM+PHJlZ2lzdGVyIHR5cGU9ItCg0LXQs9C40YHRgtGA0J3QsNC60L7Qv9C70LXQvdC40Y8u0J3QlNCh0JfQsNC/0LjRgdC40JrQvdC40LPQuNCf0L7QutGD0L/QvtC6IiBzb3VyY2UtdGFibGU9Il9BY2N1bVJnMTAiPgogIDxtb3ZlbWVudCByZWNvcmRlcj0iYTEwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiBsaW5lPSI0IiBhY3RpdmU9InRydWUiIHBlcmlvZD0iMjAyNi0wMi0wMVQwMDowMDowMCI+CiAgICA8diBuPSLQndCU0KEiIHQ9ImRlY2ltYWwiPi0xOS4yMDwvdj4KICA8L21vdmVtZW50Pgo8L3JlZ2lzdGVyPjwvcmVnaXN0ZXJzPjxkb2N1bWVudHM+PGRvY3VtZW50IGlkPSJhMTAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiIHR5cGU9ItCU0L7QutGD0LzQtdC90YIu0JrQvdC40LPQsNCf0L7QutGD0L/QvtC60JTQu9GP0J/QtdGA0LXQtNCw0YfQuNCS0K3Qu9C10LrRgtGA0L7QvdC90L7QvNCS0LjQtNC1IiBkYXRlPSIyMDI2LTAyLTAxVDExOjAwOjAwIiBudW1iZXI9IlZBVC1TQVZFRC1URVNUIiBwb3N0ZWQ9ImZhbHNlIj4KICA8dGFibGUgbj0i0KLQsNCx0LvQuNGH0L3QsNGP0KfQsNGB0YLRjCI+CiAgICA8cm93IGxpbmU9IjQiPgogICAgICA8diBuPSLQndC+0LzQtdC90LrQu9Cw0YLRg9GA0LAiIHQ9InJlZiIgZW1wdHk9InRydWUiLz4KICAgICAgPHYgbj0i0J3QlNChIiB0PSJkZWNpbWFsIj4tMTkuMjA8L3Y+CiAgICA8L3Jvdz4KICA8L3RhYmxlPgo8L2RvY3VtZW50PjwvZG9jdW1lbnRzPjwvdmF0LWJvb2tzPg==</attachment></attachments>
+</stage>

@@ -1,12 +1,15 @@
 import importlib.util
 import hashlib
+import io
 import json
 from pathlib import Path
 import subprocess
 import sys
 import stat
 import tempfile
+import struct
 import unittest
+from unittest.mock import patch
 import uuid
 import xml.etree.ElementTree as ET
 import zlib
@@ -19,7 +22,7 @@ fake = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = fake
 spec.loader.exec_module(fake)
 sys.path.insert(0, str(HERE.parent / 'tools'))
-from vendor.onecreader.raw1cd import Database1CD
+from vendor.onecreader.raw1cd import Database1CD, RangeSnapshot, TableDef
 from vendor.onecreader import bracket
 from onecd_metadata import read_files
 from inspect_1cd import decode_numeric_decimal
@@ -43,6 +46,65 @@ class ExtractTest(unittest.TestCase):
     def run_tool(self, *args):
         return subprocess.run([sys.executable, str(SCRIPT), str(self.base), *args],
                               text=True, capture_output=True)
+
+    def test_remote_snapshot_matches_local_and_requires_consistent_ranges(self):
+        fake.write_fake_1cd(self.base, [fake.FixtureTable('_Reference42', self.fields, [self.row('Товар', '0001')])])
+        data = self.base.read_bytes()
+        requests = []
+        etag = '"fixture"'
+
+        class Reply(io.BytesIO):
+            status = 206
+
+        def respond(request, timeout):
+            requests.append(request)
+            first, last = map(int, request.get_header('Range').removeprefix('bytes=').split('-'))
+            reply = Reply(data[first:last + 1])
+            reply.headers = {'Content-Range': f'bytes {first}-{last}/{len(data)}', 'ETag': etag}
+            return reply
+
+        with patch('vendor.onecreader.raw1cd.build_opener') as opener:
+            opener.return_value.open.side_effect = respond
+            db = Database1CD('https://example.test/1Cv8.1CD')
+            self.assertEqual(list(db.tables), ['_Reference42'])
+            self.assertEqual(db.read_page(1), data[db.page_size:db.page_size * 2])
+            self.assertEqual(requests[0].get_header('Range'), 'bytes=0-23')
+            self.assertEqual(requests[1].get_header('If-match'), '"fixture"')
+            etag = '"another"'
+            with self.assertRaisesRegex(ValueError, 'unchanged strong ETag'):
+                db.remote.request(0, 23)
+            db.close()
+
+        with patch('vendor.onecreader.raw1cd.build_opener') as opener:
+            reply = Reply(data)
+            reply.status = 200
+            opener.return_value.open.return_value = reply
+            with self.assertRaisesRegex(ValueError, 'expected HTTP 206'):
+                RangeSnapshot('https://example.test/1Cv8.1CD').request(0, 23)
+
+    def test_refuses_hidden_record_version(self):
+        schema = ('{"_Reference42",0,\n{"Fields",\n{"_MARKED","L",0,0,0,"CS"}\n},\n'
+                  '{"Indexes"},\n{"Recordlock","1"},\n{"Files",0,0,0}\n}')
+        with self.assertRaisesRegex(NotImplementedError, 'hidden record version'):
+            TableDef(schema)
+
+    def test_reads_8214_table_description_and_rows(self):
+        table = fake.FixtureTable('_Reference42', self.fields)
+        pages = [bytearray(4096) for _ in range(11)]
+        struct.pack_into('<8s4BII', pages[0], 0, b'1CDBMSV8', 8, 2, 14, 0, len(pages), 1)
+
+        def write_object(header, payload):
+            struct.pack_into('<8s4II', pages[header], 0, b'1CDBOBV8', len(payload), 0, 0, 0, header + 1)
+            struct.pack_into('<II', pages[header + 1], 0, 1, header + 2)
+            pages[header + 2][:len(payload)] = payload
+
+        write_object(2, struct.pack('<32sII', b'ru_RU', 1, 5))
+        write_object(5, fake._table_desc(table, (8, 0, 0)).encode('utf-16'))
+        write_object(8, self.row('Запас', '0042'))
+        self.base.write_bytes(b''.join(pages))
+        result = self.run_tool('extract', '--table', table.name, '--kind', 'items', '--output', str(self.out))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(ET.parse(self.out).find('.//КодВПрограмме').text, '0042')
 
     def file_table(self, name, files):
         fields = [fake.FixtureField('FILENAME', 'NVC', length=128),

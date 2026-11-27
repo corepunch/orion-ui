@@ -13,7 +13,7 @@ local function brief(row)
   parts[#parts+1] = row.basis
   return table.concat(parts," | ")
 end
-function M.prepare(provider, opts, json, api, adapter, fulfillment, request)
+function M.prepare(provider, opts, json, api, adapter, fulfillment, request, observed_at)
   local snapshot = api.snapshot(provider,opts,request,adapter,json)
   local eligible, rows = 0, {}
   if opts.mode ~= "availability" then
@@ -57,8 +57,14 @@ function M.prepare(provider, opts, json, api, adapter, fulfillment, request)
       end
     end
   end
+  local orders_json
+  if opts.mode~="availability" and observed_at and observed_at>0 then
+    snapshot.mode, snapshot.availability, snapshot.observed_at = "orders", json.array(), observed_at
+    local encoded = json.encode(snapshot) .. "\n"
+    if #encoded <= 1048576 then orders_json = encoded end
+  end
   return json.encode({orders=#snapshot.orders,eligible=eligible,held=#snapshot.orders-eligible,
     availability=#snapshot.availability,warnings=#snapshot.warnings, details=table.concat(rows,"\n"),
-    pick_available=html~=nil}),preview,html
+    pick_available=html~=nil,snapshot_available=orders_json~=nil}),preview,html,orders_json
 end
 return M

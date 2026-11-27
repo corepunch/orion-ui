@@ -18,9 +18,10 @@ typedef struct {
   unsigned requests, instructions;
   longTime_t deadline;
   size_t memory;
+  lua_Integer observed_at;
   char secret[TEXTEDIT_PASSWORD_CAPACITY], client[32], options[8193];
   char resources[LEDGER_PATH_MAX + 64], json_path[LEDGER_PATH_MAX * 2];
-  char *summary, *preview, *html, *raw;
+  char *summary, *preview, *html, *snapshot, *raw;
 } market_job_t;
 static struct {
   script_page_t *page;
@@ -31,7 +32,7 @@ static struct {
   ledger_market_request_fn request;
   const char *state;
   enum market_fault fault;
-  char *summary, *preview, *html;
+  char *summary, *preview, *html, *snapshot;
   bool can_save;
   char resources[LEDGER_PATH_MAX + 64], json_path[LEDGER_PATH_MAX * 2];
 } market_session;
@@ -43,7 +44,8 @@ static void market_wipe(void *p, size_t size) {
 
 static void market_clear_result(void) {
   free(market_session.summary); free(market_session.preview); free(market_session.html);
-  market_session.summary = market_session.preview = market_session.html = NULL;
+  free(market_session.snapshot);
+  market_session.summary = market_session.preview = market_session.html = market_session.snapshot = NULL;
   market_session.can_save = false;
 }
 
@@ -150,10 +152,12 @@ static int market_run_lua(lua_State *L) {
   lua_pushstring(L,job->provider);
   lua_pushvalue(L,7); lua_pushvalue(L,2); lua_pushvalue(L,3); lua_pushvalue(L,4); lua_pushvalue(L,5);
   lua_pushlightuserdata(L,job); lua_pushvalue(L,2); lua_pushcclosure(L,market_fetch_page,2);
-  lua_call(L,7,3);
-  job->summary = market_result(L,-3,196608);
-  job->preview = market_result(L,-2,196608);
-  job->html = market_result(L,-1,8388608);
+  lua_pushinteger(L,job->observed_at);
+  lua_call(L,8,4);
+  job->summary = market_result(L,-4,196608);
+  job->preview = market_result(L,-3,196608);
+  job->html = market_result(L,-2,8388608);
+  job->snapshot = market_result(L,-1,1048576);
   if (!job->summary) return luaL_error(L,"missing marketplace summary");
   job->fault = MARKET_OK;
   return 0;
@@ -193,9 +197,10 @@ static void market_reap(bool wait) {
       market_session.summary = job->summary; job->summary = NULL;
       market_session.preview = job->preview; job->preview = NULL;
       market_session.html = job->html; job->html = NULL;
+      market_session.snapshot = job->snapshot; job->snapshot = NULL;
     } else { market_session.state = "error"; market_session.fault = job->fault; }
   }
-  free(job->summary); free(job->preview); free(job->html); free(job);
+  free(job->summary); free(job->preview); free(job->html); free(job->snapshot); free(job);
 }
 
 static void market_stop_timer(void) {
@@ -258,6 +263,7 @@ int ledger_market_start(lua_State *L, const char *provider, const char *options,
   }
   job->provider = is_ozon ? "ozon" : "ebay";
   job->request = market_session.request;
+  job->observed_at = time(NULL);
   snprintf(job->options,sizeof(job->options),"%s",options);
   snprintf(job->client,sizeof(job->client),"%s",client);
   memcpy(job->resources,market_session.resources,sizeof(job->resources));
@@ -326,6 +332,10 @@ const char *ledger_market_printable(lua_State *L) {
     luaL_error(L,"%s",ui_tr("Preview this pick sheet before saving it."));
   return market_session.html;
 }
+const char *ledger_market_snapshot(lua_State *L) {
+  return market_bound(L) && market_session.state && !strcmp(market_session.state,"ready")
+    ? market_session.snapshot : NULL;
+}
 bool ledger_market_supported(void) {
   return market_session.request && (market_session.request != ledger_market_https || ledger_market_https_available());
 }
@@ -381,6 +391,9 @@ bool ledger_market_test_wait(script_page_t *page) {
 }
 const char *ledger_market_test_html(script_page_t *page) {
   return page==market_session.page && market_session.can_save ? market_session.html : NULL;
+}
+const char *ledger_market_test_snapshot(script_page_t *page) {
+  return page==market_session.page ? market_session.snapshot : NULL;
 }
 void ledger_market_test_close(script_page_t *page) {
   script_page_close(page);

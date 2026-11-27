@@ -103,8 +103,9 @@ fonts/
 /apps/groove/mtv-samples/
 /apps/groove/reel
 
-# Local 1C infobase files
+# Local 1C infobase files and reference exports
 *.1[cC][dD]
+/apps/ledger/reference/
 
 # Gradle state for the Android packaging project
 packaging/android/project/.gradle/

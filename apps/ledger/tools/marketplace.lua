@@ -24,7 +24,9 @@ local function main()
   end
   local path = os.getenv(provider=="ebay" and "ORION_EBAY_HEADERS" or "ORION_OZON_HEADERS")
   local request = dofile(dir .. "transport.lua").new(provider,opts.environment,path,json)
+  local observed_at = os.time()
   local snapshot = api.snapshot(provider,opts,request,dofile(dir .. provider .. ".lua"),json)
+  snapshot.observed_at = observed_at
   if output=="snapshot" then return json.encode(snapshot) .. "\n" end
   local picks = api.picking(snapshot,json)
   local dropped = #snapshot.orders - #picks.orders

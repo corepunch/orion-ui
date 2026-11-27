@@ -6,10 +6,15 @@ decimals are exact text, NULL stays distinct from zero and empty values, nothing
 matched by name, and whatever cannot be decoded reliably becomes an explicit
 `undecoded` marker. Every table that is not (fully) exported is listed.
 """
+import base64
 import hashlib
+import json
 import os
 import re
 import struct
+import stat
+import uuid
+import zlib
 from collections import Counter, defaultdict
 from decimal import Decimal
 from pathlib import Path
@@ -25,6 +30,17 @@ BUSINESS_CATALOGS = (
     'ПодразделенияОрганизаций', 'ФизическиеЛица', 'Валюты', 'СтатьиЗатрат', 'СтатьиДвиженияДенежныхСредств',
     'ПрочиеДоходыИРасходы', 'НоменклатурныеГруппы', 'РасходыБудущихПериодов', 'ВидыНоменклатуры',
     'КлассификаторЕдиницИзмерения', 'Сотрудники', 'ОсновныеСредства', 'НематериальныеАктивы')
+MIGRATION_REGISTERS = (
+    'СчетаУчетаНоменклатуры', 'СчетаУчетаРасчетовСКонтрагентами', 'УчетнаяПолитика',
+    'ТарифыСтраховыхВзносов', 'РазмерВычетовНДФЛ', 'РасчетНалогаУСН',
+    'КнигаУчетаДоходовИРасходов', 'РеализацияУслуг',
+    'ПервоначальныеСведенияОСБухгалтерскийУчет', 'ПараметрыАмортизацииОСБухгалтерскийУчет',
+    'НачислениеАмортизацииОСБухгалтерскийУчет', 'СпособыОтраженияРасходовПоАмортизацииОСБухгалтерскийУчет',
+    'РасчетАмортизации', 'СчетаБухгалтерскогоУчетаОС')
+VAT_BOOK_REGISTERS = frozenset(('НДСЗаписиКнигиПокупок', 'НДСЗаписиКнигиПродаж'))
+VAT_BOOK_DOCUMENTS = frozenset(('КнигаПокупокДляПередачиВЭлектронномВиде',
+                                'КнигаПродажДляПередачиВЭлектронномВиде'))
+VAT_BOOK_ARCHIVE_FORMAT = 'orion-1cd-vat-books-v1'
 ACCOUNT_KINDS = {0: 'active', 1: 'passive', 2: 'active-passive'}
 COMPOSITE_PARTS = ('_TYPE', '_L', '_N', '_T', '_S', '_RTREF', '_RRREF')
 # the common attribute that separates data areas: constant 0 in a non-separated database
@@ -33,6 +49,157 @@ XML_BAD = re.compile('[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff￾￿]')
 FLD_RE = re.compile(r'^_FLD(\d+)(DT|CT)?(RREF)?$', re.I)
 PART_RE = re.compile(r'^(.*?)(_TYPE|_L|_N|_T|_S|_RTREF|_RRREF)$', re.I)
 ZERO16 = bytes(16)
+VALUE_STORAGE = 'e199ca70-93cf-46ce-a54b-6edc88c3a296'
+UUID_TYPE = 'fc01b5df-97fe-449b-83d4-218a090e681e'
+VALUE_STORAGE_MAX = 8 * 1024 * 1024
+VALUE_STORAGE_STAGE_MAX = 16 * 1024 * 1024
+
+
+class AttachmentManifest:
+    """Explicit association supplied by the operator, never a path from the 1CD."""
+    def __init__(self, path, source_hash):
+        self.path = Path(path).resolve()
+        self.root = self.path.parent
+        with self.path.open(encoding='utf-8') as stream:
+            obj = json.load(stream)
+        if (not isinstance(obj, dict) or obj.get('format') != 'orion-1cd-attachments-v1' or
+                obj.get('source_sha256') != source_hash or not isinstance(obj.get('attachments'), list)):
+            raise ValueError('attachment manifest format or source hash mismatch')
+        self.entries = {}
+        for entry in obj['attachments']:
+            if not isinstance(entry, dict) or any(not isinstance(entry.get(k), str) for k in ('type', 'id', 'volume_id', 'path')):
+                raise ValueError('invalid attachment manifest entry')
+            key = (entry['type'], str(uuid.UUID(entry['id'])), str(uuid.UUID(entry['volume_id'])))
+            path = entry['path']
+            parts = path.split('/')
+            if (not path or any(c in path for c in '\\:\x00') or
+                    any(part in ('', '.', '..') for part in parts)):
+                raise ValueError('invalid attachment manifest path')
+            size, digest = entry.get('size'), entry.get('sha256')
+            if (not isinstance(size, int) or isinstance(size, bool) or size < 0 or size > VALUE_STORAGE_MAX or
+                    not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest) or key in self.entries):
+                raise ValueError('invalid or duplicate attachment manifest entry')
+            self.entries[key] = (parts, size, digest)
+
+    def check_output(self, output):
+        target = Path(output).resolve()
+        if target == self.path or any(target == self.root.joinpath(*parts) for parts, _, _ in self.entries.values()):
+            raise ValueError('stage output would replace the attachment manifest or one of its files')
+
+    def _open(self, parts):
+        if os.name == 'nt':
+            return self._open_windows(parts)
+        fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            for i, part in enumerate(parts):
+                flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+                if i < len(parts) - 1:
+                    flags |= os.O_DIRECTORY
+                next_fd = os.open(part, flags, dir_fd=fd)
+                os.close(fd)
+                fd = next_fd
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
+
+    def _open_windows(self, parts):
+        import ctypes
+        from ctypes import wintypes
+        import msvcrt
+
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        drive_type = kernel.GetDriveTypeW
+        drive_type.argtypes, drive_type.restype = [wintypes.LPCWSTR], wintypes.UINT
+        if drive_type(self.root.anchor) == 4:
+            raise OSError('attachments require a local Windows volume')
+        path = self.root
+        for part in parts:
+            path = path / part
+            if path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise OSError('reparse point in attachment path')
+        if not path.is_file():
+            raise OSError('attachment file is not regular')
+        fd = os.open(path, os.O_RDONLY | os.O_BINARY)
+        try:
+            final_name = kernel.GetFinalPathNameByHandleW
+            final_name.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD]
+            final_name.restype = wintypes.DWORD
+            resolved = ctypes.create_unicode_buffer(32768)
+            length = final_name(msvcrt.get_osfhandle(fd), resolved, len(resolved), 0)
+            if not 0 < length < len(resolved) or Path(resolved.value.removeprefix('\\\\?\\')) != path:
+                raise OSError('attachment path changed while opening')
+            return fd
+        except BaseException:
+            os.close(fd)
+            raise
+
+    def read(self, attrs):
+        key = (attrs['type'], attrs['id'], attrs.get('volume-id', ''))
+        if key not in self.entries:
+            return None, 'attachment absent from manifest'
+        parts, size, digest = self.entries[key]
+        if attrs.get('size') and int(attrs['size']) != size:
+            return None, 'manifest size does not match metadata'
+        fd = None
+        try:
+            fd = self._open(parts)
+            before = os.fstat(fd)
+            if not stat.S_ISREG(before.st_mode) or before.st_size != size:
+                return None, 'attachment file is not regular or size differs'
+            chunks, remaining = [], size + 1
+            while remaining:
+                chunk = os.read(fd, min(remaining, 65536))
+                if not chunk: break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            data = b''.join(chunks)
+            after = os.fstat(fd)
+            if (len(data) != size or before.st_mtime_ns != after.st_mtime_ns or
+                    before.st_ctime_ns != after.st_ctime_ns or before.st_size != after.st_size or
+                    hashlib.sha256(data).hexdigest() != digest):
+                return None, 'attachment changed or hash differs'
+            return data, ''
+        except OSError:
+            return None, 'attachment file unavailable or unsafe'
+        finally:
+            if fd is not None: os.close(fd)
+
+
+def decode_value_storage(raw):
+    """Split the envelope into serialized UTF-8 text and binary segments."""
+    prefix = raw[:2]
+    if prefix == b'\x01\x01':
+        body = raw[2:]
+    elif prefix == b'\x02\x01' and len(raw) >= 18:
+        stream = zlib.decompressobj(-15)
+        body = stream.decompress(raw[18:], VALUE_STORAGE_MAX + 1)
+        if not stream.eof or stream.unused_data or stream.unconsumed_tail:
+            raise ValueError('incomplete or oversized ValueStorage stream')
+    else:
+        raise ValueError('unknown ValueStorage envelope')
+    if not 8 <= len(body) <= VALUE_STORAGE_MAX:
+        raise ValueError('invalid ValueStorage body length')
+    text_size = struct.unpack_from('<Q', body)[0]
+    cursor = 8 + text_size
+    if cursor > len(body) or not body[8:cursor].startswith(b'\xef\xbb\xbf'):
+        raise ValueError('invalid ValueStorage text')
+    text = body[8:cursor].decode('utf-8-sig')
+    segments = []
+    while cursor < len(body):
+        if len(segments) >= 1024 or len(body) - cursor < 12:
+            raise ValueError('invalid ValueStorage segment headers')
+        reserved, size = struct.unpack_from('<IQ', body, cursor)
+        cursor += 12
+        if reserved or size > len(body) - cursor:
+            raise ValueError('invalid ValueStorage segment')
+        segments.append(body[cursor:cursor + size])
+        cursor += size
+    return text, segments
+
+
+def has_type(pattern, guid):
+    return any(len(p) > 1 and str(p[0]) == '#' and str(p[1]).lower() == guid for p in (pattern or []))
 
 
 def ref_uuid(raw):
@@ -74,6 +241,12 @@ class El:
             out.append(f'{pad}</{self.tag}>\n')
 
 
+def xml_bytes(root):
+    out = ['<?xml version="1.0" encoding="UTF-8"?>\n']
+    root.render(out)
+    return ''.join(out).encode('utf-8')
+
+
 def lower_map(mapping):
     return {k.casefold(): v for k, v in mapping.items()}
 
@@ -97,7 +270,8 @@ class Layout:
 
 
 class Stage:
-    def __init__(self, db, source_sha256=None):
+    def __init__(self, db, source_sha256=None, attachment_manifest=None):
+        self.attachment_manifest = attachment_manifest
         self.db = db
         self.meta = M.Meta(db)
         self.sha256 = source_sha256
@@ -105,8 +279,7 @@ class Stage:
         self.records = {}              # (kind, number, id16) -> El (catalog-like and documents)
         self.pending = []
         self.pulled = set()
-        self.enums = {}                # (number, id16) -> (name, order)
-        self.enum_names = {}
+        self.enum_names = {}           # number -> {id16: (name, order)}
         self.exported_rows = Counter()  # table name -> rows exported
         self.undecoded = Counter()      # (location, reason) -> count
         self.escaped = 0
@@ -117,6 +290,7 @@ class Stage:
         self.vt_cache = {}
         self.common_names = {}
         self.not_exported = []
+        self.value_storage_bytes = 0
 
     # -- tables -----------------------------------------------------------------
 
@@ -204,6 +378,8 @@ class Stage:
             if kind == 'B':
                 if field.length == 16 and not any(data):
                     return {'t': 'uuid', 'empty': 'true'}, None
+                if field.length == 16 and has_type(pattern, UUID_TYPE):
+                    return {'t': 'uuid'}, ref_uuid(data)
                 return self.undec(loc, f'raw bytes B({field.length})', data)
         except (ValueError, OverflowError, UnicodeError, struct.error) as exc:
             return self.undec(loc, f'{kind}: {exc}', data)
@@ -245,13 +421,12 @@ class Stage:
             if not any(raw):
                 attrs['empty'] = 'true'
                 return attrs, None
-            found = self.enum_value(info, raw)
+            found = self.enum_values(info).get(raw)
             if found is None:
                 attrs.update(id=ref_uuid(raw), dangling='true')
                 self.dangling.append((loc, info.name, ref_uuid(raw)))
                 return attrs, None
             attrs.update(name=found[0], id=ref_uuid(raw))
-            self.enums[(info.number, raw)] = found
             return attrs, None
         attrs = {'t': 'ref', 'type': info.name}
         if not any(raw):
@@ -265,8 +440,8 @@ class Stage:
             self.require(info, raw)
         return attrs, None
 
-    def enum_value(self, info, raw):
-        """(name, order) of an enum value: row in _EnumN matched by GUID to the metadata value header."""
+    def enum_values(self, info):
+        """Rows in _EnumN matched by GUID to the metadata value headers."""
         if info.number not in self.enum_names:
             table = self.meta.object_table(info)
             names = {}
@@ -284,7 +459,7 @@ class Stage:
                 if name is not None:
                     values[ref] = (name, order)
             self.enum_names[info.number] = values
-        return self.enum_names[info.number].get(raw)
+        return self.enum_names[info.number]
 
     def require(self, info, raw):
         key = (info.kind, info.number, raw)
@@ -391,6 +566,10 @@ class Stage:
             if fname is None:
                 self.unnamed[loc] += 1
                 fname = base
+            if field.type == 'I' and has_type(pattern, VALUE_STORAGE):
+                saved_book = info.kind == 'Document' and info.short_name in VAT_BOOK_DOCUMENTS
+                out.append((side, number, self.value_storage(table, row, field, fname, floc, retain_raw=saved_book)))
+                continue
             if base in lay.composite:
                 attrs, text = self.decode_composite(table, row, lay.composite[base], floc, pattern)
             elif single_ref:
@@ -398,6 +577,8 @@ class Stage:
                 null, data = self.cell(row, field)
                 if null:
                     attrs, text = {'t': 'null'}, None
+                elif target is None and not any(data):
+                    attrs, text = {'t': 'ref', 'empty': 'true'}, None
                 elif target is None:
                     attrs, text = self.undec(floc, 'reference target type unknown', data)
                 else:
@@ -409,6 +590,52 @@ class Stage:
             el = El('v', {'n': fname, **attrs}, text)
             out.append((side, number, el))
         return out
+
+    def value_storage(self, table, row, field, name, loc, retain_raw=False):
+        size = 0
+        source = None
+        try:
+            null, data = self.cell(row, field)
+            if null:
+                return El('v', {'n': name, 't': 'null'})
+            start, size = struct.unpack('<II', data[:8])
+            if not size:
+                return El('v', {'n': name, 't': 'value-storage', 'bytes': 0})
+            if size > VALUE_STORAGE_MAX:
+                raise ValueError('ValueStorage exceeds the staging size limit')
+            blob = self.blob(table)
+            if blob is None:
+                raise ValueError('missing ValueStorage blob object')
+            raw = blob.read_chain(start, size)
+            if len(raw) != size:
+                raise ValueError('truncated ValueStorage blob')
+            if retain_raw:
+                if self.value_storage_bytes + size > VALUE_STORAGE_STAGE_MAX:
+                    raise ValueError('ValueStorage exceeds the aggregate staging size limit')
+                self.value_storage_bytes += size
+                source = El('source-bytes', {'encoding': 'base64', 'bytes': size,
+                                              'sha256': hashlib.sha256(raw).hexdigest()},
+                            base64.b64encode(raw).decode('ascii'))
+            text, segments = decode_value_storage(raw)
+            content_size = len(text.encode('utf-8')) + sum(len(segment) for segment in segments)
+            if self.value_storage_bytes + content_size > VALUE_STORAGE_STAGE_MAX:
+                raise ValueError('ValueStorage exceeds the aggregate staging size limit')
+            self.value_storage_bytes += content_size
+            el = El('v', {'n': name, 't': 'value-storage', 'bytes': size})
+            attrs, text = self.string(text, loc)
+            el.add(El('serialized', attrs, text))
+            for segment in segments:
+                el.add(El('segment', {'encoding': 'base64', 'bytes': len(segment)},
+                          base64.b64encode(segment).decode('ascii')))
+            if source is not None:
+                el.add(source)
+            return el
+        except (ValueError, UnicodeError, struct.error, zlib.error) as exc:
+            attrs, _ = self.undec(loc, str(exc))
+            el = El('v', {'n': name, **attrs, 'bytes': size})
+            if source is not None:
+                el.add(source)
+            return el
 
     # -- predefined names ------------------------------------------------------
 
@@ -899,6 +1126,165 @@ class Exporter(Stage):
         table = self.meta.object_table(info)
         return table is not None and M.count_live_rows(self.db, table) > 0
 
+    def export_auxiliary_register(self, info, rates):
+        table = self.table_for(info)
+        layout = self.layout(table)
+        is_rates = info.short_name == 'КурсыВалют'
+        register = El('register', {'type': info.name})
+        if info.short_name in VAT_BOOK_REGISTERS:
+            register.attrs['source-table'] = table.name
+        for data in M.live_rows(self.db, table):
+            values = [value for _, _, value in self.fields(table, data, info, info.name)]
+            attrs = {}
+            for name in ('_PERIOD', '_ACTIVE', '_LINENO', '_RECORDKIND'):
+                field = layout.get(name)
+                if field:
+                    flags, value = self.primitive(table, data, field, f'{info.name}.{name}')
+                    if value is not None and flags.get('empty') != 'true':
+                        attrs[{'_PERIOD': 'period', '_ACTIVE': 'active', '_LINENO': 'line',
+                               '_RECORDKIND': 'movement-kind'}[name]] = value
+            recorder_type, recorder = layout.get('_RECORDERTREF'), layout.get('_RECORDERRREF')
+            if recorder_type and recorder:
+                target = self.meta.type_by_number.get(int.from_bytes(self.cell(data, recorder_type)[1], 'big'))
+                reference = self.cell(data, recorder)[1]
+                if target and target.kind == 'Document':
+                    ref, _ = self.reference(target, reference, f'{info.name}.recorder')
+                    attrs.update({'recorder-type': target.name, 'recorder': ref.get('id', '')})
+                else:
+                    self.note(info.name, 'unknown recorder type')
+                    attrs.update({'recorder': ref_uuid(reference), 'recorder-undecoded': 'true'})
+            if is_rates:
+                currency = next((v.attrs.get('id') for v in values if v.attrs['n'] == 'Валюта'), None)
+                if not currency or not attrs.get('period'):
+                    self.note(info.name, 'exchange rate is missing its currency or period')
+                    continue
+                rates.add(El('rate', {'currency': currency, 'period': attrs['period']})).kids.extend(values)
+            else:
+                register.add(El('movement', attrs)).kids.extend(values)
+            self.exported_rows[table.name] += 1
+        return register
+
+    def export_attachments(self):
+        """Join file catalogs to binary registers by typed 1C reference, never by name."""
+        payloads = {}
+        for (kind, _), info in sorted(self.meta.objects.items()):
+            if kind != 'InfoRg' or 'ДвоичныеДанныеФайлов' not in info.short_name or not self.nonempty(info):
+                continue
+            table = self.meta.object_table(info)
+            named = {}
+            for name, field in table.fields.items():
+                match = re.match(r'^_FLD(\d+)', name)
+                if match:
+                    named.setdefault(self.field_name(info, int(match[1])), {})[name] = field
+            refs, blobs = named.get('Файл', {}), named.get('ДвоичныеДанныеФайла', {})
+            rr = next((f for n, f in refs.items() if n.endswith('_RRREF')), None)
+            rt = next((f for n, f in refs.items() if n.endswith('_RTREF')), None)
+            typ = next((f for n, f in refs.items() if n.endswith('_TYPE')), None)
+            blob = next((f for f in blobs.values() if f.type == 'I'), None)
+            if not all((rr, rt, typ, blob)):
+                self.note(info.name, 'attachment register layout unsupported')
+                continue
+            for row in M.live_rows(self.db, table):
+                _, t = self.cell(row, typ); _, number = self.cell(row, rt); _, ref = self.cell(row, rr)
+                if t != b'\x08' or not any(ref):
+                    self.note(info.name, 'attachment file reference unsupported'); continue
+                key = (int.from_bytes(number, 'big'), ref)
+                if key in payloads:
+                    payloads[key] = (None, 'duplicate binary data'); continue
+                try:
+                    _, data = self.cell(row, blob)
+                    offset, size = struct.unpack('<II', data)
+                    if not size or not self.blob(table):
+                        raise ValueError('binary data unavailable')
+                    _, segments = decode_value_storage(self.blob(table).read_chain(offset, size))
+                    if len(segments) != 1:
+                        raise ValueError('expected one binary segment')
+                    payloads[key] = (segments[0], '')
+                except (ValueError, UnicodeError, struct.error, zlib.error) as exc:
+                    payloads[key] = (None, str(exc))
+        result = El('attachments')
+        total_bytes = 0
+        for (kind, _), info in sorted(self.meta.objects.items()):
+            if kind != 'Reference' or 'ПрисоединенныеФайлы' not in info.short_name or not self.nonempty(info):
+                continue
+            table = self.meta.object_table(info)
+            named = {}
+            for name, field in table.fields.items():
+                match = re.match(r'^_FLD(\d+)', name)
+                if match:
+                    named.setdefault(self.field_name(info, int(match[1])), []).append((name, field, int(match[1])))
+            for ref, row in self.index(info).items():
+                attrs = {'id': ref_uuid(ref), 'type': info.name}
+                for label, key in (('Размер', 'size'), ('Расширение', 'extension')):
+                    fields = named.get(label, [])
+                    if len(fields) == 1:
+                        _, value = self.primitive(table, row, fields[0][1], info.name)
+                        if value is not None: attrs[key] = value
+                _, name = self.primitive(table, row, table.fields['_DESCRIPTION'], info.name)
+                attrs['name'] = name or ''
+                owners = named.get('ВладелецФайла', [])
+                if len(owners) == 1 and owners[0][0].endswith('RREF'):
+                    _, owner = self.cell(row, owners[0][1])
+                    target = self.single_ref_target(info, owners[0][2], '', info.name)
+                    if any(owner): attrs['owner-id'] = ref_uuid(owner)
+                    if target: attrs['owner-type'] = target.name
+                elif owners:
+                    parts = {name.rsplit('_', 1)[-1]: field for name, field, _ in owners}
+                    if all(k in parts for k in ('TYPE', 'RTREF', 'RRREF')):
+                        _, typ = self.cell(row, parts['TYPE'])
+                        _, num = self.cell(row, parts['RTREF'])
+                        _, owner = self.cell(row, parts['RRREF'])
+                        target = self.meta.type_by_number.get(int.from_bytes(num, 'big'))
+                        if typ == b'\x08' and any(owner):
+                            attrs['owner-id'] = ref_uuid(owner)
+                            if target: attrs['owner-type'] = target.name
+                volume = named.get('Том', [])
+                if len(volume) == 1:
+                    _, raw = self.cell(row, volume[0][1])
+                    if any(raw): attrs['volume-id'] = ref_uuid(raw)
+                data, reason = payloads.get((info.number, ref), (None, 'external volume or missing binary data'))
+                if data is None and self.attachment_manifest and attrs.get('volume-id'):
+                    data, reason = self.attachment_manifest.read(attrs)
+                if data is not None and attrs.get('size') and int(attrs['size']) != len(data):
+                    data, reason = None, 'binary size does not match metadata'
+                if data is not None and total_bytes + len(data) > VALUE_STORAGE_STAGE_MAX:
+                    data, reason = None, 'attachment stage size limit exceeded'
+                if data is None:
+                    attrs.setdefault('size', '0')
+                    attrs['unavailable'] = reason
+                    self.note(info.name, reason)
+                    result.add(El('attachment', attrs))
+                else:
+                    total_bytes += len(data)
+                    attrs.setdefault('size', str(len(data)))
+                    attrs['sha256'] = hashlib.sha256(data).hexdigest()
+                    result.add(El('attachment', attrs, base64.b64encode(data).decode('ascii')))
+        return result
+
+    def add_vat_book_archive(self, attachments, registers, documents):
+        """Store reviewable evidence in Ledger, not regenerated statutory books."""
+        rows = [reg for reg in registers
+                if reg.attrs['type'].removeprefix('РегистрНакопления.') in VAT_BOOK_REGISTERS]
+        books = [doc for doc in documents
+                 if doc.attrs['type'].removeprefix('Документ.') in VAT_BOOK_DOCUMENTS]
+        if not rows and not books:
+            return
+        archive = El('vat-books', {'format': VAT_BOOK_ARCHIVE_FORMAT, 'source-sha256': self.sha256})
+        archive.add(El('registers')).kids.extend(rows)
+        archive.add(El('documents')).kids.extend(books)
+        data = xml_bytes(archive)
+        meta = {'id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{VAT_BOOK_ARCHIVE_FORMAT}:{self.sha256}')),
+                'type': 'Archive.1C.VATBooks', 'name': f'1c-vat-books-{self.sha256[:12]}',
+                'extension': 'xml', 'size': len(data)}
+        prior = sum(int(a.attrs['size']) for a in attachments.kids if 'unavailable' not in a.attrs)
+        if len(data) > VALUE_STORAGE_MAX or prior + len(data) > VALUE_STORAGE_STAGE_MAX:
+            reason = 'VAT book archive exceeds the attachment staging size limit; keep the staging XML'
+            self.note(meta['type'], reason)
+            attachments.add(El('attachment', {**meta, 'unavailable': reason}))
+        else:
+            attachments.add(El('attachment', {**meta, 'sha256': hashlib.sha256(data).hexdigest()},
+                               base64.b64encode(data).decode('ascii')))
+
     def build(self):
         meta, root = self.meta, El('stage', {'format': FORMAT})
         header = root.add(El('header'))
@@ -912,12 +1298,19 @@ class Exporter(Stage):
             for raw, row in self.index(sub_info).items():
                 self.export_object(sub_info, raw, row)
         registers = []
+        rates = El('rates', {'register': 'РегистрСведений.КурсыВалют'})
         for (kind, _), info in sorted(meta.objects.items()):
             if kind == 'AccRg' and self.nonempty(info):
                 chart = self.chart_for(info)
                 if chart.number not in charts:
                     raise ValueError(f'{info.name}: chart {chart.name} is empty')
                 registers.append(self.export_register(info, chart, charts[chart.number][1]))
+            elif kind in ('InfoRg', 'AccumRg') and (info.short_name in MIGRATION_REGISTERS or
+                   (kind == 'AccumRg' and info.short_name in VAT_BOOK_REGISTERS) or
+                   (kind == 'InfoRg' and info.short_name == 'КурсыВалют')) and self.nonempty(info):
+                register = self.export_auxiliary_register(info, rates)
+                if register.kids:
+                    registers.append(register)
         catalogs, missing = self.catalog_infos()
         for info in catalogs:
             for raw, row in self.index(info).items():
@@ -926,6 +1319,19 @@ class Exporter(Stage):
             if kind == 'Document' and self.nonempty(info):
                 for raw, row in self.index(info).items():
                     self.export_object(info, raw, row)
+        constants = El('constants')
+        for (kind, _), info in sorted(meta.objects.items()):
+            if kind != 'Const' or not self.nonempty(info):
+                continue
+            table = self.table_for(info)
+            key = self.layout(table).get('_RECORDKEY')
+            for row in M.live_rows(self.db, table):
+                attrs = {'type': info.name}
+                if key:
+                    attrs['key'] = self.cell(row, key)[1].hex()
+                constant = constants.add(El('constant', attrs))
+                constant.kids.extend(value for _, _, value in self.fields(table, row, info, info.name))
+                self.exported_rows[table.name] += 1
         self.drain()
         header.add(El('missing-catalogs', {'names': ','.join(missing)}))
         sec = root.add(El('chart-of-accounts'))
@@ -953,11 +1359,21 @@ class Exporter(Stage):
         regs = root.add(El('registers'))
         for reg in registers:
             regs.add(reg)
+        if rates.kids:
+            root.add(rates)
+        if constants.kids:
+            root.add(constants)
         enums = root.add(El('enums'))
-        for (number, raw), (name, order) in sorted(self.enums.items(), key=lambda kv: (kv[0][0], kv[1][1], kv[0][1])):
-            info = meta.type_by_number[number]
-            enums.add(El('enum', {'type': info.name, 'name': name, 'id': ref_uuid(raw), 'order': str(order)}))
-            self.exported_rows[meta.object_table(info).name] += 1
+        for (kind, _), info in sorted(meta.objects.items()):
+            if kind != 'Enum' or not self.nonempty(info):
+                continue
+            for raw, (name, order) in sorted(self.enum_values(info).items(), key=lambda kv: (kv[1][1], kv[0])):
+                enums.add(El('enum', {'type': info.name, 'name': name, 'id': ref_uuid(raw), 'order': str(order)}))
+                self.exported_rows[meta.object_table(info).name] += 1
+        attachments = self.export_attachments()
+        self.add_vat_book_archive(attachments, registers, docs.kids)
+        if attachments.kids:
+            root.add(attachments)
         skipped, partial = self.skipped()
         root.add(skipped)
         root.add(partial)
@@ -1057,9 +1473,13 @@ def source_sha256(path):
     return digest.hexdigest()
 
 
-def build_stage(db):
+def build_stage(db, attachment_manifest=None, output=None):
     """Build the staging element tree; returns (root, exporter)."""
-    exporter = Exporter(db, source_sha256(db.path))
+    digest = source_sha256(db.path)
+    manifest = AttachmentManifest(attachment_manifest, digest) if attachment_manifest else None
+    if manifest and output:
+        manifest.check_output(output)
+    exporter = Exporter(db, digest, manifest)
     root = exporter.build()
     summary = root.add(El('summary'))
     summary.add(El('undecoded', {'count': sum(exporter.undecoded.values())}))
@@ -1078,9 +1498,7 @@ def write_stage(root, output, source, overwrite=False):
         raise ValueError('stage output must not be the 1CD source file')
     if output.exists() and not overwrite:
         raise ValueError(f'{output} exists; pass --overwrite to replace it')
-    out = ['<?xml version="1.0" encoding="UTF-8"?>\n']
-    root.render(out)
-    data = ''.join(out).encode('utf-8')
+    data = xml_bytes(root)
     tmp = output.with_name(output.name + '.tmp')
     fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     try:
@@ -1109,7 +1527,9 @@ def summary_text(root, exporter, size):
         lines.append(f'{tag}: {len(sections[tag].kids)}')
     for reg in sections['registers'].kids:
         lines.append(f'register {reg.attrs["type"]}: {len(reg.kids)} movements')
-    lines.append(f'enums referenced: {len(sections["enums"].kids)}')
+    if 'constants' in sections:
+        lines.append(f'constant values: {len(sections["constants"].kids)}')
+    lines.append(f'enum values: {len(sections["enums"].kids)}')
     sk = sections['skipped']
     lines.append(f'skipped: {sk.attrs["tables"]} tables / {sk.attrs["rows"]} rows; partial tables: {sections["partial-tables"].attrs["tables"]}')
     lines.append(f'dangling references: {len(exporter.dangling)}')

@@ -10,7 +10,7 @@ end
 
 local function clear_result(self)
   self.status,self.request,self.previewed,self.eligible = "idle",nil,false,0
-  self.pick_available,self.details = false,""
+  self.pick_available,self.snapshot_available,self.details = false,false,""
   self.values.order_summary,self.values.stock_summary,self.values.results = "","",""
   self.values.status = self.supported and tr("Orders and availability are read-only.")
     or tr("Marketplace connections are unavailable in this build.")
@@ -38,6 +38,7 @@ function Market:data()
     fetch=busy or not self.supported,stop=not busy or not ui.market_cancel,paste=busy or not self.supported or not ui.market_paste,
     preview=busy or not self.pick_available,save=busy or not self.previewed,
     review=busy or not self.previewed,
+    export=busy or not self.snapshot_available or not ui.market_export,
   }}
 end
 
@@ -177,6 +178,7 @@ function Market:market_refresh()
     end
     self.eligible=eligible
     self.pick_available=data.pick_available~=false and eligible>0
+    self.snapshot_available=data.snapshot_available==true
     if self.request.options.mode~="availability" then
       self.values.order_summary=string.format(tr("Orders: %d total, %d ready to pick, %d held."),
         count(data.orders or data.order_count),eligible,count(data.held or data.held_orders or (count(data.orders or data.order_count)-eligible)))
@@ -233,6 +235,14 @@ function Market:save(v)
   local saved,why=ui.market_save()
   if saved then self.values.status=tr("Pick sheet saved.")
   elseif why then return nil,why end
+end
+
+function Market:export(v)
+  local ok,message=current(self,v)
+  if not ok then return nil,message end
+  if self.snapshot_available and ui.market_export and ui.market_export() then
+    self.values.status=tr("Orders snapshot saved.")
+  end
 end
 
 return Market

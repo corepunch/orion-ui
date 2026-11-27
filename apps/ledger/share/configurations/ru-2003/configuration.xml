@@ -96,6 +96,7 @@
     <vat_rate id="2" name="10%" rate="10" />
     <vat_rate id="3" name="0%" rate="0" />
     <vat_rate id="4" name="Без НДС" rate="0" />
+    <vat_rate id="5" name="18%" rate="18" valid_from="2004-01-01" valid_to="2018-12-31" />
   </vat_rates>
   <doc_types>
     <doc_type id="1" code="receipt" name="Поступление товаров" prefix="ПТ-" base="net" debit_id="14" credit_id="24" vat_debit_id="9" vat_credit_id="24" form="document" vat_book="2" description="Товары от поставщика по накладной ТОРГ-12 и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС." />
@@ -142,6 +143,28 @@
     <closing_rule id="5" kind="transfer" start="" name="Финансовый результат от продаж" account_id="44" target_id="56" via_id="48" gain_id="0" loss_id="0" />
     <closing_rule id="6" kind="transfer" start="" name="Сальдо прочих доходов и расходов" account_id="49" target_id="56" via_id="68" gain_id="0" loss_id="0" />
   </closing_rules>
+  <import_documents>
+    <import_document id="1" source_type="Документ.ПоступлениеТоваровУслуг"      doc_type_id="1"/>
+    <import_document id="2" source_type="Документ.РеализацияТоваровУслуг"       doc_type_id="2"/>
+    <import_document id="3" source_type="Документ.ПриходныйКассовыйОрдер"       doc_type_id="3"/>
+    <import_document id="4" source_type="Документ.РасходныйКассовыйОрдер"       doc_type_id="4"/>
+    <import_document id="5" source_type="Документ.ПлатежноеПоручениеИсходящее"   doc_type_id="5"/>
+    <import_document id="6" source_type="Документ.ПоступлениеНаРасчетныйСчет"    doc_type_id="6"/>
+    <import_document id="7" source_type="Документ.СписаниеСРасчетногоСчета"      doc_type_id="5"/>
+    <import_document id="8"  source_type="Документ.ВводНачальныхОстатков"                   doc_type_id="9"/>
+    <import_document id="9"  source_type="Документ.СчетНаОплатуПокупателю"                  doc_type_id="8"/>
+    <import_document id="10" source_type="Документ.ТребованиеНакладная"                     doc_type_id="8"/>
+    <import_document id="11" source_type="Документ.ИнвентаризацияТоваров"                   doc_type_id="8"/>
+    <import_document id="12" source_type="Документ.ПеремещениеТоваров"                      doc_type_id="8"/>
+    <import_document id="13" source_type="Документ.СчетФактураВыданный"                     doc_type_id="8"/>
+    <import_document id="14" source_type="Документ.СчетФактураПолученный"                   doc_type_id="8"/>
+    <import_document id="15" source_type="Документ.КорректировочныйСчетФактураВыданный"     doc_type_id="8"/>
+    <import_document id="16" source_type="Документ.КорректировочныйСчетФактураПолученный"   doc_type_id="8"/>
+    <import_document id="17" source_type="Документ.РегламентнаяОперация"                    doc_type_id="8"/>
+    <import_document id="18" source_type="Документ.ПринятиеКУчетуОС"                       doc_type_id="13"/>
+    <import_document id="19" source_type="Документ.НачислениеЗарплаты"                      doc_type_id="10"/>
+    <import_document id="20" source_type="Документ.ВедомостьНаВыплатуЗарплатыВКассу" doc_type_id="11"/>
+  </import_documents>
   <print_forms>
     <print_form id="1" report="" doc_type_id="2" name="Товарная накладная ТОРГ-12" template="goods-delivery-note.html" basis="Постановление Госкомстата России от 25.12.1998 № 132" />
     <print_form id="2" report="" doc_type_id="2" name="Счет-фактура" template="vat-invoice.html" basis="Постановление Правительства РФ от 02.12.2000 № 914 (в ред. 2002 г.)" />

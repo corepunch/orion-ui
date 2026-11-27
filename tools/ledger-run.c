@@ -4,6 +4,7 @@
 
 ledger_t *g_ledger;
 #include "apps/ledger/ledger_ib.c"
+#include "apps/ledger/inventory.c"
 #include "apps/ledger/ledger_script.c"
 #include "apps/ledger/posting.c"
 #include "apps/ledger/print.c"
