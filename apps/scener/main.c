@@ -378,6 +378,14 @@ static int cli_export(void){
 #endif
 
 static void create_app_windows(hinstance_t hinstance) {
+#if !defined(BUILD_AS_GEM) && !defined(ORION_THEME)
+  set_theme(THEME_METRO);
+#endif
+  ui_set_instance_stylesheet(hinstance, scener_command_panel_form.stylesheet,
+                             scener_command_panel_form.stylesheet_origin);
+#ifndef BUILD_AS_GEM
+  theme_css_apply_palette();
+#endif
 #ifdef BUILD_AS_GEM
   g_app->menubar_win = set_app_menu(scener_menubar_proc, kMenus, kNumMenus,
                                     handle_menu_command, hinstance);
@@ -620,6 +628,8 @@ void gem_shutdown(void) {
 
   while (g_app->docs)
     close_document(g_app->docs);
+
+  if (!g_cli.screenshot_mode) ui_set_instance_stylesheet(g_app->hinstance, NULL, NULL);
 
   render_deinit();
   shader_deinit();

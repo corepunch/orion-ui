@@ -20,7 +20,7 @@ static irect16_t document_workspace_rect(void) {
 		ui_get_system_metrics(kSystemMetricScreenHeight));
 	get_application_workspace(g_app->hinstance, &area);
 #ifdef BUILD_AS_GEM
-	area = rect_trim_right(area, SIDE_PANEL_WIDTH);
+	area = rect_trim_right(area, scener_command_panel_form.width);
 #endif
 	return rect_inset(area, 6);
 }

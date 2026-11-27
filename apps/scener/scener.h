@@ -7,8 +7,6 @@
 
 #include "build/generated/apps/scener/scener.h"
 
-#define SIDE_PANEL_WIDTH 230
-
 enum {
   SCENER_TAB_CREATE,
   SCENER_TAB_MODIFY,

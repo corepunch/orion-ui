@@ -3,7 +3,8 @@
     version="1"
     name="scener"
     title="SimpleSketch3D"
-    root="apps/scener">
+    root="apps/scener"
+    stylesheet="scener.css">
 
     <menus var="kMenus" count="kNumMenus">
       <menu name="file" label="File">
@@ -133,28 +134,28 @@
           <Button command="create.box" icon="scener-cube" checked-icon="scener-cube-fill" size="large" />
           <Button command="create.sphere" icon="scener-globe" checked-icon="scener-globe-fill" size="large" />
           <Button command="create.cylinder" icon="scener-cylinder" checked-icon="scener-cylinder-fill" size="large" />
-          <Button command="create.cone" />
-          <Button command="create.torus" />
-          <Button command="create.prism" icon="scener-pentagon" checked-icon="scener-pentagon-fill" />
-          <Button command="create.capsule" />
+          <Button command="create.cone" icon="scener-traffic-cone" checked-icon="scener-traffic-cone-fill" size="large" />
+          <Button command="create.torus" icon="scener-torus" checked-icon="scener-torus-fill" size="large" />
+          <Button command="create.prism" icon="scener-pentagon" checked-icon="scener-pentagon-fill" size="large" />
+          <Button command="create.capsule" icon="scener-pill" checked-icon="scener-pill-fill" size="large" />
         </Group>
       </Tab>
       <Tab label="Create">
         <Group label="Profiles">
           <Button command="create.rect" text="Rectangle" icon="scener-rectangle" checked-icon="scener-rectangle-fill" />
           <Button command="create.circle" icon="scener-circle" checked-icon="scener-circle-fill" />
-          <Button command="create.ellipse" />
+          <Button command="create.ellipse" icon="scener-ellipse" checked-icon="scener-ellipse-fill" />
           <Button command="create.star" icon="scener-star" checked-icon="scener-star-fill" />
           <Button command="create.screen" icon="scener-monitor" checked-icon="scener-monitor-fill" />
         </Group>
         <Group label="Architecture">
-          <Button command="create.arch" />
-          <Button command="create.window_round" text="Round Window" />
-          <Button command="create.window_cottage" />
-          <Button command="create.window_gothic" />
+          <Button command="create.arch" icon="scener-columns" checked-icon="scener-columns-fill" />
+          <Button command="create.window_round" text="Round Window" icon="scener-circle" checked-icon="scener-circle-fill" />
+          <Button command="create.window_cottage" icon="scener-house" checked-icon="scener-house-fill" />
+          <Button command="create.window_gothic" icon="scener-church" checked-icon="scener-church-fill" />
           <Button command="create.door_rectangular" icon="scener-door" checked-icon="scener-door-fill" />
-          <Button command="create.door_round" text="Round Door" />
-          <Button command="create.door_gothic" />
+          <Button command="create.door_round" text="Round Door" icon="scener-door" checked-icon="scener-door-fill" />
+          <Button command="create.door_gothic" icon="scener-door" checked-icon="scener-door-fill" />
         </Group>
         <Group label="Lights and Cameras">
           <Button command="create.point_light" icon="scener-lightbulb" />
@@ -193,50 +194,50 @@
     </toolbar>
 
   <forms>
-    <form name="command_panel" title="Command Panel" width="230" height="540" auto_layout="1" spacing="0" flags="notitle,WINDOW_ALWAYSONTOP,WINDOW_NOTRAYBUTTON,WINDOW_NORESIZE">
+    <form name="command_panel" title="Command Panel" width="270" height="540" auto_layout="1" spacing="0" flags="notitle,WINDOW_ALWAYSONTOP,WINDOW_NOTRAYBUTTON,WINDOW_NORESIZE">
       <TabView name="command_tabs" flags="flexspace">
         <StackView name="create_page" text="Create" spacing="6" padding="6" flags="vscroll">
           <Label name="shapes_label" text="Shapes" />
           <GridView name="shapes" spacing="4">
             <Column name="shapes_left">
-              <Button command="create.box" text="Box" height="22" />
-              <Button command="create.sphere" text="Sphere" height="22" />
-              <Button command="create.cylinder" text="Cylinder" height="22" />
-              <Button command="create.cone" text="Cone" height="22" />
-              <Button command="create.torus" text="Torus" height="22" />
-              <Button command="create.prism" text="Prism" height="22" />
+              <Button command="create.box" text="Box" height="22" icon="scener-cube" />
+              <Button command="create.sphere" text="Sphere" height="22" icon="scener-globe" />
+              <Button command="create.cylinder" text="Cylinder" height="22" icon="scener-cylinder" />
+              <Button command="create.cone" text="Cone" height="22" icon="scener-traffic-cone" />
+              <Button command="create.torus" text="Torus" height="22" icon="scener-torus" />
+              <Button command="create.prism" text="Prism" height="22" icon="scener-pentagon" />
             </Column>
             <Column name="shapes_right">
-              <Button command="create.capsule" text="Capsule" height="22" />
-              <Button command="create.rect" text="Rectangle" height="22" />
-              <Button command="create.circle" text="Circle" height="22" />
-              <Button command="create.ellipse" text="Ellipse" height="22" />
-              <Button command="create.star" text="Star" height="22" />
-              <Button command="create.screen" text="Screen" height="22" />
+              <Button command="create.capsule" text="Capsule" height="22" icon="scener-pill" />
+              <Button command="create.rect" text="Rectangle" height="22" icon="scener-rectangle" />
+              <Button command="create.circle" text="Circle" height="22" icon="scener-circle" />
+              <Button command="create.ellipse" text="Ellipse" height="22" icon="scener-ellipse" />
+              <Button command="create.star" text="Star" height="22" icon="scener-star" />
+              <Button command="create.screen" text="Screen" height="22" icon="scener-monitor" />
             </Column>
           </GridView>
           <Label name="architecture_label" text="Windows and Doors" />
           <GridView name="architecture" spacing="4">
             <Column name="architecture_left">
-              <Button command="create.arch" text="Arch" height="22" />
-              <Button command="create.window_round" text="Round Window" height="22" />
-              <Button command="create.window_cottage" text="Cottage Window" height="22" />
-              <Button command="create.window_gothic" text="Gothic Window" height="22" />
+              <Button command="create.arch" text="Arch" height="22" icon="scener-columns" />
+              <Button command="create.window_round" text="Round Window" height="22" icon="scener-circle" />
+              <Button command="create.window_cottage" text="Cottage Window" height="22" icon="scener-house" />
+              <Button command="create.window_gothic" text="Gothic Window" height="22" icon="scener-church" />
             </Column>
             <Column name="architecture_right">
-              <Button command="create.door_rectangular" text="Rectangular Door" height="22" />
-              <Button command="create.door_round" text="Round Door" height="22" />
-              <Button command="create.door_gothic" text="Gothic Door" height="22" />
+              <Button command="create.door_rectangular" text="Door" tooltip="Rectangular Door" height="22" icon="scener-door" />
+              <Button command="create.door_round" text="Round Door" height="22" icon="scener-door" />
+              <Button command="create.door_gothic" text="Gothic Door" height="22" icon="scener-door" />
             </Column>
           </GridView>
           <Label name="lighting_label" text="Lights and Cameras" />
           <GridView name="lighting" spacing="4">
             <Column name="lighting_left">
-              <Button command="create.point_light" text="Point Light" height="22" />
-              <Button command="create.directional_light" text="Directional Light" height="22" />
+              <Button command="create.point_light" text="Point Light" height="22" icon="scener-lightbulb" />
+              <Button command="create.directional_light" text="Directional Light" height="22" icon="scener-sun" />
             </Column>
             <Column name="lighting_right">
-              <Button command="create.camera" text="Camera from View" height="22" />
+              <Button command="create.camera" text="Camera" tooltip="Camera from View" height="22" icon="scener-camera" />
             </Column>
           </GridView>
           <ReportView name="create_properties" height="132" flags="notitle,flexspace,vscroll,WINDOW_NOACTIVATE" />

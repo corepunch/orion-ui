@@ -273,16 +273,17 @@ static result_t win_command_panel(window_t *win, uint32_t msg, uint32_t wparam, 
 
 window_t *create_command_panel_window(void) {
 	if (!g_app || !g_app->chrome_win) return NULL;
+	int width = scener_command_panel_form.width;
 #ifdef BUILD_AS_GEM
 	int top = MENUBAR_HEIGHT + TOOLBAR_BAND_HEIGHT;
-	int left = ui_get_system_metrics(kSystemMetricScreenWidth) - SIDE_PANEL_WIDTH;
+	int left = ui_get_system_metrics(kSystemMetricScreenWidth) - width;
 	window_t *win = create_window_from_form(&scener_command_panel_form, left, top, NULL,
 		win_command_panel, g_app->hinstance, NULL);
-	if (win) resize_window(win, SIDE_PANEL_WIDTH, MAX(1, ui_get_system_metrics(kSystemMetricScreenHeight) - top));
+	if (win) resize_window(win, width, MAX(1, ui_get_system_metrics(kSystemMetricScreenHeight) - top));
 #else
 	window_t *win = create_window_from_form(&scener_command_panel_form, 0, 0, g_app->chrome_win,
 		win_command_panel, g_app->hinstance, NULL);
-	if (win && !dock_window(win, DOCK_RIGHT, DOCK_EDGE(DOCK_RIGHT), DOCK_NOFLOAT, SIDE_PANEL_WIDTH, SIDE_PANEL_WIDTH)) {
+	if (win && !dock_window(win, DOCK_RIGHT, DOCK_EDGE(DOCK_RIGHT), DOCK_NOFLOAT, width, width)) {
 		destroy_window(win);
 		return NULL;
 	}

@@ -1,0 +1,131 @@
+/* Scener's graphite workspace: compact modeling controls, restrained blue selection. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scener-canvas: #17191B;
+    --scener-panel: #282A2C;
+    --scener-panel-raised: #303234;
+    --scener-panel-deep: #202224;
+    --scener-edge: #414446;
+    --scener-edge-soft: #383A3C;
+    --scener-ink: #E7E9EA;
+    --scener-muted: #A7ABAE;
+    --scener-disabled: #74797D;
+    --scener-blue: #5599BA;
+    --scener-blue-hover: #76BFDF;
+    --scener-blue-quiet: #274B5C;
+    --scener-green: #83B889;
+    --scener-yellow: #D8B56E;
+    --scener-red: #D87979;
+
+    /* Keep all theme roles available for native controls and status surfaces. */
+    --control-bg: var(--scener-panel);
+    --window-dark-bg: var(--scener-panel-deep);
+    --workspace-bg: var(--scener-canvas);
+    --active-titlebar: var(--scener-panel-deep);
+    --active-titlebar-text: var(--scener-ink);
+    --inactive-titlebar: var(--scener-panel-deep);
+    --inactive-titlebar-text: var(--scener-muted);
+    --statusbar-bg: var(--scener-panel-deep);
+    --light-edge: var(--scener-edge);
+    --dark-edge: var(--scener-canvas);
+    --flare: #55595C;
+    --accent: var(--scener-blue);
+    --button-inner: #393C3E;
+    --button-hover: #414548;
+    --text-normal: var(--scener-ink);
+    --text-disabled: var(--scener-disabled);
+    --text-error: var(--scener-red);
+    --text-success: var(--scener-green);
+    --border-focus: var(--scener-blue-hover);
+    --border-active: #606568;
+    --folder-text: #78AEE5;
+    --column-view-bg: #242628;
+    --modal-overlay: #00000070;
+    --toolbar-foreground: #D4D7D9;
+    --panel-dark: var(--scener-panel-deep);
+    --panel-darker: var(--scener-canvas);
+    --text-warning: var(--scener-yellow);
+    --text-info: #8DBBE7;
+    --text-secondary: var(--scener-muted);
+    --text-on-color: #FFFFFF;
+    --selection-top: var(--scener-blue);
+    --selection-bottom: var(--scener-blue);
+    --tab-bar-bg: var(--scener-panel-deep);
+    --accent-text: #FFFFFF;
+    --desktop-bg: var(--scener-canvas);
+    --info-background: #343A40;
+    --info-text: #D9E3EC;
+    --tooltip-background: #202224;
+    --tooltip-text: var(--scener-ink);
+
+    --window-radius: 0;
+    --button-radius: 2px;
+    --field-radius: 2px;
+    --multiline-radius: 2px;
+    --tab-radius: 2px;
+    --toolbar-radius: 2px;
+    --table-radius: 0;
+    --card-radius: 2px;
+    --badge-radius: 2px;
+  }
+
+  /* Reserve the accent for focused and selected controls. */
+  Desktop, Workspace { background: var(--scener-canvas); }
+  Window::titlebar, Window::titlebar:focus { background: var(--scener-panel-deep); }
+  Window::border { border: 1px solid var(--scener-edge); }
+  Ribbon { background: var(--scener-panel); padding: 4px; gap: 3px; border-bottom: 1px solid var(--scener-canvas); }
+  Ribbon::tabs { height: 25px; padding: 2px 4px; gap: 2px; background: var(--scener-panel-deep); color: var(--scener-ink); }
+  Ribbon::tab { padding-left: 11px; border-radius: 0; margin-top: 1px; color: var(--scener-muted); }
+  Ribbon::tab:hover { background: var(--scener-panel-raised); color: var(--scener-ink); }
+  Ribbon::tab:checked { background: var(--scener-panel); color: var(--scener-ink); border-top: 2px solid var(--scener-blue); }
+  Ribbon::tab.menu { background: var(--scener-panel-raised); }
+  MenuBar.ribbon, Toolbar.ribbon { background: var(--scener-panel-deep); }
+  Ribbon::button {
+    min-width: 42px; height: 21px; --single-height: 27px; --control-height: 18px;
+    padding-left: 5px; padding-right: 5px; padding-top: 2px; gap: 4px;
+    --icon-size: 16px; --large-icon-size: 24px; --caption-gap: 2px;
+    color: #DDE0E2; border-radius: 2px;
+  }
+  Ribbon::button:hover { background: #414548; color: #FFFFFF; }
+  Ribbon::button:checked, Ribbon::button:active { background: var(--scener-blue-quiet); border: 1px solid var(--scener-blue); color: #FFFFFF; }
+  Ribbon::button:disabled { background: none !important; color: var(--scener-disabled); }
+  Ribbon::group { padding-left: 7px; padding-right: 5px; padding-top: 2px; color: var(--scener-muted); }
+  Ribbon::separator { width: 1px; background: #5A5D5F; margin: 3px 1px; }
+  Ribbon::arrow { fill: var(--scener-muted); }
+  Ribbon::toggle { fill: var(--scener-muted); }
+
+  /* Dense docked tool panels use quiet edges and a clear active tab. */
+  TabView::bar { background: var(--scener-panel-deep); padding: 1px 2px 0; }
+  TabView::tab { height: 29px; min-width: 30px; padding-left: 8px; padding-right: 8px; gap: 4px;
+    background: var(--scener-panel-deep); border-radius: 0; color: var(--scener-muted); }
+  TabView::tab:hover, TabView::tab:active { background: #373A3C; color: var(--scener-ink); }
+  TabView::tab:checked { background: var(--scener-panel); color: var(--scener-ink); border-bottom: 2px solid var(--scener-blue); }
+  TabView::pane { background: var(--scener-panel); }
+  StackView { background: var(--scener-panel); }
+
+  /* Small square controls and inset numeric fields. */
+  Button { color: var(--scener-ink); padding-left: 6px; padding-right: 6px; background: var(--scener-panel-raised);
+    border: 1px solid var(--scener-edge); border-radius: 2px; }
+  Button:hover { background: #3A3D3F; }
+  Button:active, Button:checked { background: #414649; }
+  Button:default { background: var(--scener-blue-quiet); color: #FFFFFF; border-color: var(--scener-blue); }
+  Button:focus { border-color: var(--scener-blue-hover); }
+  Label, CheckBox { color: var(--scener-ink); }
+  TextEdit, ComboBox { color: var(--scener-ink); background: #202224; border: 1px solid #45494B; border-radius: 2px; }
+  TextEdit:focus, ComboBox:focus { border-color: var(--scener-blue-hover); }
+  CheckBox::box { border-radius: 2px; }
+  Separator { background: var(--scener-edge); }
+
+  /* Object/property reports and status keep the same readable graphite hierarchy. */
+  TableView::body { background: #232527; }
+  TableView::header { background: var(--scener-panel-raised); color: var(--scener-muted); border-bottom: 1px solid var(--scener-edge); }
+  TableView::row { background: #232527; color: var(--scener-ink); }
+  TableView::row:hover { background: #2D3032; }
+  TableView::row:checked { background: var(--scener-blue-quiet); color: #FFFFFF; }
+  TableView::rule { background: #343739; }
+  TableView::group { background: #292C2E; color: #B9BEC1; }
+  TableView::frame { border: 1px solid var(--scener-edge-soft); }
+  StatusBar { background: var(--scener-panel-deep); color: var(--scener-muted); border-top: 1px solid var(--scener-edge); }
+  Badge { border-radius: 2px; }
+  Tooltip { border: 1px solid var(--scener-edge); border-radius: 2px; }
+}
