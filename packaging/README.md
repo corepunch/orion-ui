@@ -206,34 +206,32 @@ calls it with the version in `VERSION`, collects the artifacts and stages a draf
    any app-specific files or runtime behavior. Scener checks that the OBJ and
    GLB exporter plugins load from each extracted archive, and captures the
    editor opening a packaged scene on Linux.
-4. Run Platform Builds manually on the candidate branch to check all three
-   targets before cutting the release.
+4. For a preflight build, use Platform Builds on the candidate branch. The
+   release itself runs the desktop matrix automatically.
 
 ### Sign and publish a release
 
-1. Commit the new `VERSION` and release changes. Manually run Release Packages
-   on the release branch with the version without the `v` prefix, or push a matching
-   `v*` tag. Wait for the draft workflow run to succeed and record its run ID.
-   Use the full Linux test suite for Scener. The `desktop_checks_only` input
-   limits Linux tests to the Git Client, Ledger and related framework suites.
+1. Push the release changes and a new `VERSION` to `main`. Release Packages
+   starts automatically, runs the full Linux test suite and stages the draft.
+   Record the successful build run ID. If the triggering run was lost, the
+   workflow also accepts a manual dispatch with the same version and an empty
+   `publish_run`.
 2. On the Mac with the Apple Developer team configured in Xcode and `gh`
    authenticated for the repository, run `make mac-notarize MAC_RELEASE_RUN=<build-run-id>`
    from the release checkout. It downloads the signing inputs from that exact
    run, uses Xcode's Developer ID cloud signing, waits for Apple's tickets and
-   uploads the verified ZIPs to the draft. It keeps its output under
+   uploads the verified ZIPs to the draft and automatically starts the publish
+   job with the original build run ID. It keeps its output under
    `build/macos-notarized/<build-run-id>/` and reuses completed submissions on retry.
    Set `MAC_NOTARY_TEAM` both locally and in the Actions repository variables
    to use a different Apple team.
-3. Run Release Packages again with the same version and set `publish_run` to
-   the original build run ID. The macOS runner verifies the uploaded ZIPs'
+3. The publish job verifies the uploaded ZIPs'
    bundle IDs, version, architecture, Developer ID signatures, stapled tickets
    and Gatekeeper status. It regenerates the macOS checksums and verifies the
-   complete set of assets before publishing the draft.
-4. Confirm the three files and SHA-256 manifests are public on the release.
-   Deploy `docs/` from the release checkout with the **Deploy Docs to GitHub
-   Pages** workflow and open the app's public page to verify each download.
-   For a new download page, use manual release dispatch and deploy Pages after
-   publication. Pushing a tag starts both workflows independently.
+   complete set of assets before publishing the draft. The release workflow
+   then deploys GitHub Pages from the published tag.
+4. Confirm the three files and SHA-256 manifests are public on the release,
+   then open the app's public page to verify each download.
 
 Release archives can be generated locally after building the repository:
 

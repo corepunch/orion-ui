@@ -117,7 +117,7 @@ def upload_missing(repo, plan, directory, digests):
 
 def stage(args):
     plan = {'version': args.version, 'commit': os.environ['GITHUB_SHA'],
-            'run': os.environ['GITHUB_RUN_ID']}
+            'run': os.environ['GITHUB_RUN_ID'], 'ref': os.environ['GITHUB_REF_NAME']}
     args.handoff.mkdir(parents=True, exist_ok=True)
     for name in (*ZIP_NAMES.values(), CHECKSUMS):
         shutil.move(args.release / name, args.handoff / name)
@@ -267,8 +267,8 @@ def sign(args):
     signed = verify_zips(output, version, args.team)
     upload_missing(args.repo, plan, output, signed)
     print(f'Notarized ZIPs are in {output} and attached to draft v{version}.')
-    print(f'Publish with gh workflow run release.yml --repo {args.repo} '
-          f'-f version={version} -f publish_run={args.run}')
+    gh(args.repo, 'workflow', 'run', 'release.yml', '--ref', plan.get('ref', 'main'),
+       '-f', f'version={version}', '-f', f'publish_run={args.run}')
 
 
 def cloud_sign(work, handoff, output, version, team):

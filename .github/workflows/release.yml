@@ -2,7 +2,8 @@ name: Release Packages
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: [VERSION]
   workflow_dispatch:
     inputs:
       version:
@@ -37,7 +38,7 @@ jobs:
         env:
           DISPATCH_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then version="${GITHUB_REF_NAME#v}"; else version="$DISPATCH_VERSION"; fi
+          version="${DISPATCH_VERSION:-$(cat VERSION)}"
           test "$version" = "$(cat VERSION)"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -121,3 +122,13 @@ jobs:
         run: |
           python3 packaging/macos/notarize.py publish --repo "$GITHUB_REPOSITORY" \
             --version "$VERSION" --run "$BUILD_RUN" --handoff "$RUNNER_TEMP/notary-inputs"
+
+  docs:
+    needs: publish
+    uses: ./.github/workflows/docs.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      source_ref: v${{ inputs.version }}
