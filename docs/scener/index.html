@@ -38,10 +38,9 @@
 <main id="top">
 
 <section class="hero wrap">
-  <p class="kicker">Orion UI · apps/scener · v1.1</p>
   <h1>A 3D framework for LLM agents</h1>
-  <p class="lede">Give agents a complete 3D workflow from the command line. Build scenes in plain XML with reusable prefabs, catch geometry issues with file-and-line diagnostics, and query object bounds and attachment points as JSON.</p>
-  <p class="lede">Render images or MP4 video, then use the output as visual feedback for the next edit. Build game sprites, storyboard shots, or reference renders in a workflow you can script and keep in Git.</p>
+  <p class="lede">Scener gives coding agents a way to create, inspect, and render 3D scenes from the terminal. An agent edits a plain-text scene, gets diagnostics that point to the source, reads exact dimensions and attachment points as JSON, and renders the result for visual review.</p>
+  <p class="lede">Use the same workflow to batch-render game sprites, build storyboard shots, or create reference images. Review scene changes in Git and refine the same files in Scener’s visual editor.</p>
   <dl class="spec">
     <div><dt>Executable</dt><dd>0.8 MB</dd></div>
     <div><dt>Installed bundle</dt><dd>19 MB</dd></div>
@@ -59,26 +58,26 @@
 <section id="loop" class="sec wrap">
   <header class="sec-head">
     <span class="num">01</span>
-    <h2>Built for the agent loop</h2>
-    <p>Every command is a short process that reads the scene, answers and exits. An agent works the way it works with a compiler: edit the file, run the check, read the errors, render.</p>
+    <h2>A 3D workflow an agent can run</h2>
+    <p>Each command runs independently. An agent can validate a scene and inspect its geometry before opening a viewport or spending time on a render.</p>
   </header>
 
   <ol class="steps">
     <li>
       <h3>Write</h3>
-      <p>Boxes, lathes, walls with windows and doors, floors, prefabs, characters with IK, cameras and lights. Units are centimetres. Expressions like <code>{S*(NX - 1)/2}</code> work in any attribute.</p>
+      <p>Author scenes in XML with primitives, architectural elements, rigged characters, cameras, and lights. Use prefabs and expressions to generate variations from the same source.</p>
     </li>
     <li>
       <h3>Check</h3>
-      <p><code>--check</code> loads the scene without a window and reports unknown attributes, missing prefabs, unlit scenes, floating parts, interpenetration and z-fighting faces, each with a file and a line.</p>
+      <p><code>--check</code> flags invalid attributes, missing prefabs, floating parts, intersections, and overlapping faces. Use <code>--json</code> to read diagnostics programmatically and <code>--strict</code> to make warnings fail the check.</p>
     </li>
     <li>
       <h3>Measure</h3>
-      <p><code>--query</code> prints the built scene as JSON: every node with its world bounds and attach points, so the agent can place the next object against real numbers.</p>
+      <p><code>--query</code> returns world-space bounds and attachment points as JSON. An agent can use these measurements to align parts or place new objects precisely.</p>
     </li>
     <li>
       <h3>Render</h3>
-      <p><code>--render</code> writes one clean image per camera, or an MP4 for a frame range. An agent that reads images checks its own work.</p>
+      <p><code>--render</code> produces stills from named cameras or encodes a frame range as MP4. An agent with image input can inspect the resulting frames before revising the scene.</p>
     </li>
   </ol>
 
@@ -124,8 +123,8 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="format" class="sec wrap">
   <header class="sec-head">
     <span class="num">02</span>
-    <h2>A format you can read in a diff</h2>
-    <p>One file per scene, prefabs in their own files. A <code>&lt;define&gt;</code> turns a group into a new tag with parameters, and an <code>&lt;array&gt;</code> repeats anything along a step. The library's forty stacks are twenty lines.</p>
+    <h2>3D scenes you can review in Git</h2>
+    <p>Plain XML makes scene changes visible in a diff. Parameterized definitions, reusable prefabs, and arrays let you revise repeated geometry in one place. The library below uses the same bookcase prefab across 400 instances.</p>
   </header>
 
   <div class="src-pair">
@@ -196,8 +195,8 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="numbers" class="sec wrap">
   <header class="sec-head">
     <span class="num">03</span>
-    <h2>The same scene in Blender</h2>
-    <p>We exported the library to glTF with <code>scener --export</code>, imported it into Blender 5.2 in background mode with the same camera, the same lights and the same 1600×1000 frame, and rendered it once with Eevee and once with Cycles. Both programs ran on the same Apple M1, one at a time.</p>
+    <h2>Render performance on Apple M1</h2>
+    <p>Scener loaded the 19,801-object library and rendered a 1600×1000 PNG with shadows and ambient occlusion in 2.7 seconds, using 314 MB of peak resident memory. The table shows both end-to-end timings and render-only timings for the glTF export in Blender 5.2 on the same Apple M1.</p>
   </header>
 
   <div class="compare">
@@ -245,9 +244,9 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
   </div>
 
   <div class="notes">
-    <p><b>Where the time goes.</b> Most of Blender's time is the glTF import of 19,819 objects, about 160 s on each run. With Blender MCP, Blender stays open and the scene is built once, so each later edit costs the render step: 19.4 s with Eevee and 115.1 s with Cycles, against 2.7 s for Scener. Scener has no import step because the XML <em>is</em> the scene; it rebuilds all of it on every run and is still faster.</p>
+    <p><b>Where the time goes.</b> Importing the glTF took about 160 seconds in Blender. Once the scene was loaded, Eevee rendered the frame in 19.4 seconds and Cycles in 115.1 seconds. Scener’s timing includes reading the XML and rebuilding the scene.</p>
     <p><b>Memory.</b> An empty Blender process takes 244 MB before it loads anything. Scener's check of the whole library peaks at 63 MB, its JSON query at 25 MB.</p>
-    <p><b>What this is not.</b> The light and material mapping into Blender is approximate, so the pictures differ in tone. Cycles is a path tracer and does things Scener does not try to do: soft shadows, bounced light, glass. Scener draws hard stencil shadows and screen-space ambient occlusion. That is enough for blocking out a room, a reference for painting over, a game sprite or a storyboard frame.</p>
+    <p><b>Rendering methods.</b> Scener uses hard stencil shadows and screen-space ambient occlusion. Cycles uses path tracing. The glTF export approximates the original lighting and materials, so the timings describe this scene and these render settings.</p>
   </div>
 </section>
 
@@ -255,8 +254,8 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="plates" class="sec wrap">
   <header class="sec-head">
     <span class="num">04</span>
-    <h2>What it draws</h2>
-    <p>One render per feature, straight out of <code>scener --render</code> with no paint-over. Times are wall-clock on an M1, loading included.</p>
+    <h2>Game art, scene studies, and reference renders</h2>
+    <p>These images come directly from <code>scener --render</code>. All timings include scene loading on an Apple M1.</p>
   </header>
   <div class="grid three">
     <figure><a href="shots/kitchen-night.webp" class="zoom"><img src="shots/kitchen-night.webp" width="1024" height="768" loading="lazy" alt="A round stone hall at night in blue and gold, moonlight falling through arched windows onto a tiled floor."></a><figcaption><b>Includes</b> One room layout shared by ten scenes that swap floor, decor and light. Among the Heavens, 0.90 s.</figcaption></figure>
@@ -272,8 +271,8 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="motion" class="sec wrap">
   <header class="sec-head">
     <span class="num">05</span>
-    <h2>Reels</h2>
-    <p>A <code>.reel</code> file lays type, callouts and live measurements over 3D scene layers and renders straight to MP4. Characters carry skeletons with FK, two-bone IK, procedural gaits and BVH motion capture.</p>
+    <h2>Animation and technical explainers</h2>
+    <p>Compose 3D shots, captions, and callouts in a <code>.reel</code> file and render it to MP4. Annotations can track joints and display measurements that update each frame. Character rigs support forward and inverse kinematics, procedural gaits, and BVH motion capture.</p>
   </header>
   <figure class="plate wide"><a href="shots/reel-ik-fk.webp" class="zoom"><img src="shots/reel-ik-fk.webp" width="1600" height="1000" loading="lazy" alt="An infographic frame titled Same motion, different control: two identical characters, one posed by forward kinematics and one by inverse kinematics, with callouts and measured hand distances."></a><figcaption><b>Fig. 4</b> One frame of the IK vs FK reel. The callouts follow the joints and the figures are measured from the rig on every frame.</figcaption></figure>
 </section>
@@ -282,8 +281,8 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <section id="editor" class="sec wrap">
   <header class="sec-head">
     <span class="num">06</span>
-    <h2>An editor for when a person takes over</h2>
-    <p>The native Orion editor pairs a main toolbar for selection, transforms, and snapping with a tabbed Command Panel. Choose an object type to see its placement parameters, or select a scene node to inspect its properties and modifiers. Fly the viewport camera with W A S D.</p>
+    <h2>A visual editor for hands-on refinement</h2>
+    <p>Open the scene in the native editor to inspect it from another angle, place objects, or adjust transforms with snapping. The Command Panel exposes placement controls, scene properties, and modifiers.</p>
   </header>
   <figure class="plate wide">
     <a href="shots/editor-market.webp?v=0c7ff0d9af1f" class="zoom"><img src="shots/editor-market.webp?v=0c7ff0d9af1f" width="1440" height="900" loading="lazy" alt="Scener's main toolbar above snowy Christmas market stalls casting shadows, with icon tabs and creation tools in the Command Panel on the right."></a>
@@ -296,7 +295,7 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
   <header class="sec-head">
     <span class="num">07</span>
     <h2>Download Scener</h2>
-    <p>Unpack the archive and launch Scener. For command-line use, run the executable from your terminal.</p>
+    <p>Download a build for your platform, or build Scener from the Orion UI source.</p>
   </header>
   <!-- OS logos: Phosphor core fill weight, rev. 2b75f3a (MIT, see docs/ledger/PHOSPHOR-LICENSE) -->
   <div class="downloads">
@@ -333,7 +332,7 @@ check great_library.blks: 0 errors, 0 warnings (19801 objects, 223 nodes)
 <span class="p">$</span> scener --export room.glb room.blks</code></pre>
     </figure>
   </div>
-  <p class="more">The <a href="https://github.com/corepunch/orion-ui/blob/main/apps/scener/skills/populate-simplegl-scenes/references/scene-format.md">scene format reference</a> documents every tag and attribute, and the <a href="https://github.com/corepunch/orion-ui/blob/main/apps/scener/CLI.md">CLI guide</a> covers rendering, checking, reels and export. Both are written to be handed to an agent as they are.</p>
+  <p class="more">The <a href="https://github.com/corepunch/orion-ui/blob/main/apps/scener/skills/populate-simplegl-scenes/references/scene-format.md">scene format reference</a> documents every tag and attribute, and the <a href="https://github.com/corepunch/orion-ui/blob/main/apps/scener/CLI.md">CLI guide</a> covers rendering, checking, reels and export. Give both references to your coding agent along with the scene files you want it to work on.</p>
 </section>
 
 </main>
