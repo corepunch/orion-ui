@@ -60,7 +60,7 @@ code { font: 0.86em var(--mono); background: var(--paper-2); padding: 1px 4px; }
 .hero { padding: 72px 16px 40px; }
 @media (min-width: 720px) { .hero { padding: 96px 32px 48px; } }
 .kicker { font: 13px var(--mono); color: var(--ink-3); margin: 0 0 20px; }
-h1 { font: 600 clamp(40px, 6.4vw, 78px)/1.02 var(--serif); letter-spacing: -0.02em; margin: 0 0 28px; max-width: 17ch; }
+h1 { font: 600 clamp(34px, 5.2vw, 64px)/1.06 var(--serif); letter-spacing: -0.02em; margin: 0 0 28px; text-wrap: balance; }
 .lede { font-size: 19px; color: var(--ink-2); max-width: 62ch; margin: 0 0 14px; }
 .spec { display: grid; grid-template-columns: repeat(2, 1fr); margin: 40px 0 0; border-top: 1px solid var(--ink); }
 @media (min-width: 720px) { .spec { grid-template-columns: repeat(4, 1fr); } }
