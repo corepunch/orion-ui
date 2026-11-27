@@ -43,30 +43,12 @@ typedef struct {
 
 typedef struct {
 	render_texture_t target;
-	uint32_t present_program;
 	float cam_yaw, cam_pitch;
 	vec3 world_up;
 	int last_mouse_x, last_mouse_y, orbiting, left_down;
 	uint32_t navigation_timer, playback_timer;
 	longTime_t last_move_time, last_play_time;
 } viewport_state_t;
-
-static const char *vp_present_vs =
-	"#version 150 core\n"
-	"in vec2 position; in vec2 texcoord; in vec4 color;\n"
-	"out vec2 tex; out vec4 col;\n"
-	"uniform mat4 projection; uniform vec2 offset,scale,uv_offset,uv_scale;\n"
-	"void main(){ col=color; tex=texcoord*uv_scale+uv_offset; gl_Position=projection*vec4(position*scale+offset,0,1); }\n";
-static const char *vp_present_fs =
-	"#version 150 core\n"
-	"in vec2 tex; in vec4 col; out vec4 outColor; uniform sampler2D tex0; uniform vec4 tint; uniform float alpha;\n"
-	"void main(){ outColor=texture(tex0,vec2(tex.x,1.0-tex.y))*col*tint; outColor.a*=alpha; }\n";
-
-static GLuint vp_create_present_program(void) {
-	uint32_t program = 0;
-	ui_load_program_from_source(vp_present_vs, vp_present_fs, "position", "texcoord", "color", &program);
-	return program;
-}
 
 static vec3 vp_camera_dir(const viewport_state_t *vp) {
 	float yaw = vp->cam_yaw * M_PIf / 180.0f, pitch = vp->cam_pitch * M_PIf / 180.0f;
@@ -288,7 +270,6 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 			if (!vp) return false;
 			win->userdata = vp;
 			win->userdata2 = lparam;
-			vp->present_program = vp_create_present_program();
 			doc = (scene_doc_t *)lparam;
 			if (doc) vp_init_camera(vp, &doc->scene);
 			return true;
@@ -301,8 +282,8 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 			bool ready = render_texture_resize(&vp->target, cr.w, cr.h);
 			if (ready) vp_render(vp, doc);
 			vp_restore_gl(&state);
-			if (ready && vp->present_program)
-				draw_rect_program((int)vp->target.color,0,0,cr.w,cr.h,vp->present_program,0);
+			if (ready)
+				draw_sprite_region((int)vp->target.color, cr, UV_RECT(0, 1, 1, 0), 0xffffffff, 0);
 			else fill_rect(get_sys_color(brWorkspaceBg), cr);
 			return true;
 		}
@@ -448,7 +429,6 @@ result_t win_viewport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 				if (vp->playback_timer) axCancelTimer(vp->playback_timer);
 				if (doc) doc->playing = false;
 				render_texture_free(&vp->target);
-				if(vp->present_program) glDeleteProgram(vp->present_program);
 				free(vp);
 				win->userdata = NULL;
 			}
