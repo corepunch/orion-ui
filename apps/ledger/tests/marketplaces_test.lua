@@ -40,6 +40,7 @@ local function run(data)
 end
 local snap=run(fixture("ebay"))
 eq(#snap.orders,4); eq(#snap.availability,5)
+eq(snap.orders[1].eligible,true)
 eq(snap.orders[1].lines[1].id,"L1")
 eq(snap.orders[1].lines[1].sku,"0007")
 eq(snap.orders[4].eligible,false)
@@ -78,6 +79,12 @@ a=fixture("ebay"); a.orders[1].orders[1].orderPaymentStatus="PENDING"
 eq(run(a).orders[1].hold_reason,"not_confirmed_paid")
 a=fixture("ebay"); a.orders[1].orders[1].cancelStatus=nil
 eq(run(a).orders[1].hold_reason,"cancellation_unknown_or_pending")
+for _, state in ipairs({"IN_PROGRESS","CANCELED","UNRECOGNIZED","NONE"}) do
+  a=fixture("ebay"); a.orders[1].orders[1].cancelStatus.cancelState=state
+  local order=run(a).orders[1]
+  eq(order.eligible,false)
+  eq(order.hold_reason,"cancellation_unknown_or_pending")
+end
 a=fixture("ebay"); a.orders[1].orders[1].lineItems[1].lineItemFulfillmentStatus="FULFILLED"
 eq(run(a).orders[1].hold_reason,"line_not_unstarted")
 a=fixture("ebay"); a.orders[2].orders[1].orderId=a.orders[1].orders[1].orderId

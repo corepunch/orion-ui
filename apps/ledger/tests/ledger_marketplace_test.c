@@ -36,7 +36,7 @@ static bool market_fake(const char *method, const char *url, const char *client,
     static const char prefix[]="https://api.sandbox.ebay.com/sell/fulfillment/v1/order?";
     if (!strncmp(url,prefix,sizeof(prefix)-1))
       json="{\"total\":1,\"orders\":[{\"orderId\":\"EBAY-1\",\"orderFulfillmentStatus\":\"NOT_STARTED\","
-           "\"orderPaymentStatus\":\"PAID\",\"cancelStatus\":{\"cancelState\":\"NONE\"},"
+           "\"orderPaymentStatus\":\"PAID\",\"cancelStatus\":{\"cancelState\":\"NONE_REQUESTED\"},"
            "\"fulfillmentStartInstructions\":[{\"fulfillmentInstructionsType\":\"SHIP_TO\","
            "\"shippingStep\":{\"shipTo\":{\"fullName\":\"SECRET BUYER\"}}}],"
            "\"lineItems\":[{\"lineItemId\":\"line-1\",\"sku\":\"008\",\"quantity\":4,"

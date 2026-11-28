@@ -85,7 +85,7 @@ local function order_row(raw)
   local reason
   if status ~= "NOT_STARTED" then reason = "not_unstarted"
   elseif raw.orderPaymentStatus ~= "PAID" then reason = "not_confirmed_paid"
-  elseif type(raw.cancelStatus) ~= "table" or raw.cancelStatus.cancelState ~= "NONE" then reason = "cancellation_unknown_or_pending"
+  elseif type(raw.cancelStatus) ~= "table" or raw.cancelStatus.cancelState ~= "NONE_REQUESTED" then reason = "cancellation_unknown_or_pending"
   elseif not seller_ships(raw) then reason = "not_confirmed_seller_shipping" end
   local lines, seen = {}, {}
   if not array(raw.lineItems) or #raw.lineItems == 0 then reason = reason or "no_line_items"
